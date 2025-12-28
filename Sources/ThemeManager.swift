@@ -64,6 +64,27 @@ final class ThemeManager: ObservableObject {
     var warning: Color {
         Color(light: Color(hex: "F59E0B"), dark: Color(hex: "FFD43B"))
     }
+  
+  // MARK: - Input Borders
+
+    var inputBorder: Color {
+        Color(
+            light: Color.black.opacity(0.12),
+            dark: Color.white.opacity(0.12)
+        )
+    }
+
+    var inputBorderFocused: Color {
+        accent
+    }
+
+    var inputBorderSubtle: Color {
+        Color(
+            light: Color.black.opacity(0.06),
+            dark: Color.white.opacity(0.06)
+        )
+    }
+
     
     var buttonPrimary: Color { accent }
     var buttonSecondary: Color { tertiaryBackground }

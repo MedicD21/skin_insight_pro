@@ -338,7 +338,7 @@ struct ClientDetailView: View {
                     }
 
                     if let firstDate = first?.createdAt,
-                       let lastDate = last?.createdAt {
+                       last?.createdAt != nil {
                         HStack {
                             Image(systemName: "clock")
                                 .font(.system(size: 16))
@@ -422,12 +422,24 @@ struct ClientDetailView: View {
     }
 
     private func formatProgressDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        if let date = formatter.date(from: dateString) {
+        // Try ISO8601DateFormatter with fractional seconds
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = isoFormatter.date(from: dateString) {
             let displayFormatter = DateFormatter()
             displayFormatter.dateFormat = "MM/dd/yyyy"
             return displayFormatter.string(from: date)
         }
+
+        // Fallback: Try without fractional seconds
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MM/dd/yyyy"
+            return displayFormatter.string(from: date)
+        }
+
         return dateString
     }
     
@@ -565,12 +577,24 @@ struct AnalysisRowView: View {
     }
     
     private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        if let date = formatter.date(from: dateString) {
+        // Try ISO8601DateFormatter with fractional seconds
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = isoFormatter.date(from: dateString) {
             let displayFormatter = DateFormatter()
             displayFormatter.dateFormat = "MM/dd/yyyy hh:mm a"
             return displayFormatter.string(from: date)
         }
+
+        // Fallback: Try without fractional seconds
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MM/dd/yyyy hh:mm a"
+            return displayFormatter.string(from: date)
+        }
+
         return dateString
     }
 }

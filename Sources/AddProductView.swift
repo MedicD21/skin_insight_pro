@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct AddProductView: View {
     @ObservedObject var theme = ThemeManager.shared
@@ -9,8 +10,12 @@ struct AddProductView: View {
     @State private var category = ""
     @State private var description = ""
     @State private var ingredients = ""
+    @State private var priceText = ""
     @State private var selectedSkinTypes: Set<String> = []
     @State private var selectedConcerns: Set<String> = []
+    @State private var selectedImage: PhotosPickerItem?
+    @State private var productImage: UIImage?
+    @State private var imageUrl: String?
     @State private var isActive = true
     @State private var isLoading = false
     @State private var showError = false
@@ -18,7 +23,7 @@ struct AddProductView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case name, brand, category, description, ingredients
+        case name, brand, category, description, ingredients, price
     }
 
     let skinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"]
@@ -32,7 +37,9 @@ struct AddProductView: View {
 
                 ScrollView {
                     VStack(spacing: 24) {
+                        imageSection
                         basicInfoSection
+                        pricingSection
                         detailsSection
                         skinTypesSection
                         concernsSection
@@ -41,6 +48,14 @@ struct AddProductView: View {
                     .padding(20)
                 }
                 .scrollDismissesKeyboard(.interactively)
+                .onChange(of: selectedImage) { oldValue, newValue in
+                    Task {
+                        if let data = try? await newValue?.loadTransferable(type: Data.self),
+                           let uiImage = UIImage(data: data) {
+                            productImage = uiImage
+                        }
+                    }
+                }
 
                 if isLoading {
                     Color.black.opacity(0.3)
@@ -76,6 +91,49 @@ struct AddProductView: View {
         }
     }
 
+    private var imageSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Product Image")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(theme.primaryText)
+
+            PhotosPicker(selection: $selectedImage, matching: .images) {
+                if let productImage = productImage {
+                    Image(uiImage: productImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 200)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                .stroke(theme.border, lineWidth: 1)
+                        )
+                } else {
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 48))
+                            .foregroundColor(theme.tertiaryText)
+
+                        Text("Tap to add product image")
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.secondaryText)
+                    }
+                    .frame(height: 200)
+                    .frame(maxWidth: .infinity)
+                    .background(theme.tertiaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.radiusMedium)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [5]))
+                            .foregroundColor(theme.border)
+                    )
+                }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     private var basicInfoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Basic Information")
@@ -85,6 +143,27 @@ struct AddProductView: View {
             formField(title: "Product Name", icon: "cube.box", placeholder: "e.g. Hydrating Serum", text: $name, field: .name)
             formField(title: "Brand", icon: "building.2", placeholder: "e.g. CeraVe", text: $brand, field: .brand)
             formField(title: "Category", icon: "tag", placeholder: "e.g. Serum, Cleanser, Moisturizer", text: $category, field: .category)
+        }
+    }
+
+    private var pricingSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Pricing")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(theme.primaryText)
+
+            ThemedTextField(
+                title: "Price",
+                placeholder: "0.00",
+                text: $priceText,
+                field: .price,
+                focusedField: $focusedField,
+                theme: theme,
+                icon: "dollarsign.circle",
+                keyboardType: .decimalPad,
+                textContentType: nil,
+                autocapitalization: .none
+            )
         }
     }
 
@@ -174,30 +253,16 @@ struct AddProductView: View {
     }
 
     private func formField(title: String, icon: String, placeholder: String, text: Binding<String>, field: Field) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(theme.secondaryText)
-
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(theme.tertiaryText)
-                    .frame(width: 24)
-
-                TextField(placeholder, text: text)
-                    .font(.system(size: 17))
-                    .foregroundColor(theme.primaryText)
-                    .focused($focusedField, equals: field)
-            }
-            .padding(16)
-            .background(theme.tertiaryBackground)
-            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.radiusMedium)
-                    .stroke(focusedField == field ? theme.accent : theme.border, lineWidth: focusedField == field ? 2 : 1)
-            )
-        }
+        ThemedTextField(
+            title: title,
+            placeholder: placeholder,
+            text: text,
+            field: field,
+            focusedField: $focusedField,
+            theme: theme,
+            icon: icon,
+            autocapitalization: .words
+        )
     }
 
     private func textEditorField(title: String, icon: String, placeholder: String, text: Binding<String>, field: Field) -> some View {
@@ -248,30 +313,58 @@ struct AddProductView: View {
         focusedField = nil
         isLoading = true
 
-        let newProduct = Product(
-            id: nil,
-            userId: AuthenticationManager.shared.currentUser?.id,
-            name: name,
-            brand: brand,
-            category: category,
-            description: description.isEmpty ? nil : description,
-            ingredients: ingredients.isEmpty ? nil : ingredients,
-            skinTypes: Array(selectedSkinTypes),
-            concerns: Array(selectedConcerns),
-            isActive: isActive,
-            createdAt: nil
-        )
-
         Task {
-            await viewModel.addProduct(newProduct)
-            isLoading = false
+            var uploadedImageUrl: String?
 
-            if viewModel.showError {
-                errorMessage = viewModel.errorMessage
-                showError = true
-                viewModel.showError = false
-            } else {
-                dismiss()
+            // Upload image if one was selected
+            if let productImage = productImage,
+               let userId = AuthenticationManager.shared.currentUser?.id {
+                do {
+                    uploadedImageUrl = try await NetworkService.shared.uploadProductImage(
+                        image: productImage,
+                        userId: userId
+                    )
+                } catch {
+                    await MainActor.run {
+                        isLoading = false
+                        errorMessage = "Failed to upload image: \(error.localizedDescription)"
+                        showError = true
+                    }
+                    return
+                }
+            }
+
+            // Parse price
+            let price = Double(priceText.trimmingCharacters(in: .whitespaces))
+
+            let newProduct = Product(
+                id: nil,
+                userId: AuthenticationManager.shared.currentUser?.id,
+                name: name,
+                brand: brand,
+                category: category,
+                description: description.isEmpty ? nil : description,
+                ingredients: ingredients.isEmpty ? nil : ingredients,
+                skinTypes: Array(selectedSkinTypes),
+                concerns: Array(selectedConcerns),
+                imageUrl: uploadedImageUrl,
+                price: price,
+                isActive: isActive,
+                createdAt: nil
+            )
+
+            await viewModel.addProduct(newProduct)
+
+            await MainActor.run {
+                isLoading = false
+
+                if viewModel.showError {
+                    errorMessage = viewModel.errorMessage
+                    showError = true
+                    viewModel.showError = false
+                } else {
+                    dismiss()
+                }
             }
         }
     }

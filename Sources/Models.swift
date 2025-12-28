@@ -256,6 +256,8 @@ struct Product: Identifiable, Hashable, Codable {
     var ingredients: String?
     var skinTypes: [String]?
     var concerns: [String]?
+    var imageUrl: String?
+    var price: Double?
     var isActive: Bool?
     var createdAt: String?
 
@@ -269,6 +271,8 @@ struct Product: Identifiable, Hashable, Codable {
         case ingredients
         case skinTypes = "skin_types"
         case concerns
+        case imageUrl = "image_url"
+        case price
         case isActive = "is_active"
         case createdAt = "created_at"
     }
@@ -317,6 +321,8 @@ struct CreateProductRequest: Codable {
         let ingredients: String
         let skinTypes: [String]
         let concerns: [String]
+        let imageUrl: String?
+        let price: Double?
         let isActive: Bool
 
         enum CodingKeys: String, CodingKey {
@@ -329,6 +335,8 @@ struct CreateProductRequest: Codable {
             case ingredients
             case skinTypes = "skin_types"
             case concerns
+            case imageUrl = "image_url"
+            case price
             case isActive = "is_active"
         }
     }

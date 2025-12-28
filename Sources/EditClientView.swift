@@ -192,32 +192,18 @@ struct EditClientView: View {
         field: Field,
         keyboardType: UIKeyboardType = .default
     ) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(theme.secondaryText)
-            
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(theme.tertiaryText)
-                    .frame(width: 24)
-                
-                TextField(placeholder, text: text)
-                    .font(.system(size: 17))
-                    .foregroundColor(theme.primaryText)
-                    .keyboardType(keyboardType)
-                    .autocapitalization(keyboardType == .emailAddress ? .none : .words)
-                    .focused($focusedField, equals: field)
-            }
-            .padding(16)
-            .background(theme.tertiaryBackground)
-            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.radiusMedium)
-                    .stroke(focusedField == field ? theme.accent : theme.border, lineWidth: focusedField == field ? 2 : 1)
-            )
-        }
+        ThemedTextField(
+            title: title,
+            placeholder: placeholder,
+            text: text,
+            field: field,
+            focusedField: $focusedField,
+            theme: theme,
+            icon: icon,
+            keyboardType: keyboardType,
+            textContentType: keyboardType == .emailAddress ? .emailAddress : nil,
+            autocapitalization: keyboardType == .emailAddress ? .none : .words
+        )
     }
     
     private func textEditorField(

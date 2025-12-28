@@ -72,33 +72,18 @@ struct AuthenticationView: View {
     private var formSection: some View {
         VStack(spacing: 24) {
             VStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Email")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(theme.secondaryText)
-                    
-                    HStack(spacing: 12) {
-                        Image(systemName: "envelope")
-                            .font(.system(size: 18))
-                            .foregroundColor(theme.tertiaryText)
-                            .frame(width: 24)
-                        
-                        TextField("Enter your email", text: $email)
-                            .font(.system(size: 17))
-                            .foregroundColor(theme.primaryText)
-                            .textContentType(.emailAddress)
-                            .keyboardType(.emailAddress)
-                            .autocapitalization(.none)
-                            .focused($focusedField, equals: .email)
-                    }
-                    .padding(16)
-                    .background(theme.tertiaryBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: theme.radiusMedium)
-                            .stroke(focusedField == .email ? theme.accent : theme.border, lineWidth: focusedField == .email ? 2 : 1)
-                    )
-                }
+                ThemedTextField(
+                    title: "Email",
+                    placeholder: "Enter your email",
+                    text: $email,
+                    field: .email,
+                    focusedField: $focusedField,
+                    theme: theme,
+                    icon: "envelope",
+                    keyboardType: .emailAddress,
+                    textContentType: .emailAddress,
+                    autocapitalization: .none
+                )
                 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Password")

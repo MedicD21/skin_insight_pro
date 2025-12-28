@@ -4,6 +4,7 @@ struct ProductCatalogView: View {
     @ObservedObject var theme = ThemeManager.shared
     @StateObject private var viewModel = ProductCatalogViewModel()
     @State private var showAddProduct = false
+    @State private var showImportProducts = false
     @State private var searchText = ""
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
@@ -38,15 +39,25 @@ struct ProductCatalogView: View {
             .navigationTitle("Product Catalog")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
-                    Button(action: { showAddProduct = true }) {
-                        Label("Add Product", systemImage: "plus")
+                    Menu {
+                        Button(action: { showAddProduct = true }) {
+                            Label("Add Single Product", systemImage: "plus")
+                        }
+                        Button(action: { showImportProducts = true }) {
+                            Label("Import Products (CSV)", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 20))
                     }
-                    .keyboardShortcut("n", modifiers: .command)
                 }
             }
             .searchable(text: $searchText, prompt: "Search products")
             .sheet(isPresented: $showAddProduct) {
                 AddProductView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showImportProducts) {
+                ProductImportView(viewModel: viewModel)
             }
             .task {
                 await viewModel.loadProducts()
@@ -105,51 +116,96 @@ struct ProductRowView: View {
     let product: Product
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
+        HStack(spacing: 12) {
+            // Product Image
+            Group {
+                if let imageUrl = product.imageUrl, !imageUrl.isEmpty {
+                    AsyncImage(url: URL(string: imageUrl)) { phase in
+                        switch phase {
+                        case .empty:
+                            ProgressView()
+                                .frame(width: 80, height: 80)
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        case .failure:
+                            Image(systemName: "photo")
+                                .font(.system(size: 24))
+                                .foregroundColor(theme.tertiaryText)
+                                .frame(width: 80, height: 80)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .frame(width: 80, height: 80)
+                    .background(theme.tertiaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusSmall))
+                } else {
+                    Image(systemName: "photo")
+                        .font(.system(size: 24))
+                        .foregroundColor(theme.tertiaryText)
+                        .frame(width: 80, height: 80)
+                        .background(theme.tertiaryBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusSmall))
+                }
+            }
+
+            // Product Details
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
                     Text(product.name ?? "Unknown")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(theme.primaryText)
 
-                    if let brand = product.brand, !brand.isEmpty {
-                        Text(brand)
-                            .font(.system(size: 14))
-                            .foregroundColor(theme.secondaryText)
+                    Spacer()
+
+                    if let price = product.price {
+                        Text("$\(String(format: "%.2f", price))")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(theme.accent)
                     }
                 }
 
-                Spacer()
-
-                if let isActive = product.isActive {
-                    Text(isActive ? "Active" : "Inactive")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(isActive ? theme.accent : theme.tertiaryText)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(isActive ? theme.accentSubtle.opacity(0.2) : theme.tertiaryBackground)
-                        .clipShape(Capsule())
-                }
-            }
-
-            if let category = product.category, !category.isEmpty {
-                HStack {
-                    Image(systemName: "tag")
-                        .font(.system(size: 12))
-                    Text(category)
+                if let brand = product.brand, !brand.isEmpty {
+                    Text(brand)
                         .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
                 }
-                .foregroundColor(theme.secondaryText)
-            }
 
-            if let description = product.description, !description.isEmpty {
-                Text(description)
-                    .font(.system(size: 14))
-                    .foregroundColor(theme.secondaryText)
-                    .lineLimit(2)
+                HStack {
+                    if let category = product.category, !category.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "tag")
+                                .font(.system(size: 11))
+                            Text(category)
+                                .font(.system(size: 13))
+                        }
+                        .foregroundColor(theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(theme.accent.opacity(0.1))
+                        .clipShape(Capsule())
+                    }
+
+                    if let isActive = product.isActive {
+                        Text(isActive ? "Active" : "Inactive")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(isActive ? .green : .red)
+                    }
+
+                    Spacer()
+                }
+
+                if let description = product.description, !description.isEmpty {
+                    Text(description)
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                        .lineLimit(2)
+                }
             }
         }
-        .padding(16)
+        .padding(12)
         .background(
             RoundedRectangle(cornerRadius: theme.radiusLarge)
                 .fill(theme.cardBackground)

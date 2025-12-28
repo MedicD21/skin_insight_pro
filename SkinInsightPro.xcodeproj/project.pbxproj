@@ -30,6 +30,7 @@
 		C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FAF21605DA98E7CFB6065B /* AppLogger.swift */; };
 		C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */; };
 		C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */; };
+		CBD2F4C32F01875300D076C4 /* ProductImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD2F4C22F01875300D076C4 /* ProductImportView.swift */; };
 		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
 		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
 /* End PBXBuildFile section */
@@ -56,6 +57,7 @@
 		BCACC036FECD051B397F0353 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
 		BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
 		C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkinInsightPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBD2F4C22F01875300D076C4 /* ProductImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImportView.swift; sourceTree = "<group>"; };
 		D25E0109231B05F82260E206 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInsightProApp.swift; sourceTree = "<group>"; };
 		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -99,6 +101,7 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				CBD2F4C22F01875300D076C4 /* ProductImportView.swift */,
 				B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */,
 				82E315965DF68F10E98272F2 /* AddProductView.swift */,
 				6DA15425CAA55F301D0392AF /* AIRulesView.swift */,
@@ -211,6 +214,7 @@
 				15597B726EF4238573C829D6 /* NetworkService.swift in Sources */,
 				79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */,
 				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,
+				CBD2F4C32F01875300D076C4 /* ProductImportView.swift in Sources */,
 				9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */,
 				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,
 				C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */,

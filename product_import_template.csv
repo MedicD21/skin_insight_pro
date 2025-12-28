@@ -1,0 +1,6 @@
+name,brand,category,description,ingredients,skin_types,concerns,price,image_url,is_active
+Hydrating Serum,CeraVe,Serum,Lightweight hydrating serum for all skin types,Hyaluronic Acid,Normal,Dryness,24.99,,TRUE
+Gentle Cleanser,La Roche-Posay,Cleanser,Mild foaming cleanser for sensitive skin,Glycerin,Sensitive,Redness,18.50,,TRUE
+Retinol Night Cream,The Ordinary,Moisturizer,Anti-aging night treatment with retinol,Retinol,Normal,Aging,12.99,,TRUE
+Vitamin C Serum,Skinceuticals,Serum,Brightening serum with pure vitamin C,L-Ascorbic Acid,Normal,Dark Spots,165.00,,TRUE
+Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,Oily,Pores,6.50,,TRUE

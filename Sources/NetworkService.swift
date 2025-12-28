@@ -684,6 +684,57 @@ class NetworkService {
         }
     }
 
+    func uploadProductImage(image: UIImage, userId: String) async throws -> String {
+        // Upload to Supabase Storage in product-images bucket
+        let fileName = "\(userId)/\(UUID().uuidString).jpg"
+        let url = URL(string: "\(AppConstants.supabaseUrl)/storage/v1/object/product-images/\(fileName)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        if let token = accessToken {
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        } else {
+            request.setValue("Bearer \(AppConstants.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        }
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            throw NetworkError.invalidResponse
+        }
+
+        request.httpBody = imageData
+
+        print("-> Request: Upload Product Image")
+        print("-> POST: \(url.absoluteString)")
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+
+            print("<- Response: Upload Product Image")
+            print("<- Status Code: \(httpResponse.statusCode)")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print(jsonString)
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw NetworkError.serverError(httpResponse.statusCode)
+            }
+
+            // Return public URL
+            return "\(AppConstants.supabaseUrl)/storage/v1/object/public/product-images/\(fileName)"
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
+        } catch {
+            throw error
+        }
+    }
+
     func analyzeImage(
         image: UIImage,
         medicalHistory: String?,
@@ -893,6 +944,8 @@ class NetworkService {
                 "ingredients": product.ingredients,
                 "skin_types": product.skinTypes,
                 "concerns": product.concerns,
+                "image_url": product.imageUrl,
+                "price": product.price,
                 "is_active": product.isActive
             ]
 
@@ -924,7 +977,7 @@ class NetworkService {
             }
             request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
-            let productData: [String: Any] = [
+            var productData: [String: Any] = [
                 "user_id": userId,
                 "name": product.name ?? "",
                 "brand": product.brand ?? "",
@@ -935,6 +988,13 @@ class NetworkService {
                 "concerns": product.concerns ?? [],
                 "is_active": product.isActive ?? true
             ]
+
+            if let imageUrl = product.imageUrl {
+                productData["image_url"] = imageUrl
+            }
+            if let price = product.price {
+                productData["price"] = price
+            }
 
             request.httpBody = try JSONSerialization.data(withJSONObject: productData)
 
@@ -1064,6 +1124,115 @@ class NetworkService {
             }
 
             return newRule
+        }
+    }
+
+    func createAIRule(
+        userId: String,
+        name: String,
+        condition: String,
+        action: String,
+        priority: Int,
+        isActive: Bool
+    ) async throws -> AIRule {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        request.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+        let ruleData: [String: Any] = [
+            "user_id": userId,
+            "name": name,
+            "condition": condition,
+            "product_id": action, // Store action in product_id field for now
+            "priority": priority,
+            "is_active": isActive
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: ruleData)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let rules = try JSONDecoder().decode([AIRule].self, from: data)
+        guard let newRule = rules.first else {
+            throw NetworkError.invalidResponse
+        }
+
+        return newRule
+    }
+
+    func updateAIRule(
+        ruleId: String,
+        userId: String,
+        name: String,
+        condition: String,
+        action: String,
+        priority: Int,
+        isActive: Bool
+    ) async throws -> AIRule {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        request.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+        let ruleData: [String: Any] = [
+            "name": name,
+            "condition": condition,
+            "product_id": action, // Store action in product_id field for now
+            "priority": priority,
+            "is_active": isActive
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: ruleData)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let rules = try JSONDecoder().decode([AIRule].self, from: data)
+        guard let updatedRule = rules.first else {
+            throw NetworkError.invalidResponse
+        }
+
+        return updatedRule
+    }
+
+    func deleteAIRule(ruleId: String) async throws {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
         }
     }
 
