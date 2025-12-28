@@ -1,0 +1,459 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 54;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		01C73F7497D77BEDBEE4D32C /* AddClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */; };
+		04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6C2FAAF9E373A35849AC79D /* AuthenticationView.swift */; };
+		0A3D3F04A13CCAA0DA325484 /* SkinInsightProApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */; };
+		15597B726EF4238573C829D6 /* NetworkService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7821CF1427D5751FFFD2A142 /* NetworkService.swift */; };
+		1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */; };
+		2AFAB1D7333A1139E1BC0A42 /* ClientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCACC036FECD051B397F0353 /* ClientDetailView.swift */; };
+		2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */; };
+		3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DED193BE032FB2C4674890 /* SplashScreen.swift */; };
+		343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */; };
+		348334A8C531C67F87DDF1F8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153D7D12B94012EC783295FE /* Models.swift */; };
+		4EBB2427D90EC33A986409F6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D25E0109231B05F82260E206 /* Assets.xcassets */; };
+		7E9C2594F07C304DD8AF8A81 /* Pods_SkinInsightPro.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FF687FA853500370B008A0D2 /* Pods_SkinInsightPro.framework */; };
+		97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */; };
+		A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */; };
+		C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FAF21605DA98E7CFB6065B /* AppLogger.swift */; };
+		C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */; };
+		C5CF42EBA3CCDAAA2B70D75B /* CompareAnalysesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20B491CA1109F282061F65E /* CompareAnalysesView.swift */; };
+		C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */; };
+		D704482C8D13C9629F0469D8 /* EditClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5042FF933D54707E95CCA8 /* EditClientView.swift */; };
+		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
+		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		153D7D12B94012EC783295FE /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		1890B23C7020F7CE0A5A0568 /* Pods-SkinInsightPro.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SkinInsightPro.debug.xcconfig"; path = "Target Support Files/Pods-SkinInsightPro/Pods-SkinInsightPro.debug.xcconfig"; sourceTree = "<group>"; };
+		2C5042FF933D54707E95CCA8 /* EditClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditClientView.swift; path = Sources/EditClientView.swift; sourceTree = SOURCE_ROOT; };
+		30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisDetailView.swift; sourceTree = "<group>"; };
+		39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDashboardView.swift; sourceTree = "<group>"; };
+		3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
+		56FAF21605DA98E7CFB6065B /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
+		615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinAnalysisInputView.swift; sourceTree = "<group>"; };
+		7821CF1427D5751FFFD2A142 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
+		78734AC763F22C9B471655FF /* Pods-SkinInsightPro.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SkinInsightPro.release.xcconfig"; path = "Target Support Files/Pods-SkinInsightPro/Pods-SkinInsightPro.release.xcconfig"; sourceTree = "<group>"; };
+		7E3BBE288D849926825AE0E1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinAnalysisResultsView.swift; sourceTree = "<group>"; };
+		8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		A20B491CA1109F282061F65E /* CompareAnalysesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompareAnalysesView.swift; path = Sources/CompareAnalysesView.swift; sourceTree = SOURCE_ROOT; };
+		B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddClientView.swift; sourceTree = "<group>"; };
+		B8DED193BE032FB2C4674890 /* SplashScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreen.swift; sourceTree = "<group>"; };
+		BCACC036FECD051B397F0353 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
+		BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
+		C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SkinInsightPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D25E0109231B05F82260E206 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInsightProApp.swift; sourceTree = "<group>"; };
+		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		E0A7871AD52950DF0B759860 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		E22DC34D7496C67D134CED73 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		F6C2FAAF9E373A35849AC79D /* AuthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationView.swift; sourceTree = "<group>"; };
+		FF687FA853500370B008A0D2 /* Pods_SkinInsightPro.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_SkinInsightPro.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		BCA99078DC1FF642F1DCD4AF /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7E9C2594F07C304DD8AF8A81 /* Pods_SkinInsightPro.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		56321230454331215E52188B = {
+			isa = PBXGroup;
+			children = (
+				D25E0109231B05F82260E206 /* Assets.xcassets */,
+				E83884BDC6E9FA4482FA278D /* Resources */,
+				FADFBF0CD875779BF3632B53 /* Sources */,
+				AFA7D268F215B4B62E9EC34A /* Products */,
+				F17A406A563F652BFF74697B /* Pods */,
+				6F9A5938196E567120EE922F /* Frameworks */,
+			);
+			indentWidth = 2;
+			sourceTree = "<group>";
+			tabWidth = 2;
+			usesTabs = 0;
+		};
+		6F9A5938196E567120EE922F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FF687FA853500370B008A0D2 /* Pods_SkinInsightPro.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AFA7D268F215B4B62E9EC34A /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E83884BDC6E9FA4482FA278D /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				7E3BBE288D849926825AE0E1 /* PrivacyInfo.xcprivacy */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		F17A406A563F652BFF74697B /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				1890B23C7020F7CE0A5A0568 /* Pods-SkinInsightPro.debug.xcconfig */,
+				78734AC763F22C9B471655FF /* Pods-SkinInsightPro.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		FADFBF0CD875779BF3632B53 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */,
+				30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */,
+				3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */,
+				56FAF21605DA98E7CFB6065B /* AppLogger.swift */,
+				BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */,
+				F6C2FAAF9E373A35849AC79D /* AuthenticationView.swift */,
+				39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */,
+				BCACC036FECD051B397F0353 /* ClientDetailView.swift */,
+				E0A7871AD52950DF0B759860 /* Info.plist */,
+				8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */,
+				153D7D12B94012EC783295FE /* Models.swift */,
+				7821CF1427D5751FFFD2A142 /* NetworkService.swift */,
+				DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */,
+				615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */,
+				85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */,
+				D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */,
+				B8DED193BE032FB2C4674890 /* SplashScreen.swift */,
+				E22DC34D7496C67D134CED73 /* ThemeManager.swift */,
+				2C5042FF933D54707E95CCA8 /* EditClientView.swift */,
+				A20B491CA1109F282061F65E /* CompareAnalysesView.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		8BA87A1D18CE995DE9C441A3 /* SkinInsightPro */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9B9CA442C30C4DC392006BCF /* Build configuration list for PBXNativeTarget "SkinInsightPro" */;
+			buildPhases = (
+				5A2F8E0F1708D17081FC1CF4 /* [CP] Check Pods Manifest.lock */,
+				8088A197B734D23F71C784B8 /* Sources */,
+				DCBA51C52AD97379BB1FCADD /* Resources */,
+				BCA99078DC1FF642F1DCD4AF /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SkinInsightPro;
+			productName = SkinInsightPro;
+			productReference = C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		B18E616F2FDC56A919D55144 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1620;
+				TargetAttributes = {
+				};
+			};
+			buildConfigurationList = 1F1F2430B272729D16CD93A6 /* Build configuration list for PBXProject "SkinInsightPro" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 56321230454331215E52188B;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 54;
+			productRefGroup = AFA7D268F215B4B62E9EC34A /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				8BA87A1D18CE995DE9C441A3 /* SkinInsightPro */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		DCBA51C52AD97379BB1FCADD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4EBB2427D90EC33A986409F6 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		5A2F8E0F1708D17081FC1CF4 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-SkinInsightPro-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		8088A197B734D23F71C784B8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				01C73F7497D77BEDBEE4D32C /* AddClientView.swift in Sources */,
+				343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */,
+				A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */,
+				C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */,
+				97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */,
+				04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */,
+				2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */,
+				2AFAB1D7333A1139E1BC0A42 /* ClientDetailView.swift in Sources */,
+				E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */,
+				348334A8C531C67F87DDF1F8 /* Models.swift in Sources */,
+				15597B726EF4238573C829D6 /* NetworkService.swift in Sources */,
+				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,
+				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,
+				C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */,
+				0A3D3F04A13CCAA0DA325484 /* SkinInsightProApp.swift in Sources */,
+				3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */,
+				F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */,
+				D704482C8D13C9629F0469D8 /* EditClientView.swift in Sources */,
+				C5CF42EBA3CCDAAA2B70D75B /* CompareAnalysesView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		0E3D5C5F58E1A51F32A8C0CA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		45DBD88AAFB7CA04A9849202 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A828736D28E3CF3BA5875ADE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1890B23C7020F7CE0A5A0568 /* Pods-SkinInsightPro.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				BUNDLE_DISPLAY_NAME = "Skin Insight Pro";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
+				INFOPLIST_FILE = Sources/Info.plist;
+				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dustinschaaf.skininsightpro;
+				PRODUCT_NAME = SkinInsightPro;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E905A95BB9C88E05CFED2E5F /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 78734AC763F22C9B471655FF /* Pods-SkinInsightPro.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
+				BUNDLE_DISPLAY_NAME = "Skin Insight Pro";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
+				INFOPLIST_FILE = Sources/Info.plist;
+				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dustinschaaf.skininsightpro;
+				PRODUCT_NAME = SkinInsightPro;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		1F1F2430B272729D16CD93A6 /* Build configuration list for PBXProject "SkinInsightPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				45DBD88AAFB7CA04A9849202 /* Debug */,
+				0E3D5C5F58E1A51F32A8C0CA /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9B9CA442C30C4DC392006BCF /* Build configuration list for PBXNativeTarget "SkinInsightPro" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A828736D28E3CF3BA5875ADE /* Debug */,
+				E905A95BB9C88E05CFED2E5F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = B18E616F2FDC56A919D55144 /* Project object */;
+}
