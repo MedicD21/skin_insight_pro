@@ -501,6 +501,7 @@ struct SkinAnalysisResultsView: View {
                     clientMedicalHistory: client.medicalHistory,
                     clientAllergies: client.allergies,
                     clientKnownSensitivities: client.knownSensitivities,
+                    clientMedications: client.medications,
                     productsUsed: productsUsed.isEmpty ? nil : productsUsed,
                     treatmentsPerformed: treatmentsPerformed.isEmpty ? nil : treatmentsPerformed
                 )

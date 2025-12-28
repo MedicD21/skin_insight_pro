@@ -11,11 +11,14 @@ struct AddClientView: View {
     @State private var medicalHistory = ""
     @State private var allergies = ""
     @State private var knownSensitivities = ""
+    @State private var medications = ""
     @State private var isLoading = false
+    @State private var showError = false
+    @State private var errorMessage = ""
     @FocusState private var focusedField: Field?
-    
+
     enum Field {
-        case name, email, phone, notes, medicalHistory, allergies, knownSensitivities
+        case name, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications
     }
     
     var body: some View {
@@ -59,9 +62,14 @@ struct AddClientView: View {
                     .disabled(!isFormValid)
                 }
             }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
-    
+
     private var basicInfoSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Basic Information")
@@ -143,6 +151,14 @@ struct AddClientView: View {
                     placeholder: "Skin sensitivities or reactions to specific treatments",
                     text: $knownSensitivities,
                     field: .knownSensitivities
+                )
+
+                textEditorField(
+                    title: "Current Medications",
+                    icon: "pills",
+                    placeholder: "List any medications the client is currently taking",
+                    text: $medications,
+                    field: .medications
                 )
             }
         }
@@ -243,7 +259,7 @@ struct AddClientView: View {
     private func saveClient() {
         focusedField = nil
         isLoading = true
-        
+
         let newClient = AppClient(
             id: nil,
             userId: AuthenticationManager.shared.currentUser?.id,
@@ -253,13 +269,21 @@ struct AddClientView: View {
             notes: notes,
             medicalHistory: medicalHistory.isEmpty ? nil : medicalHistory,
             allergies: allergies.isEmpty ? nil : allergies,
-            knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities
+            knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
+            medications: medications.isEmpty ? nil : medications
         )
-        
+
         Task {
             await viewModel.addClient(newClient)
             isLoading = false
-            dismiss()
+
+            if viewModel.showError {
+                errorMessage = viewModel.errorMessage
+                showError = true
+                viewModel.showError = false
+            } else {
+                dismiss()
+            }
         }
     }
 }

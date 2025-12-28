@@ -1,8 +1,9 @@
 import Foundation
 import SwiftUI
+import AuthenticationServices
 
 @MainActor
-class AuthenticationManager: ObservableObject {
+class AuthenticationManager: NSObject, ObservableObject {
     static let shared = AuthenticationManager()
     
     @Published var isAuthenticated = false
@@ -15,8 +16,10 @@ class AuthenticationManager: ObservableObject {
     private let loginProviderKey = "login_provider"
     private let guestModeKey = "guest_mode"
     private let guestUserIdKey = "guest_user_id"
-    
-    private init() {
+    private let appleUserIdKey = "apple_user_id"
+
+    private override init() {
+        super.init()
         checkAuthStatus()
     }
     
@@ -101,8 +104,65 @@ class AuthenticationManager: ObservableObject {
     
     func deleteAccount() async throws {
         guard let userId = currentUser?.id, !isGuestMode else { return }
-        
+
         try await NetworkService.shared.deleteUser(userId: userId)
         logout()
+    }
+
+    func signInWithApple() async throws {
+        let appleIDProvider = ASAuthorizationAppleIDProvider()
+        let request = appleIDProvider.createRequest()
+        request.requestedScopes = [.fullName, .email]
+
+        let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+        authorizationController.delegate = self
+        authorizationController.performRequests()
+    }
+
+    private func handleAppleSignIn(userId: String, email: String?, fullName: PersonNameComponents?) async throws {
+        let displayEmail = email ?? "Apple User"
+
+        let user = try await NetworkService.shared.createOrLoginAppleUser(
+            appleUserId: userId,
+            email: displayEmail,
+            fullName: fullName
+        )
+
+        if let serverUserId = user.id {
+            UserDefaults.standard.set(serverUserId, forKey: userIdKey)
+            UserDefaults.standard.set(displayEmail, forKey: userEmailKey)
+            UserDefaults.standard.set("apple", forKey: loginProviderKey)
+            UserDefaults.standard.set(userId, forKey: appleUserIdKey)
+            UserDefaults.standard.removeObject(forKey: guestModeKey)
+            UserDefaults.standard.removeObject(forKey: guestUserIdKey)
+
+            currentUser = user
+            isGuestMode = false
+            isAuthenticated = true
+        }
+    }
+}
+
+extension AuthenticationManager: ASAuthorizationControllerDelegate {
+    nonisolated func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        Task { @MainActor in
+            if let appleIDCredential = authorization.credential as? ASAuthorizationAppleIDCredential {
+                let userId = appleIDCredential.user
+                let email = appleIDCredential.email
+                let fullName = appleIDCredential.fullName
+
+                do {
+                    try await handleAppleSignIn(userId: userId, email: email, fullName: fullName)
+                } catch {
+                    print("Apple Sign In error: \(error)")
+                }
+            }
+        }
+    }
+
+    nonisolated func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        Task { @MainActor in
+            print("Apple Sign In failed: \(error.localizedDescription)")
+        }
     }
 }

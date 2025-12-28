@@ -21,15 +21,19 @@ struct ProfileView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         profileHeader
-                        
+
                         if authManager.isGuestMode {
                             guestModeCard
                         }
-                        
+
+                        if authManager.currentUser?.isAdmin == true && !authManager.isGuestMode {
+                            adminSection
+                        }
+
                         accountSection
-                        
+
                         aboutSection
-                        
+
                         logoutButton
                         
                         if !authManager.isGuestMode {
@@ -156,7 +160,43 @@ struct ProfileView: View {
                 .stroke(theme.accent.opacity(0.3), lineWidth: 1)
         )
     }
-    
+
+    private var adminSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Admin Tools")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                Image(systemName: "checkmark.shield.fill")
+                    .foregroundColor(theme.accent)
+            }
+
+            VStack(spacing: 0) {
+                NavigationLink(destination: ProductCatalogView()) {
+                    navigationRow(icon: "shippingbox.fill", title: "Product Catalog", subtitle: "Manage spa products")
+                }
+
+                Divider()
+                    .padding(.leading, 56)
+
+                NavigationLink(destination: AIRulesView()) {
+                    navigationRow(icon: "brain", title: "AI Recommendation Rules", subtitle: "Configure AI product suggestions")
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: theme.radiusLarge)
+                    .fill(theme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radiusLarge)
+                    .stroke(theme.cardBorder, lineWidth: 1)
+            )
+        }
+    }
+
     private var accountSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Account")
@@ -258,23 +298,49 @@ struct ProfileView: View {
         }
     }
     
+    private func navigationRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(theme.accent)
+                .frame(width: 24)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(theme.primaryText)
+
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundColor(theme.secondaryText)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(theme.tertiaryText)
+        }
+        .padding(16)
+    }
+
     private func settingRow(icon: String, title: String, value: String) -> some View {
         HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.system(size: 20))
                 .foregroundColor(theme.accent)
                 .frame(width: 24)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 14))
                     .foregroundColor(theme.secondaryText)
-                
+
                 Text(value)
                     .font(.system(size: 16))
                     .foregroundColor(theme.primaryText)
             }
-            
+
             Spacer()
         }
         .padding(16)

@@ -4,12 +4,14 @@ struct AppUser: Identifiable, Hashable, Codable {
     var id: String?
     var email: String?
     var provider: String?
+    var isAdmin: Bool?
     var createdAt: String?
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case email
         case provider
+        case isAdmin = "is_admin"
         case createdAt = "created_at"
     }
 }
@@ -24,7 +26,8 @@ struct AppClient: Identifiable, Hashable, Codable {
     var medicalHistory: String?
     var allergies: String?
     var knownSensitivities: String?
-    
+    var medications: String?
+
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
@@ -35,6 +38,7 @@ struct AppClient: Identifiable, Hashable, Codable {
         case medicalHistory = "medical_history"
         case allergies
         case knownSensitivities = "known_sensitivities"
+        case medications
     }
 }
 
@@ -139,7 +143,8 @@ struct CreateClientRequest: Codable {
         let medicalHistory: String
         let allergies: String
         let knownSensitivities: String
-        
+        let medications: String
+
         enum CodingKeys: String, CodingKey {
             case id
             case userId = "user_id"
@@ -150,6 +155,7 @@ struct CreateClientRequest: Codable {
             case medicalHistory = "medical_history"
             case allergies
             case knownSensitivities = "known_sensitivities"
+            case medications
         }
     }
 }
@@ -175,9 +181,10 @@ struct CreateAnalysisRequest: Codable {
         let clientMedicalHistory: String?
         let clientAllergies: String?
         let clientKnownSensitivities: String?
+        let clientMedications: String?
         let productsUsed: String?
         let treatmentsPerformed: String?
-        
+
         enum CodingKeys: String, CodingKey {
             case id
             case clientId = "client_id"
@@ -188,9 +195,26 @@ struct CreateAnalysisRequest: Codable {
             case clientMedicalHistory = "client_medical_history"
             case clientAllergies = "client_allergies"
             case clientKnownSensitivities = "client_known_sensitivities"
+            case clientMedications = "client_medications"
             case productsUsed = "products_used"
             case treatmentsPerformed = "treatments_performed"
         }
+    }
+}
+
+struct AppleLoginRequest: Codable {
+    let appId: String
+    let appleUserId: String
+    let email: String
+    let firstName: String?
+    let lastName: String?
+
+    enum CodingKeys: String, CodingKey {
+        case appId = "app_id"
+        case appleUserId = "apple_user_id"
+        case email
+        case firstName = "first_name"
+        case lastName = "last_name"
     }
 }
 
@@ -208,7 +232,7 @@ struct AIAnalysisResponse: Codable {
     let recommendations: [String]?
     let medicalConsiderations: [String]?
     let progressNotes: [String]?
-    
+
     enum CodingKeys: String, CodingKey {
         case skinType = "skin_type"
         case hydrationLevel = "hydration_level"
@@ -219,5 +243,125 @@ struct AIAnalysisResponse: Codable {
         case recommendations
         case medicalConsiderations = "medical_considerations"
         case progressNotes = "progress_notes"
+    }
+}
+
+struct Product: Identifiable, Hashable, Codable {
+    var id: String?
+    var userId: String?
+    var name: String?
+    var brand: String?
+    var category: String?
+    var description: String?
+    var ingredients: String?
+    var skinTypes: [String]?
+    var concerns: [String]?
+    var isActive: Bool?
+    var createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case name
+        case brand
+        case category
+        case description
+        case ingredients
+        case skinTypes = "skin_types"
+        case concerns
+        case isActive = "is_active"
+        case createdAt = "created_at"
+    }
+}
+
+struct AIRule: Identifiable, Hashable, Codable {
+    var id: String?
+    var userId: String?
+    var name: String?
+    var condition: String?
+    var productId: String?
+    var priority: Int?
+    var isActive: Bool?
+    var createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId = "user_id"
+        case name
+        case condition
+        case productId = "product_id"
+        case priority
+        case isActive = "is_active"
+        case createdAt = "created_at"
+    }
+}
+
+struct CreateProductRequest: Codable {
+    let appId: String
+    let tableName: String
+    let data: ProductData
+
+    enum CodingKeys: String, CodingKey {
+        case appId = "app_id"
+        case tableName = "table_name"
+        case data
+    }
+
+    struct ProductData: Codable {
+        var id: String?
+        let userId: String
+        let name: String
+        let brand: String
+        let category: String
+        let description: String
+        let ingredients: String
+        let skinTypes: [String]
+        let concerns: [String]
+        let isActive: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case userId = "user_id"
+            case name
+            case brand
+            case category
+            case description
+            case ingredients
+            case skinTypes = "skin_types"
+            case concerns
+            case isActive = "is_active"
+        }
+    }
+}
+
+struct CreateAIRuleRequest: Codable {
+    let appId: String
+    let tableName: String
+    let data: AIRuleData
+
+    enum CodingKeys: String, CodingKey {
+        case appId = "app_id"
+        case tableName = "table_name"
+        case data
+    }
+
+    struct AIRuleData: Codable {
+        var id: String?
+        let userId: String
+        let name: String
+        let condition: String
+        let productId: String
+        let priority: Int
+        let isActive: Bool
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case userId = "user_id"
+            case name
+            case condition
+            case productId = "product_id"
+            case priority
+            case isActive = "is_active"
+        }
     }
 }

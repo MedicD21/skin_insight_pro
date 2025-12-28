@@ -576,6 +576,7 @@ struct SkinAnalysisInputView: View {
                     medicalHistory: client.medicalHistory,
                     allergies: client.allergies,
                     knownSensitivities: client.knownSensitivities,
+                    medications: client.medications,
                     manualSkinType: manualSkinType.isEmpty ? nil : manualSkinType,
                     manualHydrationLevel: manualHydrationLevel.isEmpty ? nil : manualHydrationLevel,
                     manualSensitivity: manualSensitivity.isEmpty ? nil : manualSensitivity,

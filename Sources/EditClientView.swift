@@ -12,15 +12,16 @@ struct EditClientView: View {
     @State private var medicalHistory: String
     @State private var allergies: String
     @State private var knownSensitivities: String
+    @State private var medications: String
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
     @FocusState private var focusedField: Field?
-    
+
     enum Field {
-        case name, email, phone, notes, medicalHistory, allergies, knownSensitivities
+        case name, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications
     }
-    
+
     init(client: AppClient, onUpdate: @escaping (AppClient) -> Void) {
         self.client = client
         self.onUpdate = onUpdate
@@ -31,6 +32,7 @@ struct EditClientView: View {
         _medicalHistory = State(initialValue: client.medicalHistory ?? "")
         _allergies = State(initialValue: client.allergies ?? "")
         _knownSensitivities = State(initialValue: client.knownSensitivities ?? "")
+        _medications = State(initialValue: client.medications ?? "")
     }
     
     var body: some View {
@@ -164,6 +166,14 @@ struct EditClientView: View {
                     text: $knownSensitivities,
                     field: .knownSensitivities
                 )
+
+                textEditorField(
+                    title: "Current Medications",
+                    icon: "pills",
+                    placeholder: "List any medications the client is currently taking",
+                    text: $medications,
+                    field: .medications
+                )
             }
         }
         .padding(20)
@@ -273,7 +283,8 @@ struct EditClientView: View {
             notes: notes.isEmpty ? nil : notes,
             medicalHistory: medicalHistory.isEmpty ? nil : medicalHistory,
             allergies: allergies.isEmpty ? nil : allergies,
-            knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities
+            knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
+            medications: medications.isEmpty ? nil : medications
         )
         
         Task {

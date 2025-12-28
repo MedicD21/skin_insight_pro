@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -14,37 +14,43 @@
 		1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */; };
 		2AFAB1D7333A1139E1BC0A42 /* ClientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCACC036FECD051B397F0353 /* ClientDetailView.swift */; };
 		2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */; };
+		2BE23140B0F1AE0A04F781FA /* EditClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 198EB072500C9A2B066666D9 /* EditClientView.swift */; };
 		3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DED193BE032FB2C4674890 /* SplashScreen.swift */; };
 		343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */; };
 		348334A8C531C67F87DDF1F8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153D7D12B94012EC783295FE /* Models.swift */; };
+		43E5BAB24A71A66973900985 /* AIRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA15425CAA55F301D0392AF /* AIRulesView.swift */; };
 		4EBB2427D90EC33A986409F6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D25E0109231B05F82260E206 /* Assets.xcassets */; };
-		7E9C2594F07C304DD8AF8A81 /* Pods_SkinInsightPro.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FF687FA853500370B008A0D2 /* Pods_SkinInsightPro.framework */; };
+		79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9FEA58CEC2E5C739E72C07D /* ProductCatalogView.swift */; };
+		80F8C9DA339CC87E395D9727 /* AddProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82E315965DF68F10E98272F2 /* AddProductView.swift */; };
+		8AE99D86C6B2DBF93B80C12D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 18A98890270A640B86DA35DB /* Assets.xcassets */; };
+		95E3875A1DEA138F758B6FF8 /* CompareAnalysesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A963AFF4EDAD6BA828FC7C09 /* CompareAnalysesView.swift */; };
 		97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */; };
+		9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E2486C6F53FA4E888F8DCE /* SignInWithAppleButton.swift */; };
 		A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */; };
 		C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FAF21605DA98E7CFB6065B /* AppLogger.swift */; };
 		C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */; };
-		C5CF42EBA3CCDAAA2B70D75B /* CompareAnalysesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20B491CA1109F282061F65E /* CompareAnalysesView.swift */; };
 		C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */; };
-		D704482C8D13C9629F0469D8 /* EditClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5042FF933D54707E95CCA8 /* EditClientView.swift */; };
 		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
 		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		153D7D12B94012EC783295FE /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
-		1890B23C7020F7CE0A5A0568 /* Pods-SkinInsightPro.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SkinInsightPro.debug.xcconfig"; path = "Target Support Files/Pods-SkinInsightPro/Pods-SkinInsightPro.debug.xcconfig"; sourceTree = "<group>"; };
-		2C5042FF933D54707E95CCA8 /* EditClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = EditClientView.swift; path = Sources/EditClientView.swift; sourceTree = SOURCE_ROOT; };
+		18A98890270A640B86DA35DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		198EB072500C9A2B066666D9 /* EditClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditClientView.swift; sourceTree = "<group>"; };
 		30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisDetailView.swift; sourceTree = "<group>"; };
 		39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDashboardView.swift; sourceTree = "<group>"; };
 		3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
 		56FAF21605DA98E7CFB6065B /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinAnalysisInputView.swift; sourceTree = "<group>"; };
+		6DA15425CAA55F301D0392AF /* AIRulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRulesView.swift; sourceTree = "<group>"; };
+		73E2486C6F53FA4E888F8DCE /* SignInWithAppleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInWithAppleButton.swift; sourceTree = "<group>"; };
 		7821CF1427D5751FFFD2A142 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
-		78734AC763F22C9B471655FF /* Pods-SkinInsightPro.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SkinInsightPro.release.xcconfig"; path = "Target Support Files/Pods-SkinInsightPro/Pods-SkinInsightPro.release.xcconfig"; sourceTree = "<group>"; };
 		7E3BBE288D849926825AE0E1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		82E315965DF68F10E98272F2 /* AddProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductView.swift; sourceTree = "<group>"; };
 		85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinAnalysisResultsView.swift; sourceTree = "<group>"; };
 		8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		A20B491CA1109F282061F65E /* CompareAnalysesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CompareAnalysesView.swift; path = Sources/CompareAnalysesView.swift; sourceTree = SOURCE_ROOT; };
+		A963AFF4EDAD6BA828FC7C09 /* CompareAnalysesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareAnalysesView.swift; sourceTree = "<group>"; };
 		B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddClientView.swift; sourceTree = "<group>"; };
 		B8DED193BE032FB2C4674890 /* SplashScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreen.swift; sourceTree = "<group>"; };
 		BCACC036FECD051B397F0353 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
@@ -55,20 +61,10 @@
 		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		E0A7871AD52950DF0B759860 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		E22DC34D7496C67D134CED73 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		E9FEA58CEC2E5C739E72C07D /* ProductCatalogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductCatalogView.swift; sourceTree = "<group>"; };
+		EBF33D873CEAFD072AA32694 /* SkinInsightPro.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SkinInsightPro.entitlements; sourceTree = "<group>"; };
 		F6C2FAAF9E373A35849AC79D /* AuthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationView.swift; sourceTree = "<group>"; };
-		FF687FA853500370B008A0D2 /* Pods_SkinInsightPro.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_SkinInsightPro.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		BCA99078DC1FF642F1DCD4AF /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				7E9C2594F07C304DD8AF8A81 /* Pods_SkinInsightPro.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		56321230454331215E52188B = {
@@ -78,21 +74,11 @@
 				E83884BDC6E9FA4482FA278D /* Resources */,
 				FADFBF0CD875779BF3632B53 /* Sources */,
 				AFA7D268F215B4B62E9EC34A /* Products */,
-				F17A406A563F652BFF74697B /* Pods */,
-				6F9A5938196E567120EE922F /* Frameworks */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
 			tabWidth = 2;
 			usesTabs = 0;
-		};
-		6F9A5938196E567120EE922F /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				FF687FA853500370B008A0D2 /* Pods_SkinInsightPro.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
 		};
 		AFA7D268F215B4B62E9EC34A /* Products */ = {
 			isa = PBXGroup;
@@ -110,39 +96,35 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
-		F17A406A563F652BFF74697B /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				1890B23C7020F7CE0A5A0568 /* Pods-SkinInsightPro.debug.xcconfig */,
-				78734AC763F22C9B471655FF /* Pods-SkinInsightPro.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
-			sourceTree = "<group>";
-		};
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
 				B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */,
+				82E315965DF68F10E98272F2 /* AddProductView.swift */,
+				6DA15425CAA55F301D0392AF /* AIRulesView.swift */,
 				30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */,
 				3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */,
 				56FAF21605DA98E7CFB6065B /* AppLogger.swift */,
+				18A98890270A640B86DA35DB /* Assets.xcassets */,
 				BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */,
 				F6C2FAAF9E373A35849AC79D /* AuthenticationView.swift */,
 				39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */,
 				BCACC036FECD051B397F0353 /* ClientDetailView.swift */,
+				A963AFF4EDAD6BA828FC7C09 /* CompareAnalysesView.swift */,
+				198EB072500C9A2B066666D9 /* EditClientView.swift */,
 				E0A7871AD52950DF0B759860 /* Info.plist */,
 				8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */,
 				153D7D12B94012EC783295FE /* Models.swift */,
 				7821CF1427D5751FFFD2A142 /* NetworkService.swift */,
+				E9FEA58CEC2E5C739E72C07D /* ProductCatalogView.swift */,
 				DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */,
+				73E2486C6F53FA4E888F8DCE /* SignInWithAppleButton.swift */,
 				615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */,
 				85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */,
+				EBF33D873CEAFD072AA32694 /* SkinInsightPro.entitlements */,
 				D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */,
 				B8DED193BE032FB2C4674890 /* SplashScreen.swift */,
 				E22DC34D7496C67D134CED73 /* ThemeManager.swift */,
-				2C5042FF933D54707E95CCA8 /* EditClientView.swift */,
-				A20B491CA1109F282061F65E /* CompareAnalysesView.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -154,16 +136,16 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9B9CA442C30C4DC392006BCF /* Build configuration list for PBXNativeTarget "SkinInsightPro" */;
 			buildPhases = (
-				5A2F8E0F1708D17081FC1CF4 /* [CP] Check Pods Manifest.lock */,
 				8088A197B734D23F71C784B8 /* Sources */,
 				DCBA51C52AD97379BB1FCADD /* Resources */,
-				BCA99078DC1FF642F1DCD4AF /* Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = SkinInsightPro;
+			packageProductDependencies = (
+			);
 			productName = SkinInsightPro;
 			productReference = C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */;
 			productType = "com.apple.product-type.application";
@@ -176,8 +158,6 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1620;
-				TargetAttributes = {
-				};
 			};
 			buildConfigurationList = 1F1F2430B272729D16CD93A6 /* Build configuration list for PBXProject "SkinInsightPro" */;
 			compatibilityVersion = "Xcode 14.0";
@@ -189,8 +169,7 @@
 			);
 			mainGroup = 56321230454331215E52188B;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 54;
-			productRefGroup = AFA7D268F215B4B62E9EC34A /* Products */;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -204,43 +183,21 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8AE99D86C6B2DBF93B80C12D /* Assets.xcassets in Resources */,
 				4EBB2427D90EC33A986409F6 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
-/* Begin PBXShellScriptBuildPhase section */
-		5A2F8E0F1708D17081FC1CF4 /* [CP] Check Pods Manifest.lock */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
-				"${PODS_ROOT}/Manifest.lock",
-			);
-			name = "[CP] Check Pods Manifest.lock";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-				"$(DERIVED_FILE_DIR)/Pods-SkinInsightPro-checkManifestLockResult.txt",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
-			showEnvVarsInLog = 0;
-		};
-/* End PBXShellScriptBuildPhase section */
-
 /* Begin PBXSourcesBuildPhase section */
 		8088A197B734D23F71C784B8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				43E5BAB24A71A66973900985 /* AIRulesView.swift in Sources */,
 				01C73F7497D77BEDBEE4D32C /* AddClientView.swift in Sources */,
+				80F8C9DA339CC87E395D9727 /* AddProductView.swift in Sources */,
 				343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */,
 				A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */,
 				C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */,
@@ -248,17 +205,19 @@
 				04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */,
 				2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */,
 				2AFAB1D7333A1139E1BC0A42 /* ClientDetailView.swift in Sources */,
+				95E3875A1DEA138F758B6FF8 /* CompareAnalysesView.swift in Sources */,
+				2BE23140B0F1AE0A04F781FA /* EditClientView.swift in Sources */,
 				E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */,
 				348334A8C531C67F87DDF1F8 /* Models.swift in Sources */,
 				15597B726EF4238573C829D6 /* NetworkService.swift in Sources */,
+				79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */,
 				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,
+				9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */,
 				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,
 				C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */,
 				0A3D3F04A13CCAA0DA325484 /* SkinInsightProApp.swift in Sources */,
 				3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */,
 				F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */,
-				D704482C8D13C9629F0469D8 /* EditClientView.swift in Sources */,
-				C5CF42EBA3CCDAAA2B70D75B /* CompareAnalysesView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,11 +343,11 @@
 		};
 		A828736D28E3CF3BA5875ADE /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1890B23C7020F7CE0A5A0568 /* Pods-SkinInsightPro.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				BUNDLE_DISPLAY_NAME = "Skin Insight Pro";
+				CODE_SIGN_ENTITLEMENTS = Sources/SkinInsightPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
@@ -409,11 +368,11 @@
 		};
 		E905A95BB9C88E05CFED2E5F /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 78734AC763F22C9B471655FF /* Pods-SkinInsightPro.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				BUNDLE_DISPLAY_NAME = "Skin Insight Pro";
+				CODE_SIGN_ENTITLEMENTS = Sources/SkinInsightPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";

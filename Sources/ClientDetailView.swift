@@ -196,6 +196,20 @@ struct ClientDetailView: View {
                         content: sensitivities
                     )
                 }
+
+                if let medications = client.medications, !medications.isEmpty {
+                    if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
+                       (client.allergies != nil && !client.allergies!.isEmpty) ||
+                       (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) {
+                        Divider()
+                    }
+                    medicalInfoRow(
+                        icon: "pills",
+                        title: "Current Medications",
+                        content: medications,
+                        color: theme.accent
+                    )
+                }
             }
         }
         .padding(20)

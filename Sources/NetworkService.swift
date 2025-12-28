@@ -191,7 +191,8 @@ class NetworkService {
                 notes: client.notes ?? "",
                 medicalHistory: client.medicalHistory ?? "",
                 allergies: client.allergies ?? "",
-                knownSensitivities: client.knownSensitivities ?? ""
+                knownSensitivities: client.knownSensitivities ?? "",
+                medications: client.medications ?? ""
             )
         )
         
@@ -207,11 +208,11 @@ class NetworkService {
         
         do {
             let (data, response) = try await session.data(for: request)
-            
+
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw NetworkError.invalidResponse
             }
-            
+
             print("<- Response: Create/Update Client")
             print("<- POST: \(url.absoluteString)")
             print("<- Status Code: \(httpResponse.statusCode)")
@@ -219,17 +220,24 @@ class NetworkService {
             if let jsonString = String(data: data, encoding: .utf8) {
                 print(jsonString)
             }
-            
+
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
-            
+
             let savedClient = try JSONDecoder().decode(AppClient.self, from: data)
             return savedClient
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {
             throw CancellationError()
+        } catch let error as URLError {
+            if error.code == .notConnectedToInternet || error.code == .networkConnectionLost {
+                throw NetworkError.networkUnavailable
+            } else if error.code == .timedOut {
+                throw NetworkError.timeout
+            }
+            throw error
         } catch {
             throw error
         }
@@ -352,6 +360,7 @@ class NetworkService {
         medicalHistory: String?,
         allergies: String?,
         knownSensitivities: String?,
+        medications: String?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -391,7 +400,13 @@ class NetworkService {
             body.append("Content-Disposition: form-data; name=\"known_sensitivities\"\r\n\r\n".data(using: .utf8)!)
             body.append("\(knownSensitivities)\r\n".data(using: .utf8)!)
         }
-        
+
+        if let medications = medications, !medications.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"medications\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(medications)\r\n".data(using: .utf8)!)
+        }
+
         if let manualSkinType = manualSkinType, !manualSkinType.isEmpty {
             body.append("--\(boundary)\r\n".data(using: .utf8)!)
             body.append("Content-Disposition: form-data; name=\"manual_skin_type\"\r\n\r\n".data(using: .utf8)!)
@@ -511,6 +526,7 @@ class NetworkService {
         clientMedicalHistory: String?,
         clientAllergies: String?,
         clientKnownSensitivities: String?,
+        clientMedications: String?,
         productsUsed: String?,
         treatmentsPerformed: String?
     ) async throws -> SkinAnalysisResult {
@@ -532,6 +548,7 @@ class NetworkService {
                 clientMedicalHistory: clientMedicalHistory,
                 clientAllergies: clientAllergies,
                 clientKnownSensitivities: clientKnownSensitivities,
+                clientMedications: clientMedications,
                 productsUsed: productsUsed,
                 treatmentsPerformed: treatmentsPerformed
             )
@@ -577,6 +594,207 @@ class NetworkService {
         }
     }
     
+    func createOrLoginAppleUser(appleUserId: String, email: String, fullName: PersonNameComponents?) async throws -> AppUser {
+        let url = URL(string: "\(AppConstants.baseUrl)/data/apple-login")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        var firstName: String?
+        var lastName: String?
+        if let fullName = fullName {
+            firstName = fullName.givenName
+            lastName = fullName.familyName
+        }
+
+        let appleLoginRequest = AppleLoginRequest(
+            appId: AppConstants.appId,
+            appleUserId: appleUserId,
+            email: email,
+            firstName: firstName,
+            lastName: lastName
+        )
+
+        request.httpBody = try JSONEncoder().encode(appleLoginRequest)
+
+        print("-> Request: Apple Sign In")
+        print("-> POST: \(url.absoluteString)")
+        print("-> Parameters:")
+        if let jsonData = request.httpBody,
+           let jsonString = String(data: jsonData, encoding: .utf8) {
+            print(jsonString)
+        }
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+
+            print("<- Response: Apple Sign In")
+            print("<- POST: \(url.absoluteString)")
+            print("<- Status Code: \(httpResponse.statusCode)")
+            print("<- Response Body:")
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print(jsonString)
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw NetworkError.serverError(httpResponse.statusCode)
+            }
+
+            let user = try JSONDecoder().decode(AppUser.self, from: data)
+            return user
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
+        } catch let error as URLError {
+            if error.code == .notConnectedToInternet || error.code == .networkConnectionLost {
+                throw NetworkError.networkUnavailable
+            } else if error.code == .timedOut {
+                throw NetworkError.timeout
+            }
+            throw error
+        } catch {
+            throw error
+        }
+    }
+
+    func fetchProducts(userId: String) async throws -> [Product] {
+        var components = URLComponents(string: "\(AppConstants.baseUrl)/data")!
+        components.queryItems = [
+            URLQueryItem(name: "app_id", value: AppConstants.appId),
+            URLQueryItem(name: "table_name", value: "products"),
+            URLQueryItem(name: "user_id", value: userId)
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let products = try JSONDecoder().decode([Product].self, from: data)
+        return products
+    }
+
+    func createOrUpdateProduct(product: Product, userId: String) async throws -> Product {
+        let url = URL(string: "\(AppConstants.baseUrl)/data")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let productRequest = CreateProductRequest(
+            appId: AppConstants.appId,
+            tableName: "products",
+            data: CreateProductRequest.ProductData(
+                id: product.id,
+                userId: userId,
+                name: product.name ?? "",
+                brand: product.brand ?? "",
+                category: product.category ?? "",
+                description: product.description ?? "",
+                ingredients: product.ingredients ?? "",
+                skinTypes: product.skinTypes ?? [],
+                concerns: product.concerns ?? [],
+                isActive: product.isActive ?? true
+            )
+        )
+
+        request.httpBody = try JSONEncoder().encode(productRequest)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let savedProduct = try JSONDecoder().decode(Product.self, from: data)
+        return savedProduct
+    }
+
+    func fetchAIRules(userId: String) async throws -> [AIRule] {
+        var components = URLComponents(string: "\(AppConstants.baseUrl)/data")!
+        components.queryItems = [
+            URLQueryItem(name: "app_id", value: AppConstants.appId),
+            URLQueryItem(name: "table_name", value: "ai_rules"),
+            URLQueryItem(name: "user_id", value: userId)
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let rules = try JSONDecoder().decode([AIRule].self, from: data)
+        return rules
+    }
+
+    func createOrUpdateAIRule(rule: AIRule, userId: String) async throws -> AIRule {
+        let url = URL(string: "\(AppConstants.baseUrl)/data")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let ruleRequest = CreateAIRuleRequest(
+            appId: AppConstants.appId,
+            tableName: "ai_rules",
+            data: CreateAIRuleRequest.AIRuleData(
+                id: rule.id,
+                userId: userId,
+                name: rule.name ?? "",
+                condition: rule.condition ?? "",
+                productId: rule.productId ?? "",
+                priority: rule.priority ?? 0,
+                isActive: rule.isActive ?? true
+            )
+        )
+
+        request.httpBody = try JSONEncoder().encode(ruleRequest)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let savedRule = try JSONDecoder().decode(AIRule.self, from: data)
+        return savedRule
+    }
+
     func deleteUser(userId: String) async throws {
         var components = URLComponents(string: "\(AppConstants.baseUrl)/data")!
         components.queryItems = [
@@ -628,17 +846,36 @@ enum NetworkError: LocalizedError {
     case invalidResponse
     case serverError(Int)
     case invalidCredentials
-    
+    case networkUnavailable
+    case timeout
+
     var errorDescription: String? {
         switch self {
         case .invalidURL:
             return "Invalid URL"
         case .invalidResponse:
-            return "Invalid response from server"
+            return "Invalid response from server. Please try again."
         case .serverError(let code):
-            return "Server error: \(code)"
+            switch code {
+            case 400:
+                return "Bad request. Please check your input and try again."
+            case 401:
+                return "Authentication failed. Please log in again."
+            case 404:
+                return "Resource not found. Please contact support."
+            case 500:
+                return "Server error. Our team has been notified. Please try again later."
+            case 503:
+                return "Service temporarily unavailable. Please try again in a few moments."
+            default:
+                return "Server error (\(code)). Please try again later."
+            }
         case .invalidCredentials:
-            return "Invalid credentials"
+            return "Invalid email or password. Please try again."
+        case .networkUnavailable:
+            return "No internet connection. Please check your network and try again."
+        case .timeout:
+            return "Request timed out. Please check your connection and try again."
         }
     }
 }

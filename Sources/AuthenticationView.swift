@@ -182,17 +182,28 @@ struct AuthenticationView: View {
                 Rectangle()
                     .fill(theme.border)
                     .frame(height: 1)
-                
+
                 Text("OR")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(theme.secondaryText)
                     .padding(.horizontal, 12)
-                
+
                 Rectangle()
                     .fill(theme.border)
                     .frame(height: 1)
             }
-            
+
+            SignInWithAppleButton {
+                Task {
+                    do {
+                        try await authManager.signInWithApple()
+                    } catch {
+                        errorMessage = error.localizedDescription
+                        showError = true
+                    }
+                }
+            }
+
             Button(action: {
                 authManager.loginAsGuest()
             }) {
