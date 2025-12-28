@@ -23,7 +23,9 @@ struct ClientDetailView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         clientInfoCard
-                        
+
+                        newAnalysisButton
+
                         if hasMedicalInfo {
                             medicalInfoCard
                         }
@@ -31,7 +33,11 @@ struct ClientDetailView: View {
                         if viewModel.analyses.count >= 2 {
                             compareAnalysesButton
                         }
-                        
+
+                        if !viewModel.analyses.isEmpty {
+                            progressMetricsCard
+                        }
+
                         if viewModel.analyses.isEmpty {
                             emptyAnalysisView
                         } else {
@@ -242,6 +248,22 @@ struct ClientDetailView: View {
         }
     }
     
+    private var newAnalysisButton: some View {
+        Button(action: { showAnalysisInput = true }) {
+            HStack {
+                Spacer()
+                Image(systemName: "camera.fill")
+                Text("New Skin Analysis")
+                Spacer()
+            }
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(height: 52)
+            .background(theme.accent)
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        }
+    }
+
     private var compareAnalysesButton: some View {
         Button(action: { showCompareAnalyses = true }) {
             HStack {
@@ -256,6 +278,157 @@ struct ClientDetailView: View {
             .background(theme.accent)
             .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
         }
+    }
+
+    private var progressMetricsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .foregroundColor(theme.accent)
+                Text("Progress Metrics")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+            }
+
+            if viewModel.analyses.count >= 2 {
+                let sortedAnalyses = viewModel.analyses.sorted { ($0.createdAt ?? "") < ($1.createdAt ?? "") }
+                let first = sortedAnalyses.first
+                let last = sortedAnalyses.last
+
+                VStack(spacing: 12) {
+                    if let firstScore = first?.analysisResults?.skinHealthScore,
+                       let lastScore = last?.analysisResults?.skinHealthScore {
+                        progressMetricRow(
+                            label: "Skin Health Score",
+                            icon: "heart.fill",
+                            firstValue: firstScore,
+                            lastValue: lastScore,
+                            unit: "/10"
+                        )
+                    }
+
+                    if let firstHydration = first?.analysisResults?.hydrationLevel,
+                       let lastHydration = last?.analysisResults?.hydrationLevel {
+                        progressMetricRow(
+                            label: "Hydration Level",
+                            icon: "humidity",
+                            firstValue: firstHydration,
+                            lastValue: lastHydration,
+                            unit: "%"
+                        )
+                    }
+
+                    Divider()
+
+                    HStack {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 16))
+                            .foregroundColor(theme.accent)
+                            .frame(width: 24)
+
+                        Text("Total Analyses")
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.secondaryText)
+
+                        Spacer()
+
+                        Text("\(viewModel.analyses.count)")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(theme.primaryText)
+                    }
+
+                    if let firstDate = first?.createdAt,
+                       let lastDate = last?.createdAt {
+                        HStack {
+                            Image(systemName: "clock")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.accent)
+                                .frame(width: 24)
+
+                            Text("Tracking Since")
+                                .font(.system(size: 15))
+                                .foregroundColor(theme.secondaryText)
+
+                            Spacer()
+
+                            Text(formatProgressDate(firstDate))
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.primaryText)
+                        }
+                    }
+                }
+            } else {
+                Text("Track progress over time with multiple analyses")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .fill(theme.cardBackground)
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .stroke(theme.cardBorder, lineWidth: 1)
+        )
+    }
+
+    private func progressMetricRow(label: String, icon: String, firstValue: Int, lastValue: Int, unit: String) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(theme.accent)
+                .frame(width: 24)
+
+            Text(label)
+                .font(.system(size: 15))
+                .foregroundColor(theme.secondaryText)
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(lastValue)\(unit)")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.primaryText)
+
+                let change = lastValue - firstValue
+                HStack(spacing: 4) {
+                    if change > 0 {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.success)
+                        Text("+\(change) from first")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.success)
+                    } else if change < 0 {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.error)
+                        Text("\(change) from first")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.error)
+                    } else {
+                        Text("No change")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.secondaryText)
+                    }
+                }
+            }
+        }
+    }
+
+    private func formatProgressDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MM/dd/yyyy"
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
     
     private var analysisHistorySection: some View {
@@ -395,8 +568,7 @@ struct AnalysisRowView: View {
         let formatter = ISO8601DateFormatter()
         if let date = formatter.date(from: dateString) {
             let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .medium
-            displayFormatter.timeStyle = .short
+            displayFormatter.dateFormat = "MM/dd/yyyy hh:mm a"
             return displayFormatter.string(from: date)
         }
         return dateString

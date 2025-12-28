@@ -64,7 +64,7 @@ class SimpleForegroundLogger: ObservableObject {
   // MARK: - Initialization
   private init() {
     self.appId = AppConstants.appId
-    self.serverURL = "\(AppConstants.baseUrl)/analytics/log"
+    self.serverURL = "\(AppConstants.supabaseUrl)/analytics/log"
     // Load launch number from UserDefaults
     loadLaunchNumber()
     loadReviewData()

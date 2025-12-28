@@ -134,6 +134,9 @@ struct SkinAnalysisInputView: View {
                     )
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .dismissAnalysisInput)) { _ in
+                dismiss()
+            }
         }
     }
     
@@ -352,60 +355,66 @@ struct SkinAnalysisInputView: View {
     }
     
     private var manualInputSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                Image(systemName: "slider.horizontal.3")
-                    .foregroundColor(theme.accent)
-                Text("Manual Parameters (Optional)")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(theme.primaryText)
+        VStack(alignment: .leading, spacing: 0) {
+            DisclosureGroup {
+                VStack(spacing: 16) {
+                    Text("Override or supplement AI analysis with your professional assessment")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 8)
+
+                    inputField(
+                        title: "Skin Type",
+                        icon: "drop",
+                        placeholder: "e.g., Oily, Dry, Combination, Normal",
+                        text: $manualSkinType,
+                        field: .skinType
+                    )
+
+                    inputField(
+                        title: "Hydration Level",
+                        icon: "humidity",
+                        placeholder: "e.g., 65% or Well-hydrated",
+                        text: $manualHydrationLevel,
+                        field: .hydration
+                    )
+
+                    inputField(
+                        title: "Sensitivity",
+                        icon: "exclamationmark.triangle",
+                        placeholder: "e.g., Low, Medium, High",
+                        text: $manualSensitivity,
+                        field: .sensitivity
+                    )
+
+                    inputField(
+                        title: "Pore Condition",
+                        icon: "circle.grid.3x3",
+                        placeholder: "e.g., Enlarged, Normal, Refined",
+                        text: $manualPoreCondition,
+                        field: .pore
+                    )
+
+                    textEditorField(
+                        title: "Specific Concerns",
+                        icon: "exclamationmark.circle",
+                        placeholder: "List any specific skin concerns you observe",
+                        text: $manualConcerns,
+                        field: .concerns
+                    )
+                }
+                .padding(.bottom, 8)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "slider.horizontal.3")
+                        .foregroundColor(theme.accent)
+                    Text("Manual Parameters (Optional)")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(theme.primaryText)
+                }
             }
-            
-            Text("Override or supplement AI analysis with your professional assessment")
-                .font(.system(size: 13))
-                .foregroundColor(theme.secondaryText)
-            
-            VStack(spacing: 16) {
-                inputField(
-                    title: "Skin Type",
-                    icon: "drop",
-                    placeholder: "e.g., Oily, Dry, Combination, Normal",
-                    text: $manualSkinType,
-                    field: .skinType
-                )
-                
-                inputField(
-                    title: "Hydration Level",
-                    icon: "humidity",
-                    placeholder: "e.g., 65% or Well-hydrated",
-                    text: $manualHydrationLevel,
-                    field: .hydration
-                )
-                
-                inputField(
-                    title: "Sensitivity",
-                    icon: "exclamationmark.triangle",
-                    placeholder: "e.g., Low, Medium, High",
-                    text: $manualSensitivity,
-                    field: .sensitivity
-                )
-                
-                inputField(
-                    title: "Pore Condition",
-                    icon: "circle.grid.3x3",
-                    placeholder: "e.g., Enlarged, Normal, Refined",
-                    text: $manualPoreCondition,
-                    field: .pore
-                )
-                
-                textEditorField(
-                    title: "Specific Concerns",
-                    icon: "exclamationmark.circle",
-                    placeholder: "List any specific skin concerns you observe",
-                    text: $manualConcerns,
-                    field: .concerns
-                )
-            }
+            .tint(theme.accent)
         }
         .padding(20)
         .background(
@@ -416,36 +425,42 @@ struct SkinAnalysisInputView: View {
     }
     
     private var treatmentSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                Image(systemName: "cross.case")
-                    .foregroundColor(theme.accent)
-                Text("Products & Treatments")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(theme.primaryText)
+        VStack(alignment: .leading, spacing: 0) {
+            DisclosureGroup {
+                VStack(spacing: 16) {
+                    Text("Track products and treatments to monitor effectiveness over time")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 8)
+
+                    textEditorField(
+                        title: "Products Used",
+                        icon: "drop.triangle",
+                        placeholder: "List products applied (e.g., serums, moisturizers, cleansers)",
+                        text: $productsUsed,
+                        field: .products
+                    )
+
+                    textEditorField(
+                        title: "Treatments Performed",
+                        icon: "wand.and.stars",
+                        placeholder: "Describe treatments performed (e.g., chemical peel, microdermabrasion, facial massage)",
+                        text: $treatmentsPerformed,
+                        field: .treatments
+                    )
+                }
+                .padding(.bottom, 8)
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "cross.case")
+                        .foregroundColor(theme.accent)
+                    Text("Products & Treatments")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(theme.primaryText)
+                }
             }
-            
-            Text("Track products and treatments to monitor effectiveness over time")
-                .font(.system(size: 13))
-                .foregroundColor(theme.secondaryText)
-            
-            VStack(spacing: 16) {
-                textEditorField(
-                    title: "Products Used",
-                    icon: "drop.triangle",
-                    placeholder: "List products applied (e.g., serums, moisturizers, cleansers)",
-                    text: $productsUsed,
-                    field: .products
-                )
-                
-                textEditorField(
-                    title: "Treatments Performed",
-                    icon: "wand.and.stars",
-                    placeholder: "Describe treatments performed (e.g., chemical peel, microdermabrasion, facial massage)",
-                    text: $treatmentsPerformed,
-                    field: .treatments
-                )
-            }
+            .tint(theme.accent)
         }
         .padding(20)
         .background(

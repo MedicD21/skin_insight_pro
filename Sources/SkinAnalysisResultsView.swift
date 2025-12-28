@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let dismissAnalysisInput = Notification.Name("dismissAnalysisInput")
+}
+
 struct SkinAnalysisResultsView: View {
     @ObservedObject var theme = ThemeManager.shared
     let client: AppClient
@@ -34,7 +38,11 @@ struct SkinAnalysisResultsView: View {
                     imagePreview
                     
                     overviewCard
-                    
+
+                    if let previousAnalysis = viewModel.analyses.first {
+                        comparisonCard(previousAnalysis: previousAnalysis)
+                    }
+
                     if let concerns = analysisResult.concerns, !concerns.isEmpty {
                         concernsCard
                     }
@@ -107,38 +115,38 @@ struct SkinAnalysisResultsView: View {
             Text("Skin Analysis Overview")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundColor(theme.primaryText)
-            
+
             VStack(spacing: 12) {
                 if let skinType = analysisResult.skinType {
                     infoRow(label: "Skin Type", value: skinType.capitalized, icon: "drop")
                 }
-                
+
                 if let hydration = analysisResult.hydrationLevel {
                     infoRow(label: "Hydration Level", value: "\(hydration)%", icon: "humidity")
                 }
-                
+
                 if let sensitivity = analysisResult.sensitivity {
                     infoRow(label: "Sensitivity", value: sensitivity.capitalized, icon: "exclamationmark.triangle")
                 }
-                
+
                 if let poreCondition = analysisResult.poreCondition {
                     infoRow(label: "Pore Condition", value: poreCondition.capitalized, icon: "circle.grid.3x3")
                 }
-                
+
                 if let score = analysisResult.skinHealthScore {
                     Divider()
-                    
+
                     HStack {
                         Image(systemName: "heart.fill")
                             .font(.system(size: 20))
                             .foregroundColor(theme.accent)
-                        
+
                         Text("Skin Health Score")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(theme.primaryText)
-                        
+
                         Spacer()
-                        
+
                         Text("\(score)/10")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(theme.accent)
@@ -152,6 +160,138 @@ struct SkinAnalysisResultsView: View {
                 .fill(theme.cardBackground)
                 .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
         )
+    }
+
+    private func comparisonCard(previousAnalysis: SkinAnalysisResult) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.left.arrow.right.circle.fill")
+                    .foregroundColor(theme.accent)
+                Text("Comparison with Previous Analysis")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+            }
+
+            if let previousDate = previousAnalysis.createdAt {
+                Text("Compared to analysis from \(formatComparisonDate(previousDate))")
+                    .font(.system(size: 13))
+                    .foregroundColor(theme.secondaryText)
+            }
+
+            VStack(spacing: 12) {
+                if let currentScore = analysisResult.skinHealthScore,
+                   let previousScore = previousAnalysis.analysisResults?.skinHealthScore {
+                    comparisonRow(
+                        label: "Skin Health Score",
+                        icon: "heart.fill",
+                        currentValue: "\(currentScore)/10",
+                        previousValue: "\(previousScore)/10",
+                        change: currentScore - previousScore
+                    )
+                }
+
+                if let currentHydration = analysisResult.hydrationLevel,
+                   let previousHydration = previousAnalysis.analysisResults?.hydrationLevel {
+                    comparisonRow(
+                        label: "Hydration Level",
+                        icon: "humidity",
+                        currentValue: "\(currentHydration)%",
+                        previousValue: "\(previousHydration)%",
+                        change: currentHydration - previousHydration
+                    )
+                }
+
+                if let currentSkinType = analysisResult.skinType,
+                   let previousSkinType = previousAnalysis.analysisResults?.skinType {
+                    if currentSkinType != previousSkinType {
+                        HStack {
+                            Image(systemName: "drop")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.accent)
+                                .frame(width: 24)
+
+                            Text("Skin Type")
+                                .font(.system(size: 15))
+                                .foregroundColor(theme.secondaryText)
+
+                            Spacer()
+
+                            VStack(alignment: .trailing, spacing: 4) {
+                                Text(currentSkinType.capitalized)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(theme.primaryText)
+                                Text("was: \(previousSkinType.capitalized)")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(theme.secondaryText)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .fill(theme.accent.opacity(0.05))
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .stroke(theme.accent.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private func comparisonRow(label: String, icon: String, currentValue: String, previousValue: String, change: Int) -> some View {
+        HStack {
+            Image(systemName: icon)
+                .font(.system(size: 16))
+                .foregroundColor(theme.accent)
+                .frame(width: 24)
+
+            Text(label)
+                .font(.system(size: 15))
+                .foregroundColor(theme.secondaryText)
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(currentValue)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.primaryText)
+
+                HStack(spacing: 4) {
+                    if change > 0 {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.success)
+                        Text("+\(change)")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.success)
+                    } else if change < 0 {
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.error)
+                        Text("\(change)")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.error)
+                    } else {
+                        Text("No change")
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.secondaryText)
+                    }
+                }
+            }
+        }
+    }
+
+    private func formatComparisonDate(_ dateString: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        if let date = formatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MM/dd/yyyy"
+            return displayFormatter.string(from: date)
+        }
+        return dateString
     }
     
     private var concernsCard: some View {
@@ -507,9 +647,14 @@ struct SkinAnalysisResultsView: View {
                 )
                 
                 viewModel.addAnalysis(savedAnalysis)
-                
+
                 isSaving = false
+                // Dismiss the results view first
                 dismiss()
+                // Then dismiss the input sheet by posting a notification
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    NotificationCenter.default.post(name: .dismissAnalysisInput, object: nil)
+                }
             } catch is CancellationError {
                 isSaving = false
                 return

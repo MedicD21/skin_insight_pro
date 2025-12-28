@@ -30,13 +30,15 @@ class AuthenticationManager: NSObject, ObservableObject {
             currentUser = AppUser(id: guestUserId, email: "Guest User", provider: "guest", createdAt: nil)
             isGuestMode = true
             isAuthenticated = true
-        } else if let userId = UserDefaults.standard.string(forKey: userIdKey),
+        } else if let _ = UserDefaults.standard.string(forKey: AppConstants.accessTokenKey),
+                  let userId = UserDefaults.standard.string(forKey: AppConstants.userIdKey),
                   let email = UserDefaults.standard.string(forKey: userEmailKey) {
+            // User has valid Supabase tokens
             currentUser = AppUser(id: userId, email: email, provider: "email", createdAt: nil)
             isAuthenticated = true
             isGuestMode = false
         }
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             self.isLoading = false
         }
@@ -96,7 +98,12 @@ class AuthenticationManager: NSObject, ObservableObject {
         UserDefaults.standard.removeObject(forKey: loginProviderKey)
         UserDefaults.standard.removeObject(forKey: guestModeKey)
         UserDefaults.standard.removeObject(forKey: guestUserIdKey)
-        
+
+        // Clear Supabase tokens
+        UserDefaults.standard.removeObject(forKey: AppConstants.accessTokenKey)
+        UserDefaults.standard.removeObject(forKey: AppConstants.refreshTokenKey)
+        UserDefaults.standard.removeObject(forKey: AppConstants.userIdKey)
+
         currentUser = nil
         isGuestMode = false
         isAuthenticated = false
