@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 63;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -19,6 +19,7 @@
 		343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */; };
 		348334A8C531C67F87DDF1F8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153D7D12B94012EC783295FE /* Models.swift */; };
 		43E5BAB24A71A66973900985 /* AIRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA15425CAA55F301D0392AF /* AIRulesView.swift */; };
+		47D98A743BC65F40FEA03B78 /* ProductImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A453B1C86EEA2500EFCBA1 /* ProductImportView.swift */; };
 		4EBB2427D90EC33A986409F6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = D25E0109231B05F82260E206 /* Assets.xcassets */; };
 		79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9FEA58CEC2E5C739E72C07D /* ProductCatalogView.swift */; };
 		80F8C9DA339CC87E395D9727 /* AddProductView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82E315965DF68F10E98272F2 /* AddProductView.swift */; };
@@ -27,10 +28,10 @@
 		97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */; };
 		9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E2486C6F53FA4E888F8DCE /* SignInWithAppleButton.swift */; };
 		A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */; };
+		AC2862EB858577BBCCB79514 /* ThemedTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3174563EA1C7E08545EE5046 /* ThemedTextField.swift */; };
 		C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FAF21605DA98E7CFB6065B /* AppLogger.swift */; };
 		C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */; };
 		C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */; };
-		CBD2F4C32F01875300D076C4 /* ProductImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBD2F4C22F01875300D076C4 /* ProductImportView.swift */; };
 		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
 		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
 /* End PBXBuildFile section */
@@ -40,14 +41,16 @@
 		18A98890270A640B86DA35DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		198EB072500C9A2B066666D9 /* EditClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditClientView.swift; sourceTree = "<group>"; };
 		30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisDetailView.swift; sourceTree = "<group>"; };
+		3174563EA1C7E08545EE5046 /* ThemedTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextField.swift; sourceTree = "<group>"; };
 		39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDashboardView.swift; sourceTree = "<group>"; };
 		3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
+		41A453B1C86EEA2500EFCBA1 /* ProductImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImportView.swift; sourceTree = "<group>"; };
 		56FAF21605DA98E7CFB6065B /* AppLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLogger.swift; sourceTree = "<group>"; };
 		615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinAnalysisInputView.swift; sourceTree = "<group>"; };
 		6DA15425CAA55F301D0392AF /* AIRulesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRulesView.swift; sourceTree = "<group>"; };
 		73E2486C6F53FA4E888F8DCE /* SignInWithAppleButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInWithAppleButton.swift; sourceTree = "<group>"; };
 		7821CF1427D5751FFFD2A142 /* NetworkService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkService.swift; sourceTree = "<group>"; };
-		7E3BBE288D849926825AE0E1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7E3BBE288D849926825AE0E1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		82E315965DF68F10E98272F2 /* AddProductView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddProductView.swift; sourceTree = "<group>"; };
 		85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinAnalysisResultsView.swift; sourceTree = "<group>"; };
 		8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
@@ -56,8 +59,7 @@
 		B8DED193BE032FB2C4674890 /* SplashScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashScreen.swift; sourceTree = "<group>"; };
 		BCACC036FECD051B397F0353 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
 		BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
-		C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkinInsightPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		CBD2F4C22F01875300D076C4 /* ProductImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductImportView.swift; sourceTree = "<group>"; };
+		C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = SkinInsightPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D25E0109231B05F82260E206 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInsightProApp.swift; sourceTree = "<group>"; };
 		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -101,7 +103,6 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				CBD2F4C22F01875300D076C4 /* ProductImportView.swift */,
 				B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */,
 				82E315965DF68F10E98272F2 /* AddProductView.swift */,
 				6DA15425CAA55F301D0392AF /* AIRulesView.swift */,
@@ -120,6 +121,7 @@
 				153D7D12B94012EC783295FE /* Models.swift */,
 				7821CF1427D5751FFFD2A142 /* NetworkService.swift */,
 				E9FEA58CEC2E5C739E72C07D /* ProductCatalogView.swift */,
+				41A453B1C86EEA2500EFCBA1 /* ProductImportView.swift */,
 				DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */,
 				73E2486C6F53FA4E888F8DCE /* SignInWithAppleButton.swift */,
 				615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */,
@@ -127,6 +129,7 @@
 				EBF33D873CEAFD072AA32694 /* SkinInsightPro.entitlements */,
 				D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */,
 				B8DED193BE032FB2C4674890 /* SplashScreen.swift */,
+				3174563EA1C7E08545EE5046 /* ThemedTextField.swift */,
 				E22DC34D7496C67D134CED73 /* ThemeManager.swift */,
 			);
 			path = Sources;
@@ -172,6 +175,7 @@
 			);
 			mainGroup = 56321230454331215E52188B;
 			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -213,14 +217,15 @@
 				348334A8C531C67F87DDF1F8 /* Models.swift in Sources */,
 				15597B726EF4238573C829D6 /* NetworkService.swift in Sources */,
 				79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */,
+				47D98A743BC65F40FEA03B78 /* ProductImportView.swift in Sources */,
 				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,
-				CBD2F4C32F01875300D076C4 /* ProductImportView.swift in Sources */,
 				9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */,
 				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,
 				C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */,
 				0A3D3F04A13CCAA0DA325484 /* SkinInsightProApp.swift in Sources */,
 				3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */,
 				F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */,
+				AC2862EB858577BBCCB79514 /* ThemedTextField.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -353,7 +358,6 @@
 				CODE_SIGN_ENTITLEMENTS = Sources/SkinInsightPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 286LKF859M;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
 				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;
@@ -379,7 +383,6 @@
 				CODE_SIGN_ENTITLEMENTS = Sources/SkinInsightPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 286LKF859M;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
 				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;

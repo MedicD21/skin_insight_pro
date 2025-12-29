@@ -14,7 +14,8 @@ final class ThemeManager: ObservableObject {
     }
     
     var tertiaryBackground: Color {
-        Color(light: Color(hex: "F0F0F0"), dark: Color(hex: "2C2C2E"))
+        // Slightly cooler tint in light mode to help inputs stand out on white cards
+        Color(light: Color(hex: "F6F7FA"), dark: Color(hex: "2C2C2E"))
     }
     
     var cardBackground: Color {
@@ -42,7 +43,7 @@ final class ThemeManager: ObservableObject {
     }
     
     var border: Color {
-        Color(light: Color(hex: "E5E7EB"), dark: Color(hex: "38383A"))
+        Color(light: Color(hex: "CFD5DD"), dark: Color(hex: "38383A"))
     }
     
     var cardBorder: Color {
@@ -68,10 +69,8 @@ final class ThemeManager: ObservableObject {
   // MARK: - Input Borders
 
     var inputBorder: Color {
-        Color(
-            light: Color.black.opacity(0.12),
-            dark: Color.white.opacity(0.12)
-        )
+        // Light green outline to mirror splash palette
+        Color(light: Color(hex: "A9B6AD"), dark: Color.white.opacity(0.16))
     }
 
     var inputBorderFocused: Color {
@@ -79,10 +78,12 @@ final class ThemeManager: ObservableObject {
     }
 
     var inputBorderSubtle: Color {
-        Color(
-            light: Color.black.opacity(0.06),
-            dark: Color.white.opacity(0.06)
-        )
+        Color(light: Color(hex: "DCE3DE"), dark: Color.white.opacity(0.12))
+    }
+
+    var inputBackground: Color {
+        // Green-tinted fill for better separation on light backgrounds
+        Color(light: Color(hex: "E9EEE9"), dark: Color(hex: "1F2622"))
     }
 
     

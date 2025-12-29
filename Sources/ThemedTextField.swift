@@ -37,7 +37,7 @@ struct ThemedTextField<Field: Hashable>: View {
                     .focused($focusedField, equals: field)
             }
             .padding(16)
-            .background(theme.tertiaryBackground)
+            .background(theme.inputBackground)
             .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
             .overlay(
                 RoundedRectangle(cornerRadius: theme.radiusMedium)
