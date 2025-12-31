@@ -12,6 +12,7 @@ struct ProfileView: View {
     @State private var showUpgradePrompt = false
     @State private var showEditProfile = false
     @State private var showCompanyProfile = false
+    @State private var showJoinCompany = false
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
@@ -19,47 +20,11 @@ struct ProfileView: View {
             ZStack {
                 theme.primaryBackground
                     .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 24) {
-                        profileHeader
 
-                        if authManager.isGuestMode {
-                            guestModeCard
-                        }
+                mainContent
 
-                        if authManager.currentUser?.isAdmin == true && !authManager.isGuestMode {
-                            adminSection
-                        }
-
-                        accountSection
-
-                        aboutSection
-
-                        logoutButton
-                        
-                        if !authManager.isGuestMode {
-                            deleteAccountButton
-                        }
-                    }
-                    .padding(.horizontal, horizontalSizeClass == .regular ? 32 : 16)
-                    .padding(.top, 20)
-                    .padding(.bottom, horizontalSizeClass == .regular ? 40 : 100)
-                }
-                
                 if isDeleting {
-                    Color.black.opacity(0.5)
-                        .ignoresSafeArea()
-                    
-                    VStack(spacing: 20) {
-                        ProgressView()
-                            .scaleEffect(1.5)
-                            .tint(.white)
-                        
-                        Text("Deleting account...")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(.white)
-                    }
+                    deletingOverlay
                 }
             }
             .navigationTitle("Profile")
@@ -74,6 +39,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showCompanyProfile) {
                 CompanyProfileView()
+            }
+            .sheet(isPresented: $showJoinCompany) {
+                JoinCompanyView()
             }
             .alert("Logout", isPresented: $showLogoutConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -98,6 +66,52 @@ struct ProfileView: View {
             }
         }
     }
+
+    private var mainContent: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                profileHeader
+
+                if authManager.isGuestMode {
+                    guestModeCard
+                }
+
+                if authManager.currentUser?.isAdmin == true && !authManager.isGuestMode {
+                    adminSection
+                }
+
+                accountSection
+
+                aboutSection
+
+                logoutButton
+
+                if !authManager.isGuestMode {
+                    deleteAccountButton
+                }
+            }
+            .padding(.horizontal, horizontalSizeClass == .regular ? 32 : 16)
+            .padding(.top, 20)
+            .padding(.bottom, horizontalSizeClass == .regular ? 40 : 100)
+        }
+    }
+
+    private var deletingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.5)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(.white)
+
+                Text("Deleting account...")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundColor(.white)
+            }
+        }
+    }
     
     private var profileHeader: some View {
         VStack(spacing: 16) {
@@ -105,20 +119,53 @@ struct ProfileView: View {
                 Circle()
                     .fill(theme.accent.opacity(0.15))
                     .frame(width: 100, height: 100)
-                
-                Image(systemName: authManager.isGuestMode ? "person.fill.questionmark" : "person.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(theme.accent)
+
+                if let profileImageUrl = authManager.currentUser?.profileImageUrl,
+                   !profileImageUrl.isEmpty,
+                   let url = URL(string: profileImageUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(Circle())
+                        default:
+                            Image(systemName: authManager.isGuestMode ? "person.fill.questionmark" : "person.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(theme.accent)
+                        }
+                    }
+                } else {
+                    Image(systemName: authManager.isGuestMode ? "person.fill.questionmark" : "person.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(theme.accent)
+                }
             }
-            
+
             VStack(spacing: 6) {
-                Text(authManager.currentUser?.email ?? "User")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(theme.primaryText)
-                
-                Text(authManager.isGuestMode ? "Guest User" : "Esthetician")
-                    .font(.system(size: 15))
-                    .foregroundColor(theme.secondaryText)
+                if let firstName = authManager.currentUser?.firstName,
+                   let lastName = authManager.currentUser?.lastName,
+                   !firstName.isEmpty || !lastName.isEmpty {
+                    Text("\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces))
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
+                } else {
+                    Text(authManager.currentUser?.email ?? "User")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
+                }
+
+                if let role = authManager.currentUser?.role, !role.isEmpty {
+                    Text(role)
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.secondaryText)
+                } else {
+                    Text(authManager.isGuestMode ? "Guest User" : "Esthetician")
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.secondaryText)
+                }
             }
         }
         .frame(maxWidth: .infinity)
@@ -222,6 +269,13 @@ struct ProfileView: View {
 
                     Button(action: { showCompanyProfile = true }) {
                         navigationRow(icon: "building.2", title: "Company Profile", subtitle: "Manage company information")
+                    }
+
+                    Divider()
+                        .padding(.leading, 56)
+
+                    Button(action: { showJoinCompany = true }) {
+                        navigationRow(icon: "person.2.badge.gearshape", title: "Join Company", subtitle: "Enter a company code to join a team")
                     }
 
                     Divider()

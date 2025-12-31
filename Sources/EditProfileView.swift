@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct EditProfileView: View {
     @ObservedObject var theme = ThemeManager.shared
@@ -12,6 +13,8 @@ struct EditProfileView: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showImagePicker = false
+    @State private var selectedImage: UIImage?
 
     init() {
         _firstName = State(initialValue: AuthenticationManager.shared.currentUser?.firstName ?? "")
@@ -67,6 +70,9 @@ struct EditProfileView: View {
             } message: {
                 Text(errorMessage)
             }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(image: $selectedImage, sourceType: .photoLibrary)
+            }
         }
     }
 
@@ -77,7 +83,13 @@ struct EditProfileView: View {
                     .fill(theme.accent.opacity(0.15))
                     .frame(width: 100, height: 100)
 
-                if let imageUrl = authManager.currentUser?.profileImageUrl, let url = URL(string: imageUrl) {
+                if let selectedImage = selectedImage {
+                    Image(uiImage: selectedImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else if let imageUrl = authManager.currentUser?.profileImageUrl, let url = URL(string: imageUrl) {
                     AsyncImage(url: url) { phase in
                         switch phase {
                         case .success(let image):
@@ -99,7 +111,7 @@ struct EditProfileView: View {
                 }
             }
 
-            Button(action: {}) {
+            Button(action: { showImagePicker = true }) {
                 Text("Change Photo")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(theme.accent)
@@ -220,6 +232,12 @@ struct EditProfileView: View {
                 updatedUser?.lastName = lastName
                 updatedUser?.phoneNumber = phoneNumber
                 updatedUser?.role = role
+
+                // Upload profile image if one was selected
+                if let selectedImage = selectedImage, let userId = updatedUser?.id {
+                    let imageUrl = try await NetworkService.shared.uploadImage(image: selectedImage, userId: userId)
+                    updatedUser?.profileImageUrl = imageUrl
+                }
 
                 guard let user = updatedUser else {
                     throw NetworkError.invalidResponse

@@ -32,6 +32,10 @@
 		C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56FAF21605DA98E7CFB6065B /* AppLogger.swift */; };
 		C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */; };
 		C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */; };
+		CB00CCFB2F05AF70009ED8F1 /* CompanyProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CCFA2F05AF70009ED8F1 /* CompanyProfileView.swift */; };
+		CB00CCFD2F05AF7E009ED8F1 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CCFC2F05AF7E009ED8F1 /* EditProfileView.swift */; };
+		CB00CD012F05C710009ED8F1 /* TeamMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD002F05C710009ED8F1 /* TeamMembersView.swift */; };
+		CB00CD032F05D820009ED8F1 /* JoinCompanyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD022F05D820009ED8F1 /* JoinCompanyView.swift */; };
 		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
 		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
 /* End PBXBuildFile section */
@@ -60,6 +64,10 @@
 		BCACC036FECD051B397F0353 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
 		BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
 		C2EFFA79AB6D56EF9BECC68C /* SkinInsightPro.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkinInsightPro.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CB00CCFA2F05AF70009ED8F1 /* CompanyProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanyProfileView.swift; sourceTree = "<group>"; };
+		CB00CCFC2F05AF7E009ED8F1 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+		CB00CD002F05C710009ED8F1 /* TeamMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamMembersView.swift; sourceTree = "<group>"; };
+		CB00CD022F05D820009ED8F1 /* JoinCompanyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoinCompanyView.swift; sourceTree = "<group>"; };
 		D25E0109231B05F82260E206 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInsightProApp.swift; sourceTree = "<group>"; };
 		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -103,6 +111,10 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				CB00CD022F05D820009ED8F1 /* JoinCompanyView.swift */,
+				CB00CD002F05C710009ED8F1 /* TeamMembersView.swift */,
+				CB00CCFC2F05AF7E009ED8F1 /* EditProfileView.swift */,
+				CB00CCFA2F05AF70009ED8F1 /* CompanyProfileView.swift */,
 				B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */,
 				82E315965DF68F10E98272F2 /* AddProductView.swift */,
 				6DA15425CAA55F301D0392AF /* AIRulesView.swift */,
@@ -209,12 +221,16 @@
 				97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */,
 				04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */,
 				2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */,
+				CB00CCFD2F05AF7E009ED8F1 /* EditProfileView.swift in Sources */,
 				2AFAB1D7333A1139E1BC0A42 /* ClientDetailView.swift in Sources */,
 				95E3875A1DEA138F758B6FF8 /* CompareAnalysesView.swift in Sources */,
 				2BE23140B0F1AE0A04F781FA /* EditClientView.swift in Sources */,
+				CB00CCFB2F05AF70009ED8F1 /* CompanyProfileView.swift in Sources */,
+				CB00CD032F05D820009ED8F1 /* JoinCompanyView.swift in Sources */,
 				E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */,
 				348334A8C531C67F87DDF1F8 /* Models.swift in Sources */,
 				15597B726EF4238573C829D6 /* NetworkService.swift in Sources */,
+				CB00CD012F05C710009ED8F1 /* TeamMembersView.swift in Sources */,
 				79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */,
 				47D98A743BC65F40FEA03B78 /* ProductImportView.swift in Sources */,
 				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,

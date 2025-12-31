@@ -10,6 +10,7 @@ struct CompanyProfileView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showCreateCompany = false
+    @State private var showTeamMembers = false
 
     var body: some View {
         NavigationStack {
@@ -175,10 +176,18 @@ struct CompanyProfileView: View {
                 .foregroundColor(theme.primaryText)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text("Team member management coming soon")
-                .font(.system(size: 15))
-                .foregroundColor(theme.secondaryText)
-                .padding(.vertical, 20)
+            Button(action: { showTeamMembers = true }) {
+                HStack {
+                    Image(systemName: "person.2.fill")
+                    Text("Manage Team")
+                }
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(theme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+            }
         }
         .padding(20)
         .background(
@@ -186,6 +195,9 @@ struct CompanyProfileView: View {
                 .fill(theme.cardBackground)
                 .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
         )
+        .sheet(isPresented: $showTeamMembers) {
+            TeamMembersView()
+        }
     }
 
     private var emptyStateView: some View {
@@ -252,6 +264,8 @@ struct EditCompanyView: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showImagePicker = false
+    @State private var selectedImage: UIImage?
 
     init(company: Company?) {
         self.company = company
@@ -309,6 +323,9 @@ struct EditCompanyView: View {
             } message: {
                 Text(errorMessage)
             }
+            .sheet(isPresented: $showImagePicker) {
+                ImagePicker(image: $selectedImage, sourceType: .photoLibrary)
+            }
         }
     }
 
@@ -319,12 +336,35 @@ struct EditCompanyView: View {
                     .fill(theme.accent.opacity(0.15))
                     .frame(width: 100, height: 100)
 
-                Image(systemName: "building.2.fill")
-                    .font(.system(size: 50))
-                    .foregroundColor(theme.accent)
+                if let selectedImage = selectedImage {
+                    Image(uiImage: selectedImage)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 100, height: 100)
+                        .clipShape(Circle())
+                } else if let logoUrl = company?.logoUrl, let url = URL(string: logoUrl) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                                .frame(width: 100, height: 100)
+                                .clipShape(Circle())
+                        default:
+                            Image(systemName: "building.2.fill")
+                                .font(.system(size: 50))
+                                .foregroundColor(theme.accent)
+                        }
+                    }
+                } else {
+                    Image(systemName: "building.2.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(theme.accent)
+                }
             }
 
-            Button(action: {}) {
+            Button(action: { showImagePicker = true }) {
                 Text("Upload Logo")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(theme.accent)
@@ -386,6 +426,14 @@ struct EditCompanyView: View {
                 companyToSave.phone = phone
                 companyToSave.email = email
                 companyToSave.website = website
+
+                // Upload logo image if one was selected
+                if let selectedImage = selectedImage {
+                    // Use a temporary company ID for upload path
+                    let uploadId = companyToSave.id ?? UUID().uuidString
+                    let imageUrl = try await NetworkService.shared.uploadImage(image: selectedImage, userId: uploadId)
+                    companyToSave.logoUrl = imageUrl
+                }
 
                 let savedCompany = try await NetworkService.shared.createOrUpdateCompany(companyToSave)
 

@@ -566,16 +566,32 @@ class NetworkService {
         }
         request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
-        let userData: [String: Any?] = [
-            "first_name": user.firstName,
-            "last_name": user.lastName,
-            "phone_number": user.phoneNumber,
-            "role": user.role,
-            "profile_image_url": user.profileImageUrl,
-            "company_id": user.companyId
-        ]
+        var userData: [String: Any] = [:]
 
-        request.httpBody = try JSONSerialization.data(withJSONObject: userData.compactMapValues { $0 })
+        if let firstName = user.firstName, !firstName.isEmpty {
+            userData["first_name"] = firstName
+        }
+        if let lastName = user.lastName, !lastName.isEmpty {
+            userData["last_name"] = lastName
+        }
+        if let phoneNumber = user.phoneNumber, !phoneNumber.isEmpty {
+            userData["phone_number"] = phoneNumber
+        }
+        if let role = user.role, !role.isEmpty {
+            userData["role"] = role
+        }
+        if let profileImageUrl = user.profileImageUrl, !profileImageUrl.isEmpty {
+            userData["profile_image_url"] = profileImageUrl
+        }
+        if let companyId = user.companyId, !companyId.isEmpty {
+            userData["company_id"] = companyId
+        }
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: userData)
+
+        print("-> Request: Update User Profile")
+        print("-> PATCH: \(url.absoluteString)")
+        print("-> Body: \(userData)")
 
         let (data, response) = try await session.data(for: request)
 
@@ -583,7 +599,13 @@ class NetworkService {
             throw NetworkError.invalidResponse
         }
 
+        print("<- Response: Update User Profile")
+        print("<- Status Code: \(httpResponse.statusCode)")
+
         guard (200...299).contains(httpResponse.statusCode) else {
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("<- Error Response: \(errorString)")
+            }
             throw NetworkError.serverError(httpResponse.statusCode)
         }
 
@@ -682,13 +704,26 @@ class NetworkService {
 
             request.httpBody = try JSONSerialization.data(withJSONObject: companyData)
 
+            print("-> Request: Create Company")
+            print("-> POST: \(url.absoluteString)")
+            print("-> Headers: \(request.allHTTPHeaderFields ?? [:])")
+            print("-> Body: \(companyData)")
+            print("-> Access Token: \(accessToken ?? "NIL")")
+
             let (data, response) = try await session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw NetworkError.invalidResponse
             }
 
+            print("<- Response: Create Company")
+            print("<- Status Code: \(httpResponse.statusCode)")
+
             guard (200...299).contains(httpResponse.statusCode) else {
+                // Print error response body
+                if let errorString = String(data: data, encoding: .utf8) {
+                    print("<- Error Response: \(errorString)")
+                }
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
 
@@ -699,6 +734,71 @@ class NetworkService {
 
             return newCompany
         }
+    }
+
+    // MARK: - Team Members
+
+    func fetchTeamMembers(companyId: String) async throws -> [AppUser] {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        components.queryItems = [
+            URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
+            URLQueryItem(name: "order", value: "created_at.asc")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let teamMembers = try JSONDecoder().decode([AppUser].self, from: data)
+        return teamMembers
+    }
+
+    func verifyCompanyExists(id: String) async throws -> Bool {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+        components.queryItems = [
+            URLQueryItem(name: "id", value: "eq.\(id)"),
+            URLQueryItem(name: "select", value: "id")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        // Decode as array of companies
+        let companies = try JSONDecoder().decode([Company].self, from: data)
+        return !companies.isEmpty
     }
 
     // MARK: - Skin Analyses
