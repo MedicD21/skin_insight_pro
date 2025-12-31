@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>12</integer>
+	<key>logs</key>
+	<dict>
+		<key>3721A27A-6732-4A69-ABEC-D7157B55A198</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>3721A27A-6732-4A69-ABEC-D7157B55A198.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>SkinInsightPro project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>SkinInsightPro</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning workspace SkinInsightPro with scheme SkinInsightPro</string>
+			<key>timeStartedRecording</key>
+			<real>788897044.51745105</real>
+			<key>timeStoppedRecording</key>
+			<real>788897047.79287505</real>
+			<key>title</key>
+			<string>Cleaning workspace SkinInsightPro with scheme SkinInsightPro</string>
+			<key>uniqueIdentifier</key>
+			<string>3721A27A-6732-4A69-ABEC-D7157B55A198</string>
+		</dict>
+		<key>C27521CA-5D0D-4CC9-9BE0-8BA6267C69BA</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>C27521CA-5D0D-4CC9-9BE0-8BA6267C69BA.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>E</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>1</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>SkinInsightPro project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>SkinInsightPro</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building workspace SkinInsightPro with scheme SkinInsightPro</string>
+			<key>timeStartedRecording</key>
+			<real>788897047.80061698</real>
+			<key>timeStoppedRecording</key>
+			<real>788897074.96551001</real>
+			<key>title</key>
+			<string>Building workspace SkinInsightPro with scheme SkinInsightPro</string>
+			<key>uniqueIdentifier</key>
+			<string>C27521CA-5D0D-4CC9-9BE0-8BA6267C69BA</string>
+		</dict>
+		<key>D0A4C74E-E5E3-49E0-8B17-290B54BB14DD</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>D0A4C74E-E5E3-49E0-8B17-290B54BB14DD.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>S</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>0</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>SkinInsightPro project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>SkinInsightPro</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Cleaning workspace SkinInsightPro with scheme SkinInsightPro</string>
+			<key>timeStartedRecording</key>
+			<real>788894114.77161396</real>
+			<key>timeStoppedRecording</key>
+			<real>788894116.64832604</real>
+			<key>title</key>
+			<string>Cleaning workspace SkinInsightPro with scheme SkinInsightPro</string>
+			<key>uniqueIdentifier</key>
+			<string>D0A4C74E-E5E3-49E0-8B17-290B54BB14DD</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

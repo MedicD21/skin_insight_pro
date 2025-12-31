@@ -16,7 +16,7 @@ struct SkinInsightProApp: App {
                     AuthenticationView()
                 }
             }
-            .preferredColorScheme(.light)
+            .preferredColorScheme(.dark)
         }
     }
 }

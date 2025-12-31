@@ -1,0 +1,23 @@
+{
+  "/Users/dustinschaaf/Desktop/skin_insight_pro/Sources/AnalysisDetailView.swift" : {
+    "const-values" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AnalysisDetailView.swiftconstvalues",
+    "dependencies" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AnalysisDetailView.d",
+    "diagnostics" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AnalysisDetailView.dia",
+    "object" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AnalysisDetailView.o",
+    "swift-dependencies" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AnalysisDetailView.swiftdeps"
+  },
+  "/Users/dustinschaaf/Desktop/skin_insight_pro/Sources/AppConstants.swift" : {
+    "const-values" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppConstants.swiftconstvalues",
+    "dependencies" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppConstants.d",
+    "diagnostics" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppConstants.dia",
+    "object" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppConstants.o",
+    "swift-dependencies" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppConstants.swiftdeps"
+  },
+  "/Users/dustinschaaf/Desktop/skin_insight_pro/Sources/AppLogger.swift" : {
+    "const-values" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppLogger.swiftconstvalues",
+    "dependencies" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppLogger.d",
+    "diagnostics" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppLogger.dia",
+    "object" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppLogger.o",
+    "swift-dependencies" : "/Users/dustinschaaf/Desktop/skin_insight_pro/build/Build/Intermediates.noindex/SkinInsightPro.build/Debug-iphonesimulator/SkinInsightPro.build/Objects-normal/x86_64/AppLogger.swiftdeps"
+  }
+}

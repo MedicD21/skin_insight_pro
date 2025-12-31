@@ -90,6 +90,13 @@ struct ClientDashboardView: View {
         .navigationTitle("Clients")
         .searchable(text: $searchText, prompt: "Search clients")
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Image("logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 32)
+            }
+
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if horizontalSizeClass == .regular {
                     Button(action: { showAddClient = true }) {

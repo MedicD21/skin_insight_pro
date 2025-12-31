@@ -63,7 +63,7 @@
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
 	<key>UIUserInterfaceStyle</key>
-	<string>Automatic</string>
+	<string>Dark</string>
 	<key>XCTAssetCatalogCompilerAppIconName</key>
 	<string>AppIcon</string>
 	<key>XCTAssetCatalogCompilerIncludeAllAppIconAssets</key>

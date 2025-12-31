@@ -7,24 +7,15 @@ struct SplashScreen: View {
     
     var body: some View {
         ZStack {
-            theme.accent
+            Color.black
                 .ignoresSafeArea()
-            
+
             VStack(spacing: 20) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 80, weight: .light))
-                    .foregroundColor(.white)
+                Image("logoWithText")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 250)
                     .scaleEffect(scale)
-                    .opacity(opacity)
-                
-                Text("Skin Insight Pro")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .opacity(opacity)
-                
-                Text("AI-Powered Skin Analysis")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white.opacity(0.9))
                     .opacity(opacity)
             }
         }

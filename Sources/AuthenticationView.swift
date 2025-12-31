@@ -55,14 +55,11 @@ struct AuthenticationView: View {
     
     private var headerSection: some View {
         VStack(spacing: 16) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 60, weight: .light))
-                .foregroundColor(theme.accent)
-            
-            Text("Skin Insight Pro")
-                .font(.system(size: 32, weight: .bold, design: .rounded))
-                .foregroundColor(theme.primaryText)
-            
+            Image("logoWithText")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 200)
+
             Text("Professional Skin Analysis")
                 .font(.system(size: 16))
                 .foregroundColor(theme.secondaryText)
