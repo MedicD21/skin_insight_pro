@@ -236,19 +236,29 @@ class ClientDashboardViewModel: ObservableObject {
     @Published var errorMessage = ""
     
     func loadClients() async {
-        guard let userId = AuthenticationManager.shared.currentUser?.id else { return }
-        
+        guard let currentUser = AuthenticationManager.shared.currentUser,
+              let userId = currentUser.id else { return }
+
         if AuthenticationManager.shared.isGuestMode {
             loadLocalClients(userId: userId)
             return
         }
-        
+
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
             try Task.checkCancellation()
-            let fetchedClients = try await NetworkService.shared.fetchClients(userId: userId)
+
+            // If user belongs to a company, fetch company-wide clients
+            // Otherwise, fetch only user's clients
+            let fetchedClients: [AppClient]
+            if let companyId = currentUser.companyId {
+                fetchedClients = try await NetworkService.shared.fetchClientsByCompany(companyId: companyId)
+            } else {
+                fetchedClients = try await NetworkService.shared.fetchClients(userId: userId)
+            }
+
             clients = fetchedClients.sorted { ($0.name ?? "") < ($1.name ?? "") }
         } catch is CancellationError {
             return

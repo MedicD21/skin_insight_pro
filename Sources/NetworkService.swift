@@ -379,6 +379,51 @@ class NetworkService {
         }
     }
 
+    func fetchClientsByCompany(companyId: String) async throws -> [AppClient] {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/clients")!
+        components.queryItems = [
+            URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
+            URLQueryItem(name: "order", value: "created_at.desc")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        print("-> Request: Fetch Clients by Company")
+        print("-> GET: \(url.absoluteString)")
+
+        do {
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+
+            print("<- Response: Fetch Clients by Company")
+            print("<- Status Code: \(httpResponse.statusCode)")
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw NetworkError.serverError(httpResponse.statusCode)
+            }
+
+            let clients = try JSONDecoder().decode([AppClient].self, from: data)
+            return clients
+        } catch is CancellationError {
+            return []
+        } catch let error as URLError where error.code == .cancelled {
+            return []
+        } catch {
+            throw error
+        }
+    }
+
     func createOrUpdateClient(client: AppClient, userId: String) async throws -> AppClient {
         if let clientId = client.id {
             // Update existing client
@@ -398,7 +443,9 @@ class NetworkService {
                 "medical_history": client.medicalHistory,
                 "allergies": client.allergies,
                 "known_sensitivities": client.knownSensitivities,
-                "medications": client.medications
+                "medications": client.medications,
+                "profile_image_url": client.profileImageUrl,
+                "company_id": client.companyId
             ]
 
             request.httpBody = try JSONSerialization.data(withJSONObject: clientData.compactMapValues { $0 })
@@ -446,7 +493,7 @@ class NetworkService {
             }
             request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
-            let clientData: [String: Any] = [
+            var clientData: [String: Any] = [
                 "user_id": userId,
                 "name": client.name ?? "",
                 "phone": client.phone ?? "",
@@ -457,6 +504,14 @@ class NetworkService {
                 "known_sensitivities": client.knownSensitivities ?? "",
                 "medications": client.medications ?? ""
             ]
+
+            if let profileImageUrl = client.profileImageUrl {
+                clientData["profile_image_url"] = profileImageUrl
+            }
+
+            if let companyId = client.companyId {
+                clientData["company_id"] = companyId
+            }
 
             request.httpBody = try JSONSerialization.data(withJSONObject: clientData)
 
@@ -493,6 +548,156 @@ class NetworkService {
             } catch {
                 throw error
             }
+        }
+    }
+
+    // MARK: - User Profile
+
+    func updateUserProfile(_ user: AppUser) async throws -> AppUser {
+        guard let userId = user.id else {
+            throw NetworkError.invalidResponse
+        }
+
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        request.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+        let userData: [String: Any?] = [
+            "first_name": user.firstName,
+            "last_name": user.lastName,
+            "phone_number": user.phoneNumber,
+            "role": user.role,
+            "profile_image_url": user.profileImageUrl,
+            "company_id": user.companyId
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: userData.compactMapValues { $0 })
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let users = try JSONDecoder().decode([AppUser].self, from: data)
+        guard let updatedUser = users.first else {
+            throw NetworkError.invalidResponse
+        }
+
+        return updatedUser
+    }
+
+    // MARK: - Companies
+
+    func fetchCompany(id: String) async throws -> Company {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(id)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let companies = try JSONDecoder().decode([Company].self, from: data)
+        guard let company = companies.first else {
+            throw NetworkError.invalidResponse
+        }
+
+        return company
+    }
+
+    func createOrUpdateCompany(_ company: Company) async throws -> Company {
+        if let companyId = company.id {
+            // Update existing company
+            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(companyId)")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "PATCH"
+            for (key, value) in supabaseHeaders(authenticated: true) {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+            request.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+            let companyData: [String: Any?] = [
+                "name": company.name,
+                "address": company.address,
+                "phone": company.phone,
+                "email": company.email,
+                "logo_url": company.logoUrl,
+                "website": company.website
+            ]
+
+            request.httpBody = try JSONSerialization.data(withJSONObject: companyData.compactMapValues { $0 })
+
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw NetworkError.serverError(httpResponse.statusCode)
+            }
+
+            let companies = try JSONDecoder().decode([Company].self, from: data)
+            guard let updatedCompany = companies.first else {
+                throw NetworkError.invalidResponse
+            }
+
+            return updatedCompany
+        } else {
+            // Create new company
+            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            for (key, value) in supabaseHeaders(authenticated: true) {
+                request.setValue(value, forHTTPHeaderField: key)
+            }
+            request.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+            let companyData: [String: Any] = [
+                "name": company.name ?? "",
+                "address": company.address ?? "",
+                "phone": company.phone ?? "",
+                "email": company.email ?? "",
+                "logo_url": company.logoUrl ?? "",
+                "website": company.website ?? ""
+            ]
+
+            request.httpBody = try JSONSerialization.data(withJSONObject: companyData)
+
+            let (data, response) = try await session.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw NetworkError.invalidResponse
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw NetworkError.serverError(httpResponse.statusCode)
+            }
+
+            let companies = try JSONDecoder().decode([Company].self, from: data)
+            guard let newCompany = companies.first else {
+                throw NetworkError.invalidResponse
+            }
+
+            return newCompany
         }
     }
 

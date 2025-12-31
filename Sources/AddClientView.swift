@@ -249,6 +249,7 @@ struct AddClientView: View {
         let newClient = AppClient(
             id: nil,
             userId: AuthenticationManager.shared.currentUser?.id,
+            companyId: AuthenticationManager.shared.currentUser?.companyId,
             name: name,
             phone: phone,
             email: email,
@@ -256,7 +257,8 @@ struct AddClientView: View {
             medicalHistory: medicalHistory.isEmpty ? nil : medicalHistory,
             allergies: allergies.isEmpty ? nil : allergies,
             knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
-            medications: medications.isEmpty ? nil : medications
+            medications: medications.isEmpty ? nil : medications,
+            profileImageUrl: nil
         )
 
         Task {

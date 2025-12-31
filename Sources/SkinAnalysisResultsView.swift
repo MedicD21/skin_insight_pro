@@ -657,8 +657,13 @@ struct SkinAnalysisResultsView: View {
                     productsUsed: productsUsed.isEmpty ? nil : productsUsed,
                     treatmentsPerformed: treatmentsPerformed.isEmpty ? nil : treatmentsPerformed
                 )
-                
+
                 viewModel.addAnalysis(savedAnalysis)
+
+                // Update client's profile image with the latest analysis image
+                var updatedClient = client
+                updatedClient.profileImageUrl = imageUrl
+                _ = try await NetworkService.shared.createOrUpdateClient(client: updatedClient, userId: userId)
 
                 isSaving = false
                 // Dismiss the results view first

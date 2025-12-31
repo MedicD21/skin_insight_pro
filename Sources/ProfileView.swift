@@ -10,6 +10,8 @@ struct ProfileView: View {
     @State private var errorMessage = ""
     @State private var showAbout = false
     @State private var showUpgradePrompt = false
+    @State private var showEditProfile = false
+    @State private var showCompanyProfile = false
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
@@ -66,6 +68,12 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showUpgradePrompt) {
                 UpgradePromptView()
+            }
+            .sheet(isPresented: $showEditProfile) {
+                EditProfileView()
+            }
+            .sheet(isPresented: $showCompanyProfile) {
+                CompanyProfileView()
             }
             .alert("Logout", isPresented: $showLogoutConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -202,17 +210,33 @@ struct ProfileView: View {
             Text("Account")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(theme.primaryText)
-            
+
             VStack(spacing: 0) {
+                if !authManager.isGuestMode {
+                    Button(action: { showEditProfile = true }) {
+                        navigationRow(icon: "person.circle", title: "Edit Profile", subtitle: "Update your personal information")
+                    }
+
+                    Divider()
+                        .padding(.leading, 56)
+
+                    Button(action: { showCompanyProfile = true }) {
+                        navigationRow(icon: "building.2", title: "Company Profile", subtitle: "Manage company information")
+                    }
+
+                    Divider()
+                        .padding(.leading, 56)
+                }
+
                 settingRow(
                     icon: "envelope",
                     title: "Email",
                     value: authManager.currentUser?.email ?? "Not available"
                 )
-                
+
                 Divider()
                     .padding(.leading, 56)
-                
+
                 settingRow(
                     icon: "key",
                     title: "Provider",

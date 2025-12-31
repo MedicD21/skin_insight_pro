@@ -31,6 +31,7 @@ struct AppUser: Identifiable, Hashable, Codable {
 struct AppClient: Identifiable, Hashable, Codable {
     var id: String?
     var userId: String?
+    var companyId: String?
     var name: String?
     var phone: String?
     var email: String?
@@ -39,10 +40,12 @@ struct AppClient: Identifiable, Hashable, Codable {
     var allergies: String?
     var knownSensitivities: String?
     var medications: String?
+    var profileImageUrl: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
+        case companyId = "company_id"
         case name
         case phone
         case email
@@ -51,6 +54,7 @@ struct AppClient: Identifiable, Hashable, Codable {
         case allergies
         case knownSensitivities = "known_sensitivities"
         case medications
+        case profileImageUrl = "profile_image_url"
     }
 }
 
@@ -148,6 +152,7 @@ struct CreateClientRequest: Codable {
     struct ClientData: Codable {
         var id: String?
         let userId: String
+        let companyId: String?
         let name: String
         let phone: String
         let email: String
@@ -156,10 +161,12 @@ struct CreateClientRequest: Codable {
         let allergies: String
         let knownSensitivities: String
         let medications: String
+        let profileImageUrl: String?
 
         enum CodingKeys: String, CodingKey {
             case id
             case userId = "user_id"
+            case companyId = "company_id"
             case name
             case phone
             case email
@@ -168,6 +175,7 @@ struct CreateClientRequest: Codable {
             case allergies
             case knownSensitivities = "known_sensitivities"
             case medications
+            case profileImageUrl = "profile_image_url"
         }
     }
 }
@@ -227,6 +235,60 @@ struct AppleLoginRequest: Codable {
         case email
         case firstName = "first_name"
         case lastName = "last_name"
+    }
+}
+
+struct Company: Identifiable, Hashable, Codable {
+    var id: String?
+    var name: String?
+    var address: String?
+    var phone: String?
+    var email: String?
+    var logoUrl: String?
+    var website: String?
+    var createdAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case name
+        case address
+        case phone
+        case email
+        case logoUrl = "logo_url"
+        case website
+        case createdAt = "created_at"
+    }
+}
+
+struct CreateCompanyRequest: Codable {
+    let appId: String
+    let tableName: String
+    let data: CompanyData
+
+    enum CodingKeys: String, CodingKey {
+        case appId = "app_id"
+        case tableName = "table_name"
+        case data
+    }
+
+    struct CompanyData: Codable {
+        var id: String?
+        let name: String
+        let address: String
+        let phone: String
+        let email: String
+        let logoUrl: String?
+        let website: String?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case name
+            case address
+            case phone
+            case email
+            case logoUrl = "logo_url"
+            case website
+        }
     }
 }
 
