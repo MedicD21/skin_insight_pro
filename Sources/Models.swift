@@ -6,6 +6,12 @@ struct AppUser: Identifiable, Hashable, Codable {
     var provider: String?
     var isAdmin: Bool?
     var createdAt: String?
+    var companyId: String?
+    var firstName: String?
+    var lastName: String?
+    var phoneNumber: String?
+    var profileImageUrl: String?
+    var role: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -13,6 +19,12 @@ struct AppUser: Identifiable, Hashable, Codable {
         case provider
         case isAdmin = "is_admin"
         case createdAt = "created_at"
+        case companyId = "company_id"
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case phoneNumber = "phone_number"
+        case profileImageUrl = "profile_image_url"
+        case role
     }
 }
 
