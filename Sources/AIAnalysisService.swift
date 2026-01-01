@@ -21,7 +21,8 @@ class AIAnalysisService {
         treatmentsPerformed: String?,
         injectablesHistory: String?,
         previousAnalyses: [SkinAnalysisResult],
-        aiRules: [AIRule]
+        aiRules: [AIRule],
+        products: [Product] = []
     ) async throws -> AnalysisData {
         switch AppConstants.aiProvider {
         case .appleVision:
@@ -40,7 +41,8 @@ class AIAnalysisService {
                 treatmentsPerformed: treatmentsPerformed,
                 injectablesHistory: injectablesHistory,
                 previousAnalyses: previousAnalyses,
-                aiRules: aiRules
+                aiRules: aiRules,
+                products: products
             )
         case .claude:
             return try await analyzeWithClaude(
@@ -58,7 +60,8 @@ class AIAnalysisService {
                 treatmentsPerformed: treatmentsPerformed,
                 injectablesHistory: injectablesHistory,
                 previousAnalyses: previousAnalyses,
-                aiRules: aiRules
+                aiRules: aiRules,
+                products: products
             )
         }
     }
@@ -79,11 +82,10 @@ class AIAnalysisService {
         treatmentsPerformed: String?,
         injectablesHistory: String?,
         previousAnalyses: [SkinAnalysisResult],
-        aiRules: [AIRule]
+        aiRules: [AIRule],
+        products: [Product]
     ) async throws -> AnalysisData {
-        // Apple Vision doesn't have pre-trained skin analysis
-        // We'll use manual inputs + basic image analysis + apply AI rules
-
+        // Apple Vision with enhanced image analysis
         var concerns: [String] = []
         var recommendations: [String] = []
         var productRecommendations: [String] = []
@@ -93,42 +95,89 @@ class AIAnalysisService {
             concerns = manualConcerns.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         }
 
-        // Perform basic image analysis
+        // Perform enhanced image analysis
         if let cgImage = image.cgImage {
-            let brightness = await analyzeBrightness(cgImage: cgImage)
-            let dominantColors = await analyzeDominantColors(cgImage: cgImage)
+            let imageMetrics = await analyzeImageMetrics(cgImage: cgImage)
 
-            // Basic heuristics
-            if brightness < 0.3 {
+            // Analyze brightness for dark spots and hyperpigmentation
+            if imageMetrics.brightness < 0.35 {
                 if !concerns.contains("Dark spots") {
                     concerns.append("Dark spots")
                 }
             }
 
-            // Check for redness based on color analysis
-            if dominantColors.contains(where: { $0.isReddish }) {
+            // Analyze redness
+            if imageMetrics.rednessLevel > 0.45 {
                 if !concerns.contains("Redness") {
                     concerns.append("Redness")
                 }
             }
+
+            // Analyze texture/smoothness
+            if imageMetrics.textureVariance > 0.6 {
+                if !concerns.contains("Uneven texture") {
+                    concerns.append("Uneven texture")
+                }
+            }
+
+            // Analyze oiliness (high brightness + color saturation)
+            if imageMetrics.brightness > 0.7 && imageMetrics.saturation > 0.5 {
+                if !concerns.contains("Excess oil") {
+                    concerns.append("Excess oil")
+                }
+            }
+
+            // Analyze dryness (low saturation, uneven texture)
+            if imageMetrics.saturation < 0.3 && imageMetrics.textureVariance > 0.5 {
+                if !concerns.contains("Dryness") {
+                    concerns.append("Dryness")
+                }
+            }
         }
 
-        // Apply AI Rules
+        // Apply AI Rules to recommendations (not product recommendations)
         let appliedRules = applyAIRules(concerns: concerns, rules: aiRules)
-        productRecommendations = appliedRules
+        recommendations.append(contentsOf: appliedRules)
 
-        // Generate basic recommendations
+        // Match Products only for product recommendations
+        let matchedProducts = matchProducts(
+            concerns: concerns,
+            skinType: manualSkinType,
+            products: products,
+            allergies: allergies,
+            sensitivities: knownSensitivities
+        )
+        productRecommendations = matchedProducts
+
+        // Generate intelligent recommendations based on detected concerns
         if concerns.contains("Redness") {
-            recommendations.append("Use a gentle, fragrance-free cleanser")
-            recommendations.append("Apply soothing ingredients like aloe or chamomile")
+            recommendations.append("Use a gentle, fragrance-free cleanser to avoid irritation")
+            recommendations.append("Apply products with soothing ingredients like centella asiatica, aloe, or niacinamide")
+            recommendations.append("Avoid hot water and harsh exfoliants")
         }
         if concerns.contains("Dark spots") {
-            recommendations.append("Consider vitamin C serum for brightening")
-            recommendations.append("Use SPF 30+ daily to prevent further darkening")
+            recommendations.append("Use vitamin C serum in the morning for brightening")
+            recommendations.append("Apply SPF 50+ daily to prevent further darkening")
+            recommendations.append("Consider retinol or alpha hydroxy acids for evening use")
+        }
+        if concerns.contains("Uneven texture") {
+            recommendations.append("Incorporate gentle chemical exfoliation (AHA/BHA) 2-3x weekly")
+            recommendations.append("Use a hydrating serum with hyaluronic acid")
+        }
+        if concerns.contains("Excess oil") {
+            recommendations.append("Use a salicylic acid cleanser to control oil")
+            recommendations.append("Apply lightweight, oil-free moisturizer")
+            recommendations.append("Use clay masks 1-2x weekly")
+        }
+        if concerns.contains("Dryness") {
+            recommendations.append("Use a creamy, hydrating cleanser")
+            recommendations.append("Apply a rich moisturizer with ceramides and hyaluronic acid")
+            recommendations.append("Consider adding a facial oil for extra hydration")
         }
         if concerns.isEmpty {
-            recommendations.append("Maintain current skincare routine")
-            recommendations.append("Continue using SPF daily")
+            recommendations.append("Skin appears healthy - maintain current routine")
+            recommendations.append("Continue daily SPF protection")
+            recommendations.append("Keep skin hydrated with regular moisturizer use")
         }
 
         // Determine skin type from manual input or default
@@ -171,7 +220,8 @@ class AIAnalysisService {
         treatmentsPerformed: String?,
         injectablesHistory: String?,
         previousAnalyses: [SkinAnalysisResult],
-        aiRules: [AIRule]
+        aiRules: [AIRule],
+        products: [Product]
     ) async throws -> AnalysisData {
         guard !AppConstants.claudeApiKey.isEmpty else {
             throw NSError(domain: "AIAnalysisService", code: 1, userInfo: [
@@ -202,7 +252,8 @@ class AIAnalysisService {
             treatmentsPerformed: treatmentsPerformed,
             injectablesHistory: injectablesHistory,
             previousAnalyses: previousAnalyses,
-            aiRules: aiRules
+            aiRules: aiRules,
+            products: products
         )
 
         // Call Claude API
@@ -214,7 +265,7 @@ class AIAnalysisService {
         request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
 
         let requestBody: [String: Any] = [
-            "model": "claude-3-5-sonnet-20241022",
+            "model": "claude-sonnet-4-5-20250929",
             "max_tokens": 2048,
             "messages": [
                 [
@@ -260,17 +311,22 @@ class AIAnalysisService {
 
     // MARK: - Helper Methods
 
-    private func analyzeBrightness(cgImage: CGImage) async -> CGFloat {
+    struct ImageMetrics {
+        let brightness: CGFloat
+        let rednessLevel: CGFloat
+        let saturation: CGFloat
+        let textureVariance: CGFloat
+    }
+
+    private func analyzeImageMetrics(cgImage: CGImage) async -> ImageMetrics {
         return await withCheckedContinuation { continuation in
             let ciImage = CIImage(cgImage: cgImage)
             let extentVector = CIVector(x: ciImage.extent.origin.x, y: ciImage.extent.origin.y, z: ciImage.extent.size.width, w: ciImage.extent.size.height)
 
-            guard let filter = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: ciImage, kCIInputExtentKey: extentVector]) else {
-                continuation.resume(returning: 0.5)
-                return
-            }
-            guard let outputImage = filter.outputImage else {
-                continuation.resume(returning: 0.5)
+            // Analyze average color
+            guard let averageFilter = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: ciImage, kCIInputExtentKey: extentVector]),
+                  let outputImage = averageFilter.outputImage else {
+                continuation.resume(returning: ImageMetrics(brightness: 0.5, rednessLevel: 0.3, saturation: 0.4, textureVariance: 0.4))
                 return
             }
 
@@ -278,14 +334,43 @@ class AIAnalysisService {
             let context = CIContext(options: [.workingColorSpace: kCFNull as Any])
             context.render(outputImage, toBitmap: &bitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
 
-            let brightness = (CGFloat(bitmap[0]) + CGFloat(bitmap[1]) + CGFloat(bitmap[2])) / (3.0 * 255.0)
-            continuation.resume(returning: brightness)
-        }
-    }
+            let r = CGFloat(bitmap[0]) / 255.0
+            let g = CGFloat(bitmap[1]) / 255.0
+            let b = CGFloat(bitmap[2]) / 255.0
 
-    private func analyzeDominantColors(cgImage: CGImage) async -> [UIColor] {
-        // Simplified color analysis
-        return []
+            // Calculate metrics
+            let brightness = (r + g + b) / 3.0
+            let rednessLevel = r / max(g + b, 0.01) // How much more red than other colors
+
+            // Calculate saturation
+            let maxChannel = max(r, g, b)
+            let minChannel = min(r, g, b)
+            let saturation = maxChannel > 0 ? (maxChannel - minChannel) / maxChannel : 0
+
+            // Estimate texture variance using edge detection
+            let edgeFilter = CIFilter(name: "CIEdges")
+            edgeFilter?.setValue(ciImage, forKey: kCIInputImageKey)
+            edgeFilter?.setValue(1.5, forKey: kCIInputIntensityKey)
+
+            var textureVariance: CGFloat = 0.4 // Default
+            if let edgeOutput = edgeFilter?.outputImage {
+                let avgEdgeFilter = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: edgeOutput, kCIInputExtentKey: extentVector])
+                if let edgeAvg = avgEdgeFilter?.outputImage {
+                    var edgeBitmap = [UInt8](repeating: 0, count: 4)
+                    context.render(edgeAvg, toBitmap: &edgeBitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
+                    textureVariance = CGFloat(edgeBitmap[0]) / 255.0
+                }
+            }
+
+            let metrics = ImageMetrics(
+                brightness: brightness,
+                rednessLevel: rednessLevel,
+                saturation: saturation,
+                textureVariance: textureVariance
+            )
+
+            continuation.resume(returning: metrics)
+        }
     }
 
     private func applyAIRules(concerns: [String], rules: [AIRule]) -> [String] {
@@ -309,6 +394,93 @@ class AIAnalysisService {
         }
 
         return productRecommendations
+    }
+
+    private func matchProducts(
+        concerns: [String],
+        skinType: String?,
+        products: [Product],
+        allergies: String?,
+        sensitivities: String?
+    ) -> [String] {
+        var matchedProducts: [String] = []
+
+        // Build list of ingredients to avoid
+        var ingredientsToAvoid: [String] = []
+        if let allergies = allergies, !allergies.isEmpty {
+            ingredientsToAvoid.append(contentsOf: allergies.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
+        }
+        if let sensitivities = sensitivities, !sensitivities.isEmpty {
+            ingredientsToAvoid.append(contentsOf: sensitivities.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
+        }
+
+        // Filter active products
+        let activeProducts = products.filter { $0.isActive == true }
+
+        // Group products by concern they address
+        var productsByConcern: [String: [Product]] = [:]
+        for concern in concerns {
+            productsByConcern[concern] = []
+        }
+
+        for product in activeProducts {
+            // Check if product ingredients contain allergens
+            if let ingredients = product.ingredients {
+                let hasAllergen = ingredientsToAvoid.contains { allergen in
+                    ingredients.lowercased().contains(allergen)
+                }
+                if hasAllergen {
+                    continue // Skip this product
+                }
+            }
+
+            // Check skin type compatibility
+            if let skinType = skinType, let productSkinTypes = product.skinTypes, !productSkinTypes.isEmpty {
+                let isCompatible = productSkinTypes.contains { productSkinType in
+                    productSkinType.lowercased().contains(skinType.lowercased()) ||
+                    skinType.lowercased().contains(productSkinType.lowercased())
+                }
+                if !isCompatible {
+                    continue // Skip if skin type doesn't match
+                }
+            }
+
+            // Match product to concerns
+            if let productConcerns = product.concerns {
+                for concern in concerns {
+                    let matches = productConcerns.contains { productConcern in
+                        concern.lowercased().contains(productConcern.lowercased()) ||
+                        productConcern.lowercased().contains(concern.lowercased())
+                    }
+                    if matches {
+                        productsByConcern[concern]?.append(product)
+                    }
+                }
+            }
+        }
+
+        // Select best 2-3 products per concern
+        for (_, productsForConcern) in productsByConcern {
+            let topProducts = Array(productsForConcern.prefix(3)) // Take top 3
+
+            for product in topProducts {
+                let productName: String
+                if let brand = product.brand, let name = product.name {
+                    productName = "\(brand) - \(name)"
+                } else if let name = product.name {
+                    productName = name
+                } else {
+                    continue
+                }
+
+                // Avoid duplicates
+                if !matchedProducts.contains(productName) {
+                    matchedProducts.append(productName)
+                }
+            }
+        }
+
+        return matchedProducts
     }
 
     private func calculateHealthScore(concerns: [String]) -> Int {
@@ -354,7 +526,8 @@ class AIAnalysisService {
         treatmentsPerformed: String?,
         injectablesHistory: String?,
         previousAnalyses: [SkinAnalysisResult],
-        aiRules: [AIRule]
+        aiRules: [AIRule],
+        products: [Product]
     ) -> String {
         var prompt = """
         You are an expert skin analysis AI for estheticians and spa professionals. Analyze this skin image and provide a detailed assessment.
@@ -385,10 +558,41 @@ class AIAnalysisService {
 
         // Add AI Rules
         if !aiRules.isEmpty {
-            prompt += "\nIMPORTANT - Apply these professional rules when making product recommendations:\n"
+            prompt += "\n\nCUSTOM AI RULES - These are professional rules you MUST follow:\n"
             for (index, rule) in aiRules.enumerated() {
                 if let condition = rule.condition, let action = rule.action {
-                    prompt += "\(index + 1). WHEN: \(condition) → THEN recommend: \(action) (Priority: \(rule.priority ?? 0))\n"
+                    prompt += "Rule \(index + 1): IF skin shows \"\(condition)\" THEN add to recommendations: \"\(action)\" (Priority: \(rule.priority ?? 0))\n"
+                }
+            }
+        }
+
+        // Add Available Products
+        if !products.isEmpty {
+            let activeProducts = products.filter { $0.isActive == true }
+            if !activeProducts.isEmpty {
+                prompt += "\n\nAVAILABLE PRODUCTS CATALOG - Use your professional judgment to select the BEST products:\n"
+                for (index, product) in activeProducts.enumerated() {
+                    if let name = product.name {
+                        let brand = product.brand ?? ""
+                        let productName = brand.isEmpty ? name : "\(brand) - \(name)"
+
+                        var productDetails = "Product \(index + 1): \"\(productName)\""
+
+                        if let skinTypes = product.skinTypes, !skinTypes.isEmpty {
+                            productDetails += " | Skin Types: \(skinTypes.joined(separator: ", "))"
+                        }
+                        if let concerns = product.concerns, !concerns.isEmpty {
+                            productDetails += " | Addresses: \(concerns.joined(separator: ", "))"
+                        }
+                        if let ingredients = product.ingredients, !ingredients.isEmpty {
+                            productDetails += " | Key Ingredients: \(ingredients)"
+                        }
+                        if let description = product.description, !description.isEmpty {
+                            productDetails += " | Details: \(description)"
+                        }
+
+                        prompt += productDetails + "\n"
+                    }
                 }
             }
         }
@@ -397,18 +601,34 @@ class AIAnalysisService {
 
         Provide your analysis in this EXACT JSON format:
         {
-          "skinType": "Normal/Dry/Oily/Combination/Sensitive",
-          "hydrationLevel": 1-10,
+          "skin_type": "Normal/Dry/Oily/Combination/Sensitive",
+          "hydration_level": 1-10,
           "sensitivity": "Low/Normal/High",
           "concerns": ["concern1", "concern2"],
-          "poreCondition": "Fine/Normal/Enlarged",
-          "skinHealthScore": 0-100,
+          "pore_condition": "Fine/Normal/Enlarged",
+          "skin_health_score": 0-100,
           "recommendations": ["recommendation1", "recommendation2"],
-          "productRecommendations": ["product1", "product2"],
-          "medicalConsiderations": ["consideration1"]
+          "product_recommendations": ["product1", "product2"],
+          "medical_considerations": ["consideration1"]
         }
 
-        CRITICAL: The "productRecommendations" field must contain product recommendations that follow the AI rules provided above. Match the detected concerns with the rule conditions and apply the corresponding actions.
+        CRITICAL INSTRUCTIONS FOR TWO SEPARATE FIELDS:
+
+        1. "recommendations" - Include BOTH:
+           a) Your own professional skincare recommendations based on the analysis
+           b) ALL matching custom AI rules (check detected concerns against rule conditions and include every match)
+
+        2. "product_recommendations" - ONLY matching products from the catalog:
+           - Consider detected skin type and concerns
+           - Select products that address the specific concerns
+           - From multiple products addressing the same concern, choose the BEST 2-3 based on ingredients and efficacy
+           - CHECK INGREDIENTS: Skip any product if its ingredients contain items listed in the client's allergies or sensitivities
+           - Format products as: "Brand - Product Name"
+           - DO NOT include AI rules here, they belong in "recommendations"
+
+        Example: If you detect "Redness" and "Dry" skin type:
+        - recommendations: Your professional advice + ALL matching AI rules
+        - product_recommendations: The 2-3 BEST products for redness on dry skin (excluding allergens)
         """
 
         return prompt

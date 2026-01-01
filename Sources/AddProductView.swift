@@ -5,6 +5,9 @@ struct AddProductView: View {
     @ObservedObject var theme = ThemeManager.shared
     @ObservedObject var viewModel: ProductCatalogViewModel
     @Environment(\.dismiss) var dismiss
+
+    let editingProduct: Product? // Optional product to edit
+
     @State private var name = ""
     @State private var brand = ""
     @State private var category = ""
@@ -28,6 +31,11 @@ struct AddProductView: View {
 
     let skinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"]
     let concerns = ["Acne", "Aging", "Dark Spots", "Redness", "Dryness", "Oiliness", "Fine Lines", "Pores"]
+
+    init(viewModel: ProductCatalogViewModel, editingProduct: Product? = nil) {
+        self.viewModel = viewModel
+        self.editingProduct = editingProduct
+    }
 
     var body: some View {
         NavigationStack {
@@ -66,8 +74,31 @@ struct AddProductView: View {
                         .tint(theme.accent)
                 }
             }
-            .navigationTitle("Add Product")
+            .navigationTitle(editingProduct == nil ? "Add Product" : "Edit Product")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                if let product = editingProduct {
+                    name = product.name ?? ""
+                    brand = product.brand ?? ""
+                    category = product.category ?? ""
+                    description = product.description ?? ""
+                    ingredients = product.ingredients ?? ""
+                    imageUrl = product.imageUrl
+                    isActive = product.isActive ?? true
+
+                    if let price = product.price {
+                        priceText = String(format: "%.2f", price)
+                    }
+
+                    if let skinTypes = product.skinTypes {
+                        selectedSkinTypes = Set(skinTypes)
+                    }
+
+                    if let concerns = product.concerns {
+                        selectedConcerns = Set(concerns)
+                    }
+                }
+            }
             .toolbar {
                 ToolbarItemGroup(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -337,9 +368,9 @@ struct AddProductView: View {
             // Parse price
             let price = Double(priceText.trimmingCharacters(in: .whitespaces))
 
-            let newProduct = Product(
-                id: nil,
-                userId: AuthenticationManager.shared.currentUser?.id,
+            let productToSave = Product(
+                id: editingProduct?.id,  // Use existing ID if editing
+                userId: editingProduct?.userId ?? AuthenticationManager.shared.currentUser?.id,
                 name: name,
                 brand: brand,
                 category: category,
@@ -347,13 +378,17 @@ struct AddProductView: View {
                 ingredients: ingredients.isEmpty ? nil : ingredients,
                 skinTypes: Array(selectedSkinTypes),
                 concerns: Array(selectedConcerns),
-                imageUrl: uploadedImageUrl,
+                imageUrl: uploadedImageUrl ?? imageUrl,  // Use new upload or keep existing
                 price: price,
                 isActive: isActive,
-                createdAt: nil
+                createdAt: editingProduct?.createdAt
             )
 
-            await viewModel.addProduct(newProduct)
+            if editingProduct != nil {
+                await viewModel.updateProduct(productToSave)
+            } else {
+                await viewModel.addProduct(productToSave)
+            }
 
             await MainActor.run {
                 isLoading = false

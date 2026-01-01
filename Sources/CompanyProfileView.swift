@@ -37,7 +37,7 @@ struct CompanyProfileView: View {
                     }
                 }
 
-                if company != nil {
+                if company != nil && authManager.currentUser?.isAdmin == true {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Edit") {
                             showCreateCompany = true

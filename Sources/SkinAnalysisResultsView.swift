@@ -151,7 +151,7 @@ struct SkinAnalysisResultsView: View {
 
                         Spacer()
 
-                        Text("\(score)/10")
+                        Text("\(score)/100")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(theme.accent)
                     }
@@ -188,8 +188,8 @@ struct SkinAnalysisResultsView: View {
                     comparisonRow(
                         label: "Skin Health Score",
                         icon: "heart.fill",
-                        currentValue: "\(currentScore)/10",
-                        previousValue: "\(previousScore)/10",
+                        currentValue: "\(currentScore)/100",
+                        previousValue: "\(previousScore)/100",
                         change: currentScore - previousScore
                     )
                 }

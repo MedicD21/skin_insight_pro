@@ -6,6 +6,7 @@ struct ProductCatalogView: View {
     @State private var showAddProduct = false
     @State private var showImportProducts = false
     @State private var searchText = ""
+    @State private var productToEdit: Product?
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     var body: some View {
@@ -25,6 +26,9 @@ struct ProductCatalogView: View {
                         LazyVStack(spacing: 12) {
                             ForEach(filteredProducts) { product in
                                 ProductRowView(product: product)
+                                    .onTapGesture {
+                                        productToEdit = product
+                                    }
                             }
                         }
                         .padding(.horizontal, 16)
@@ -55,6 +59,9 @@ struct ProductCatalogView: View {
             .searchable(text: $searchText, prompt: "Search products")
             .sheet(isPresented: $showAddProduct) {
                 AddProductView(viewModel: viewModel)
+            }
+            .sheet(item: $productToEdit) { product in
+                AddProductView(viewModel: viewModel, editingProduct: product)
             }
             .sheet(isPresented: $showImportProducts) {
                 ProductImportView(viewModel: viewModel)
@@ -247,6 +254,24 @@ class ProductCatalogViewModel: ObservableObject {
             let savedProduct = try await NetworkService.shared.createOrUpdateProduct(product: product, userId: userId)
             products.append(savedProduct)
             products.sort { ($0.name ?? "") < ($1.name ?? "") }
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    func updateProduct(_ product: Product) async {
+        guard let userId = AuthenticationManager.shared.currentUser?.id,
+              let productId = product.id else { return }
+
+        do {
+            let updatedProduct = try await NetworkService.shared.createOrUpdateProduct(product: product, userId: userId)
+
+            // Replace the product in the list
+            if let index = products.firstIndex(where: { $0.id == productId }) {
+                products[index] = updatedProduct
+                products.sort { ($0.name ?? "") < ($1.name ?? "") }
+            }
         } catch {
             errorMessage = error.localizedDescription
             showError = true

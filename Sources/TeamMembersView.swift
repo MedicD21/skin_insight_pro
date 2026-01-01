@@ -11,6 +11,9 @@ struct TeamMembersView: View {
     @State private var errorMessage = ""
     @State private var companyId: String = ""
     @State private var showCopiedConfirmation = false
+    @State private var updatingUserId: String?
+    @State private var showEditCompanyCode = false
+    @State private var showEmployeeImport = false
 
     var body: some View {
         NavigationStack {
@@ -34,6 +37,14 @@ struct TeamMembersView: View {
                         dismiss()
                     }
                 }
+
+                if authManager.currentUser?.isAdmin == true {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(action: { showEmployeeImport = true }) {
+                            Image(systemName: "square.and.arrow.down")
+                        }
+                    }
+                }
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
@@ -42,6 +53,19 @@ struct TeamMembersView: View {
             }
             .task {
                 await loadTeamMembers()
+            }
+            .refreshable {
+                await loadTeamMembers()
+            }
+            .sheet(isPresented: $showEditCompanyCode) {
+                EditCompanyCodeView(companyId: $companyId)
+            }
+            .sheet(isPresented: $showEmployeeImport, onDismiss: {
+                Task {
+                    await loadTeamMembers()
+                }
+            }) {
+                EmployeeImportView()
             }
             .overlay(alignment: .bottom) {
                 if showCopiedConfirmation {
@@ -58,6 +82,14 @@ struct TeamMembersView: View {
 
                 if !teamMembers.isEmpty {
                     teamMembersListSection
+                } else {
+                    Text("No team members found")
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.secondaryText)
+                        .padding(40)
+                        .onAppear {
+                            print("📋 TeamMembersView: Showing 'No team members' - array count is \(teamMembers.count)")
+                        }
                 }
             }
             .padding(.horizontal, 20)
@@ -68,10 +100,25 @@ struct TeamMembersView: View {
 
     private var companyCodeSection: some View {
         VStack(spacing: 16) {
-            Text("Company Code")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(theme.primaryText)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            HStack {
+                Text("Company Code")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                if authManager.currentUser?.isAdmin == true {
+                    Button(action: { showEditCompanyCode = true }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 13))
+                            Text("Edit")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(theme.accent)
+                    }
+                }
+            }
 
             VStack(spacing: 12) {
                 HStack {
@@ -224,7 +271,9 @@ struct TeamMembersView: View {
 
             Spacer()
 
+            // Show admin toggle for admins, badge for everyone else
             if member.isAdmin == true {
+                // Show admin badge for all users
                 Text("Admin")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(theme.accent)
@@ -232,6 +281,23 @@ struct TeamMembersView: View {
                     .padding(.vertical, 4)
                     .background(theme.accent.opacity(0.15))
                     .clipShape(Capsule())
+            }
+
+            // Only show toggle if current user is admin
+            if authManager.currentUser?.isAdmin == true {
+                if updatingUserId == member.id {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Toggle("", isOn: Binding(
+                        get: { member.isAdmin ?? false },
+                        set: { newValue in
+                            toggleAdminStatus(for: member, isAdmin: newValue)
+                        }
+                    ))
+                    .labelsHidden()
+                    .tint(theme.accent)
+                }
             }
         }
         .padding(.vertical, 8)
@@ -254,22 +320,178 @@ struct TeamMembersView: View {
         .animation(.spring(), value: showCopiedConfirmation)
     }
 
+    private func toggleAdminStatus(for member: AppUser, isAdmin: Bool) {
+        guard let memberId = member.id else { return }
+
+        updatingUserId = memberId
+
+        Task {
+            do {
+                try await NetworkService.shared.updateUserAdminStatus(userId: memberId, isAdmin: isAdmin)
+
+                // Update local array
+                if let index = teamMembers.firstIndex(where: { $0.id == memberId }) {
+                    teamMembers[index].isAdmin = isAdmin
+                }
+
+                updatingUserId = nil
+            } catch {
+                updatingUserId = nil
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+    }
+
     private func loadTeamMembers() async {
         guard let companyId = authManager.currentUser?.companyId else {
+            print("❌ TeamMembersView: No company ID for current user")
             errorMessage = "No company associated with your account"
             return
         }
 
+        print("📋 TeamMembersView: Loading team members for company: \(companyId)")
         self.companyId = companyId
         isLoading = true
         defer { isLoading = false }
 
         do {
             let members = try await NetworkService.shared.fetchTeamMembers(companyId: companyId)
+            print("📋 TeamMembersView: Received \(members.count) members")
+            print("📋 TeamMembersView: Members: \(members.map { "\($0.firstName ?? "") \($0.lastName ?? "") (\($0.email ?? ""))" })")
             teamMembers = members
+            print("📋 TeamMembersView: teamMembers array updated with \(teamMembers.count) members")
         } catch {
+            print("❌ TeamMembersView: Error loading team members: \(error)")
             errorMessage = error.localizedDescription
             showError = true
+        }
+    }
+}
+
+struct EditCompanyCodeView: View {
+    @ObservedObject var theme = ThemeManager.shared
+    @StateObject private var authManager = AuthenticationManager.shared
+    @Environment(\.dismiss) var dismiss
+
+    @Binding var companyId: String
+    @State private var newCompanyCode: String = ""
+    @State private var isSaving = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                theme.primaryBackground
+                    .ignoresSafeArea()
+
+                VStack(spacing: 24) {
+                    VStack(spacing: 16) {
+                        Image(systemName: "building.2.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(theme.accent)
+
+                        Text("Edit Company Code")
+                            .font(.system(size: 24, weight: .bold))
+                            .foregroundColor(theme.primaryText)
+
+                        Text("Choose a custom code for your company. This code will be used by team members to join your company.")
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.secondaryText)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
+                    .padding(.top, 40)
+
+                    VStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Company Code")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(theme.secondaryText)
+
+                            TextField("Enter custom code", text: $newCompanyCode)
+                                .font(.system(size: 17))
+                                .foregroundColor(theme.primaryText)
+                                .autocapitalization(.none)
+                                .disableAutocorrection(true)
+                                .padding(16)
+                                .background(theme.tertiaryBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                        .stroke(theme.border, lineWidth: 1)
+                                )
+
+                            Text("Use letters, numbers, hyphens, or underscores. Keep it simple and memorable.")
+                                .font(.system(size: 13))
+                                .foregroundColor(theme.secondaryText)
+                        }
+                    }
+                    .padding(.horizontal, 20)
+
+                    Spacer()
+                }
+
+                if isSaving {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+
+                    ProgressView()
+                        .scaleEffect(1.5)
+                        .tint(theme.accent)
+                }
+            }
+            .navigationTitle("Company Code")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        saveCompanyCode()
+                    }
+                    .disabled(newCompanyCode.isEmpty || isSaving)
+                }
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
+            .onAppear {
+                newCompanyCode = companyId
+            }
+        }
+    }
+
+    private func saveCompanyCode() {
+        guard let currentCompanyId = authManager.currentUser?.companyId else { return }
+
+        isSaving = true
+
+        Task {
+            do {
+                // Update the company ID in the database
+                try await NetworkService.shared.updateCompanyId(oldId: currentCompanyId, newId: newCompanyCode)
+
+                // Update local state
+                companyId = newCompanyCode
+
+                // Update current user's company ID
+                authManager.currentUser?.companyId = newCompanyCode
+
+                isSaving = false
+                dismiss()
+            } catch {
+                isSaving = false
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }

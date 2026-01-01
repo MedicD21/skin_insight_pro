@@ -729,12 +729,15 @@ struct SkinAnalysisInputView: View {
 
         Task {
             do {
-                // Fetch AI rules for the current user
+                // Fetch AI rules and products for the current user
                 let aiRules: [AIRule]
+                let products: [Product]
                 if let userId = AuthenticationManager.shared.currentUser?.id {
                     aiRules = try await NetworkService.shared.fetchAIRules(userId: userId)
+                    products = try await NetworkService.shared.fetchProducts(userId: userId)
                 } else {
                     aiRules = []
+                    products = []
                 }
 
                 let result = try await NetworkService.shared.analyzeImage(
@@ -752,7 +755,8 @@ struct SkinAnalysisInputView: View {
                     treatmentsPerformed: treatmentsPerformed.isEmpty ? nil : treatmentsPerformed,
                     injectablesHistory: injectablesHistory,
                     previousAnalyses: viewModel.analyses,
-                    aiRules: aiRules
+                    aiRules: aiRules,
+                    products: products
                 )
                 analysisResult = result
                 isAnalyzing = false

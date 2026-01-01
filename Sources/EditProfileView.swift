@@ -15,6 +15,10 @@ struct EditProfileView: View {
     @State private var errorMessage = ""
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
+    @State private var showPasswordSection = false
+    @State private var newPassword = ""
+    @State private var confirmPassword = ""
+    @State private var showPasswordSuccess = false
 
     init() {
         _firstName = State(initialValue: AuthenticationManager.shared.currentUser?.firstName ?? "")
@@ -34,6 +38,8 @@ struct EditProfileView: View {
                         profileImageSection
 
                         formSection
+
+                        passwordSection
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -69,6 +75,15 @@ struct EditProfileView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
+            }
+            .alert("Password Updated", isPresented: $showPasswordSuccess) {
+                Button("OK", role: .cancel) {
+                    newPassword = ""
+                    confirmPassword = ""
+                    showPasswordSection = false
+                }
+            } message: {
+                Text("Your password has been updated successfully.")
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $selectedImage, sourceType: .photoLibrary)
@@ -219,6 +234,136 @@ struct EditProfileView: View {
                 .fill(theme.cardBackground)
                 .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
         )
+    }
+
+    private var passwordSection: some View {
+        VStack(spacing: 16) {
+            Button(action: { showPasswordSection.toggle() }) {
+                HStack {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(theme.accent)
+
+                    Text("Change Password")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(theme.primaryText)
+
+                    Spacer()
+
+                    Image(systemName: showPasswordSection ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                }
+                .padding(16)
+                .background(theme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+            }
+
+            if showPasswordSection {
+                VStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("New Password")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(theme.secondaryText)
+
+                        SecureField("Enter new password", text: $newPassword)
+                            .font(.system(size: 17))
+                            .foregroundColor(theme.primaryText)
+                            .padding(16)
+                            .background(theme.tertiaryBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                    .stroke(theme.border, lineWidth: 1)
+                            )
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Confirm Password")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(theme.secondaryText)
+
+                        SecureField("Confirm new password", text: $confirmPassword)
+                            .font(.system(size: 17))
+                            .foregroundColor(theme.primaryText)
+                            .padding(16)
+                            .background(theme.tertiaryBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                    .stroke(theme.border, lineWidth: 1)
+                            )
+                    }
+
+                    if !isPasswordValid && !newPassword.isEmpty {
+                        Text("Password must be at least 6 characters with 1 uppercase and 1 special character")
+                            .font(.system(size: 12))
+                            .foregroundColor(.red)
+                    }
+
+                    Button(action: { updatePassword() }) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("Update Password")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(16)
+                        .background(isPasswordValid && newPassword == confirmPassword ? theme.accent : Color.gray)
+                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    }
+                    .disabled(!isPasswordValid || newPassword != confirmPassword || isSaving)
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.radiusXL)
+                        .fill(theme.cardBackground)
+                        .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
+                )
+            }
+        }
+    }
+
+    private var isPasswordValid: Bool {
+        let hasMinLength = newPassword.count >= 6
+        let hasCapital = newPassword.range(of: "[A-Z]", options: .regularExpression) != nil
+        let hasSpecial = newPassword.range(of: "[!@#$%^&*(),.?\":{}|<>]", options: .regularExpression) != nil
+        return hasMinLength && hasCapital && hasSpecial
+    }
+
+    private func updatePassword() {
+        guard newPassword == confirmPassword else {
+            errorMessage = "Passwords do not match"
+            showError = true
+            return
+        }
+
+        guard isPasswordValid else {
+            errorMessage = "Password must be at least 6 characters with 1 uppercase and 1 special character"
+            showError = true
+            return
+        }
+
+        isSaving = true
+
+        Task {
+            do {
+                try await NetworkService.shared.updatePassword(newPassword: newPassword)
+
+                await MainActor.run {
+                    isSaving = false
+                    showPasswordSuccess = true
+                }
+            } catch {
+                await MainActor.run {
+                    isSaving = false
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+        }
     }
 
     private func saveProfile() {

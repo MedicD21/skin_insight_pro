@@ -647,6 +647,31 @@ class NetworkService {
         return updatedUser
     }
 
+    func updatePassword(newPassword: String) async throws {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/user")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let passwordData: [String: Any] = ["password": newPassword]
+        request.httpBody = try JSONSerialization.data(withJSONObject: passwordData)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            if let errorString = String(data: data, encoding: .utf8) {
+                print("Password update error: \(errorString)")
+            }
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - Companies
 
     func fetchCompany(id: String) async throws -> Company {
@@ -766,12 +791,51 @@ class NetworkService {
         }
     }
 
+    func updateCompanyId(oldId: String, newId: String) async throws {
+        // Update the company's ID
+        let updateCompanyUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(oldId)")!
+        var updateCompanyRequest = URLRequest(url: updateCompanyUrl)
+        updateCompanyRequest.httpMethod = "PATCH"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            updateCompanyRequest.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let companyData: [String: Any] = ["id": newId]
+        updateCompanyRequest.httpBody = try JSONSerialization.data(withJSONObject: companyData)
+
+        let (_, companyResponse) = try await session.data(for: updateCompanyRequest)
+
+        guard let httpResponse = companyResponse as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError((companyResponse as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+
+        // Update all users with the old company_id to the new company_id
+        let updateUsersUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?company_id=eq.\(oldId)")!
+        var updateUsersRequest = URLRequest(url: updateUsersUrl)
+        updateUsersRequest.httpMethod = "PATCH"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            updateUsersRequest.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let userData: [String: Any] = ["company_id": newId]
+        updateUsersRequest.httpBody = try JSONSerialization.data(withJSONObject: userData)
+
+        let (_, usersResponse) = try await session.data(for: updateUsersRequest)
+
+        guard let httpResponse2 = usersResponse as? HTTPURLResponse,
+              (200...299).contains(httpResponse2.statusCode) else {
+            throw NetworkError.serverError((usersResponse as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+    }
+
     // MARK: - Team Members
 
     func fetchTeamMembers(companyId: String) async throws -> [AppUser] {
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
         components.queryItems = [
             URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
+            URLQueryItem(name: "select", value: "*"),
             URLQueryItem(name: "order", value: "created_at.asc")
         ]
 
@@ -785,6 +849,12 @@ class NetworkService {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
+        // Add Range header to ensure no pagination limit
+        request.setValue("0-999", forHTTPHeaderField: "Range")
+
+        // Add Prefer header to get full count
+        request.setValue("count=exact", forHTTPHeaderField: "Prefer")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -795,7 +865,17 @@ class NetworkService {
             throw NetworkError.serverError(httpResponse.statusCode)
         }
 
+        // Debug logging
+        if let contentRange = httpResponse.value(forHTTPHeaderField: "Content-Range") {
+            print("Team members Content-Range: \(contentRange)")
+        }
+
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("Team members response: \(responseString)")
+        }
+
         let teamMembers = try JSONDecoder().decode([AppUser].self, from: data)
+        print("Fetched \(teamMembers.count) team members for company: \(companyId)")
         return teamMembers
     }
 
@@ -1085,7 +1165,8 @@ class NetworkService {
         treatmentsPerformed: String?,
         injectablesHistory: String?,
         previousAnalyses: [SkinAnalysisResult],
-        aiRules: [AIRule] = []
+        aiRules: [AIRule] = [],
+        products: [Product] = []
     ) async throws -> AnalysisData {
         // Use new AI service (Apple Vision or Claude based on AppConstants.aiProvider)
         return try await AIAnalysisService.shared.analyzeImage(
@@ -1103,183 +1184,146 @@ class NetworkService {
             treatmentsPerformed: treatmentsPerformed,
             injectablesHistory: injectablesHistory,
             previousAnalyses: previousAnalyses,
-            aiRules: aiRules
+            aiRules: aiRules,
+            products: products
         )
     }
 
-    // Legacy API method - kept for reference, no longer used
-    private func analyzeImageWithOldAPI(
-        image: UIImage,
-        medicalHistory: String?,
-        allergies: String?,
-        knownSensitivities: String?,
-        medications: String?,
-        manualSkinType: String?,
-        manualHydrationLevel: String?,
-        manualSensitivity: String?,
-        manualPoreCondition: String?,
-        manualConcerns: String?,
-        productsUsed: String?,
-        treatmentsPerformed: String?,
-        injectablesHistory: String?,
-        previousAnalyses: [SkinAnalysisResult],
-        aiRules: [AIRule] = []
-    ) async throws -> AnalysisData {
-        let url = URL(string: "\(AppConstants.aiApiUrl)/aiapi/answerimage")!
+    // MARK: - User Management
+
+    func createEmployeeAccount(
+        email: String,
+        password: String,
+        firstName: String,
+        lastName: String,
+        role: String,
+        isAdmin: Bool,
+        companyId: String
+    ) async throws -> AppUser {
+        // Create account via Supabase Auth
+        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/signup")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
 
-        let boundary = UUID().uuidString
-        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        let signupData: [String: Any] = [
+            "email": email,
+            "password": password,
+            "data": [
+                "first_name": firstName,
+                "last_name": lastName,
+                "role": role,
+                "is_admin": isAdmin,
+                "company_id": companyId
+            ]
+        ]
 
-        var body = Data()
+        request.httpBody = try JSONSerialization.data(withJSONObject: signupData)
 
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"app_id\"\r\n\r\n".data(using: .utf8)!)
-        body.append("\(AppConstants.appId)\r\n".data(using: .utf8)!)
+        let (data, response) = try await session.data(for: request)
 
-        if let medicalHistory = medicalHistory, !medicalHistory.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"medical_history\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(medicalHistory)\r\n".data(using: .utf8)!)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
         }
 
-        if let allergies = allergies, !allergies.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"allergies\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(allergies)\r\n".data(using: .utf8)!)
-        }
-
-        if let knownSensitivities = knownSensitivities, !knownSensitivities.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"known_sensitivities\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(knownSensitivities)\r\n".data(using: .utf8)!)
-        }
-
-        if let medications = medications, !medications.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"medications\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(medications)\r\n".data(using: .utf8)!)
-        }
-
-        if let manualSkinType = manualSkinType, !manualSkinType.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"manual_skin_type\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(manualSkinType)\r\n".data(using: .utf8)!)
-        }
-
-        if let manualHydrationLevel = manualHydrationLevel, !manualHydrationLevel.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"manual_hydration_level\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(manualHydrationLevel)\r\n".data(using: .utf8)!)
-        }
-
-        if let manualSensitivity = manualSensitivity, !manualSensitivity.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"manual_sensitivity\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(manualSensitivity)\r\n".data(using: .utf8)!)
-        }
-
-        if let manualPoreCondition = manualPoreCondition, !manualPoreCondition.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"manual_pore_condition\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(manualPoreCondition)\r\n".data(using: .utf8)!)
-        }
-
-        if let manualConcerns = manualConcerns, !manualConcerns.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"manual_concerns\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(manualConcerns)\r\n".data(using: .utf8)!)
-        }
-
-        if let productsUsed = productsUsed, !productsUsed.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"products_used\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(productsUsed)\r\n".data(using: .utf8)!)
-        }
-
-        if let treatmentsPerformed = treatmentsPerformed, !treatmentsPerformed.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"treatments_performed\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(treatmentsPerformed)\r\n".data(using: .utf8)!)
-        }
-
-        if let injectablesHistory = injectablesHistory, !injectablesHistory.isEmpty {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"injectables_history\"\r\n\r\n".data(using: .utf8)!)
-            body.append("\(injectablesHistory)\r\n".data(using: .utf8)!)
-        }
-
-        if !previousAnalyses.isEmpty {
-            let recentAnalyses = Array(previousAnalyses.prefix(3))
-            if let jsonData = try? JSONEncoder().encode(recentAnalyses),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                body.append("--\(boundary)\r\n".data(using: .utf8)!)
-                body.append("Content-Disposition: form-data; name=\"previous_analyses\"\r\n\r\n".data(using: .utf8)!)
-                body.append("\(jsonString)\r\n".data(using: .utf8)!)
+        guard (200...299).contains(httpResponse.statusCode) else {
+            // Try to parse error message
+            if let errorJson = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let errorMsg = errorJson["msg"] as? String {
+                throw NSError(domain: "NetworkService", code: httpResponse.statusCode, userInfo: [
+                    NSLocalizedDescriptionKey: errorMsg
+                ])
             }
+            throw NetworkError.serverError(httpResponse.statusCode)
         }
 
-        if !aiRules.isEmpty {
-            let activeRules = aiRules.filter { $0.isActive == true }.sorted { ($0.priority ?? 0) > ($1.priority ?? 0) }
-            if let jsonData = try? JSONEncoder().encode(activeRules),
-               let jsonString = String(data: jsonData, encoding: .utf8) {
-                body.append("--\(boundary)\r\n".data(using: .utf8)!)
-                body.append("Content-Disposition: form-data; name=\"ai_rules\"\r\n\r\n".data(using: .utf8)!)
-                body.append("\(jsonString)\r\n".data(using: .utf8)!)
-            }
+        // Parse the response to get the user ID
+        struct SignupResponse: Codable {
+            let user: SignupUser?
         }
 
-        if let imageData = image.jpegData(compressionQuality: 0.8) {
-            body.append("--\(boundary)\r\n".data(using: .utf8)!)
-            body.append("Content-Disposition: form-data; name=\"image\"; filename=\"skin_analysis.jpg\"\r\n".data(using: .utf8)!)
-            body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
-            body.append(imageData)
-            body.append("\r\n".data(using: .utf8)!)
+        struct SignupUser: Codable {
+            let id: String
         }
 
-        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        request.httpBody = body
+        let signupResponse = try JSONDecoder().decode(SignupResponse.self, from: data)
 
-        print("-> Request: AI Image Analysis")
-        print("-> POST: \(url.absoluteString)")
+        guard let userId = signupResponse.user?.id else {
+            throw NetworkError.invalidResponse
+        }
 
-        do {
-            let (data, response) = try await session.data(for: request)
+        // Return a basic AppUser object
+        return AppUser(
+            id: userId,
+            email: email,
+            provider: "email",
+            isAdmin: isAdmin,
+            createdAt: nil,
+            companyId: companyId,
+            firstName: firstName,
+            lastName: lastName,
+            phoneNumber: nil,
+            profileImageUrl: nil,
+            role: role
+        )
+    }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                throw NetworkError.invalidResponse
-            }
+    func fetchCompanyUsers(companyId: String) async throws -> [AppUser] {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        components.queryItems = [
+            URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
+            URLQueryItem(name: "select", value: "*"),
+            URLQueryItem(name: "order", value: "email.asc")
+        ]
 
-            print("<- Response: AI Image Analysis")
-            print("<- Status Code: \(httpResponse.statusCode)")
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
 
-            guard (200...299).contains(httpResponse.statusCode) else {
-                throw NetworkError.serverError(httpResponse.statusCode)
-            }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(AppConstants.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
 
-            let aiResponse = try JSONDecoder().decode(AIAnalysisResponse.self, from: data)
+        let (data, response) = try await session.data(for: request)
 
-            let analysisData = AnalysisData(
-                skinType: aiResponse.skinType,
-                hydrationLevel: aiResponse.hydrationLevel,
-                sensitivity: aiResponse.sensitivity,
-                concerns: aiResponse.concerns,
-                poreCondition: aiResponse.poreCondition,
-                skinHealthScore: aiResponse.skinHealthScore,
-                recommendations: aiResponse.recommendations,
-                productRecommendations: aiResponse.productRecommendations,
-                medicalConsiderations: aiResponse.medicalConsiderations,
-                progressNotes: aiResponse.progressNotes
-            )
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
 
-            return analysisData
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch let error as URLError where error.code == .cancelled {
-            throw CancellationError()
-        } catch {
-            throw error
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let users = try JSONDecoder().decode([AppUser].self, from: data)
+        return users
+    }
+
+    func updateUserAdminStatus(userId: String, isAdmin: Bool) async throws {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(AppConstants.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        request.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+        let updateData: [String: Any] = [
+            "is_admin": isAdmin
+        ]
+
+        request.httpBody = try JSONSerialization.data(withJSONObject: updateData)
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
         }
     }
 
