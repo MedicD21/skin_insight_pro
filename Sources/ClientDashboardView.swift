@@ -206,9 +206,12 @@ struct ClientRowView: View {
                         .lineLimit(1)
                 }
             }
-            
+
             Spacer(minLength: 8)
-            
+
+            // Consent status indicator
+            consentStatusBadge
+
             Image(systemName: "chevron.right")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundColor(theme.tertiaryText)
@@ -241,6 +244,22 @@ struct ClientRowView: View {
             return true
         }
         return clientUserId == currentUserId
+    }
+
+    @ViewBuilder
+    private var consentStatusBadge: some View {
+        let status = client.consentStatus
+
+        switch status {
+        case .valid:
+            Image(systemName: status.icon)
+                .font(.system(size: 18))
+                .foregroundColor(Color(red: status.color.red, green: status.color.green, blue: status.color.blue))
+        case .expired, .missing:
+            Image(systemName: status.icon)
+                .font(.system(size: 18))
+                .foregroundColor(Color(red: status.color.red, green: status.color.green, blue: status.color.blue))
+        }
     }
 }
 

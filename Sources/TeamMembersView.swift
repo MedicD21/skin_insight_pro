@@ -88,7 +88,9 @@ struct TeamMembersView: View {
                         .foregroundColor(theme.secondaryText)
                         .padding(40)
                         .onAppear {
+                            #if DEBUG
                             print("📋 TeamMembersView: Showing 'No team members' - array count is \(teamMembers.count)")
+                            #endif
                         }
                 }
             }
@@ -345,24 +347,34 @@ struct TeamMembersView: View {
 
     private func loadTeamMembers() async {
         guard let companyId = authManager.currentUser?.companyId else {
+            #if DEBUG
             print("❌ TeamMembersView: No company ID for current user")
+            #endif
             errorMessage = "No company associated with your account"
             return
         }
 
+        #if DEBUG
         print("📋 TeamMembersView: Loading team members for company: \(companyId)")
+        #endif
         self.companyId = companyId
         isLoading = true
         defer { isLoading = false }
 
         do {
             let members = try await NetworkService.shared.fetchTeamMembers(companyId: companyId)
+            #if DEBUG
             print("📋 TeamMembersView: Received \(members.count) members")
             print("📋 TeamMembersView: Members: \(members.map { "\($0.firstName ?? "") \($0.lastName ?? "") (\($0.email ?? ""))" })")
+            #endif
             teamMembers = members
+            #if DEBUG
             print("📋 TeamMembersView: teamMembers array updated with \(teamMembers.count) members")
+            #endif
         } catch {
+            #if DEBUG
             print("❌ TeamMembersView: Error loading team members: \(error)")
+            #endif
             errorMessage = error.localizedDescription
             showError = true
         }

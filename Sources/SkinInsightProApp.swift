@@ -4,23 +4,53 @@ import SwiftUI
 struct SkinInsightProApp: App {
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var eventManager = SimpleForegroundLogger.shared
-    
+    @StateObject private var complianceManager = HIPAAComplianceManager.shared
+    @State private var showConsentScreen = false
+    @State private var showSessionTimeout = false
+
     var body: some Scene {
         WindowGroup {
-            Group {
-                if authManager.isLoading {
-                    SplashScreen()
-                } else if authManager.isAuthenticated {
-                    if authManager.needsProfileCompletion {
-                        CompleteProfileView()
+            ZStack {
+                Group {
+                    if authManager.isLoading {
+                        SplashScreen()
+                    } else if authManager.isAuthenticated {
+                        if !complianceManager.hasGivenConsent() {
+                            // Show consent screen first
+                            HIPAAConsentView {
+                                // After consent, continue to profile completion or main app
+                                showConsentScreen = false
+                            }
+                        } else if authManager.needsProfileCompletion {
+                            CompleteProfileView()
+                                .trackHIPAAActivity()
+                        } else {
+                            MainTabView()
+                                .trackHIPAAActivity()
+                        }
                     } else {
-                        MainTabView()
+                        AuthenticationView()
                     }
-                } else {
-                    AuthenticationView()
+                }
+                .preferredColorScheme(.dark)
+
+                // Session timeout overlay
+                if complianceManager.isSessionExpired {
+                    SessionTimeoutView(isPresented: $showSessionTimeout)
                 }
             }
-            .preferredColorScheme(.dark)
+            .onAppear {
+                if authManager.isAuthenticated {
+                    complianceManager.startSessionMonitoring()
+                }
+            }
+            .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
+                if isAuthenticated {
+                    complianceManager.startSessionMonitoring()
+                } else {
+                    complianceManager.stopSessionMonitoring()
+                }
+            }
         }
     }
 }

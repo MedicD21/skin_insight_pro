@@ -8,7 +8,16 @@ struct ClientDetailView: View {
     @State private var showAnalysisInput = false
     @State private var showEditClient = false
     @State private var showCompareAnalyses = false
+    @State private var showConsentForm = false
+    @State private var showConsentAlert = false
+    @State private var currentClient: AppClient
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+
+    init(client: AppClient, selectedClient: Binding<AppClient?>) {
+        self.client = client
+        self._selectedClient = selectedClient
+        self._currentClient = State(initialValue: client)
+    }
     
     var body: some View {
         ZStack {
@@ -60,8 +69,14 @@ struct ClientDetailView: View {
                 Button(action: { showEditClient = true }) {
                     Label("Edit", systemImage: "pencil")
                 }
-                
-                Button(action: { showAnalysisInput = true }) {
+
+                Button(action: {
+                    if currentClient.hasValidConsent {
+                        showAnalysisInput = true
+                    } else {
+                        showConsentAlert = true
+                    }
+                }) {
                     Label("New Analysis", systemImage: "camera")
                 }
                 .keyboardShortcut("a", modifiers: .command)
@@ -80,6 +95,25 @@ struct ClientDetailView: View {
         }
         .sheet(isPresented: $showCompareAnalyses) {
             CompareAnalysesView(client: client, analyses: viewModel.analyses)
+        }
+        .sheet(isPresented: $showConsentForm) {
+            ClientHIPAAConsentView(client: client, onConsent: { signature in
+                viewModel.updateClientConsent(client: client, signature: signature) { updatedClient in
+                    selectedClient = updatedClient
+                }
+            })
+        }
+        .alert("Consent Required", isPresented: $showConsentAlert) {
+            Button("Sign Now") {
+                showConsentForm = true
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            if client.hasExpiredConsent {
+                Text("This client's HIPAA consent has expired. A new consent signature is required before performing skin analysis.")
+            } else {
+                Text("This client has not signed a HIPAA consent form. A consent signature is required before performing skin analysis.")
+            }
         }
         .task {
             await viewModel.loadAnalyses(clientId: client.id ?? "", userId: AuthenticationManager.shared.currentUser?.id ?? "")
@@ -102,17 +136,20 @@ struct ClientDetailView: View {
                     Circle()
                         .fill(theme.accent.opacity(0.15))
                         .frame(width: 72, height: 72)
-                    
+
                     Text(initials)
                         .font(.system(size: 28, weight: .semibold))
                         .foregroundColor(theme.accent)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text(client.name ?? "Unknown")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(theme.primaryText)
-                    
+
+                    // HIPAA Consent Status Badge
+                    consentStatusBadge
+
                     if let email = client.email, !email.isEmpty {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope")
@@ -122,7 +159,7 @@ struct ClientDetailView: View {
                         }
                         .foregroundColor(theme.secondaryText)
                     }
-                    
+
                     if let phone = client.phone, !phone.isEmpty {
                         HStack(spacing: 8) {
                             Image(systemName: "phone")
@@ -133,18 +170,32 @@ struct ClientDetailView: View {
                         .foregroundColor(theme.secondaryText)
                     }
                 }
-                
+
                 Spacer()
             }
-            
+
+            // Show consent date if available
+            if let consentDate = client.consentDate {
+                Divider()
+
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.accent)
+                    Text("Consent signed on \(formatConsentDate(consentDate))")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                }
+            }
+
             if let notes = client.notes, !notes.isEmpty {
                 Divider()
-                
+
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Notes")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(theme.secondaryText)
-                    
+
                     Text(notes)
                         .font(.system(size: 15))
                         .foregroundColor(theme.primaryText)
@@ -297,7 +348,14 @@ struct ClientDetailView: View {
     }
     
     private var newAnalysisButton: some View {
-        Button(action: { showAnalysisInput = true }) {
+        Button(action: {
+            // Check if consent is valid before allowing analysis
+            if client.hasValidConsent {
+                showAnalysisInput = true
+            } else {
+                showConsentAlert = true
+            }
+        }) {
             HStack {
                 Spacer()
                 Image(systemName: "camera.fill")
@@ -570,6 +628,50 @@ struct ClientDetailView: View {
             return String(name.prefix(2)).uppercased()
         }
     }
+
+    private func formatConsentDate(_ dateString: String) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = isoFormatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MMM d, yyyy"
+            return displayFormatter.string(from: date)
+        }
+
+        // Fallback: Try without fractional seconds
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MMM d, yyyy"
+            return displayFormatter.string(from: date)
+        }
+
+        return dateString
+    }
+
+    @ViewBuilder
+    private var consentStatusBadge: some View {
+        let status = client.consentStatus
+
+        HStack(spacing: 6) {
+            Image(systemName: status.icon)
+                .font(.system(size: 12))
+            Text(status.displayText)
+                .font(.system(size: 12, weight: .medium))
+        }
+        .foregroundColor(Color(red: status.color.red, green: status.color.green, blue: status.color.blue))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color(red: status.color.red, green: status.color.green, blue: status.color.blue).opacity(0.1))
+        .clipShape(Capsule())
+        .onTapGesture {
+            // Allow tapping to renew consent
+            if status == .expired || status == .missing {
+                showConsentForm = true
+            }
+        }
+    }
 }
 
 struct AnalysisRowView: View {
@@ -677,11 +779,11 @@ class ClientDetailViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorMessage = ""
     @Published var clients: [AppClient] = []
-    
+
     func loadAnalyses(clientId: String, userId: String) async {
         isLoading = true
         defer { isLoading = false }
-        
+
         do {
             try Task.checkCancellation()
             let fetchedAnalyses = try await NetworkService.shared.fetchAnalyses(clientId: clientId, userId: userId)
@@ -693,8 +795,30 @@ class ClientDetailViewModel: ObservableObject {
             showError = true
         }
     }
-    
+
     func addAnalysis(_ analysis: SkinAnalysisResult) {
         analyses.insert(analysis, at: 0)
+    }
+
+    func updateClientConsent(client: AppClient, signature: String, completion: @escaping (AppClient) -> Void) {
+        guard let userId = AuthenticationManager.shared.currentUser?.id else { return }
+
+        var updatedClient = client
+        updatedClient.consentSignature = signature
+        updatedClient.consentDate = ISO8601DateFormatter().string(from: Date())
+
+        Task {
+            do {
+                let savedClient = try await NetworkService.shared.createOrUpdateClient(client: updatedClient, userId: userId)
+                await MainActor.run {
+                    completion(savedClient)
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+        }
     }
 }

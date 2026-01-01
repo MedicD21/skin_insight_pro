@@ -377,7 +377,15 @@ struct EditCompanyView: View {
         VStack(spacing: 20) {
             textField(title: "Company Name", placeholder: "Enter company name", text: $name)
             textField(title: "Address", placeholder: "Enter address", text: $address)
-            textField(title: "Phone", placeholder: "Enter phone number", text: $phone, keyboardType: .phonePad)
+            textField(
+                title: "Phone",
+                placeholder: "(555) 123-4567",
+                text: Binding(
+                    get: { phone.formatPhoneNumber() },
+                    set: { phone = $0.unformatPhoneNumber() }
+                ),
+                keyboardType: .phonePad
+            )
             textField(title: "Email", placeholder: "Enter email", text: $email, keyboardType: .emailAddress)
             textField(title: "Website", placeholder: "Enter website URL", text: $website, keyboardType: .URL)
         }

@@ -4,7 +4,8 @@ struct AddClientView: View {
     @ObservedObject var theme = ThemeManager.shared
     @ObservedObject var viewModel: ClientDashboardViewModel
     @Environment(\.dismiss) var dismiss
-    @State private var name = ""
+    @State private var firstName = ""
+    @State private var lastName = ""
     @State private var email = ""
     @State private var phone = ""
     @State private var notes = ""
@@ -15,10 +16,12 @@ struct AddClientView: View {
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showConsentForm = false
+    @State private var consentSignature: String?
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case name, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications
+        case firstName, lastName, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications
     }
     
     var body: some View {
@@ -55,8 +58,8 @@ struct AddClientView: View {
                 }
                 
                 ToolbarItemGroup(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveClient()
+                    Button("Next") {
+                        showConsentForm = true
                     }
                     .fontWeight(.semibold)
                     .disabled(!isFormValid)
@@ -67,6 +70,34 @@ struct AddClientView: View {
             } message: {
                 Text(errorMessage)
             }
+            .sheet(isPresented: $showConsentForm) {
+                // Create temporary client object for consent form
+                let tempClient = AppClient(
+                    id: nil,
+                    userId: AuthenticationManager.shared.currentUser?.id,
+                    companyId: AuthenticationManager.shared.currentUser?.companyId,
+                    name: "\(firstName) \(lastName)",
+                    firstName: firstName,
+                    lastName: lastName,
+                    phone: phone,
+                    email: email,
+                    notes: notes.isEmpty ? nil : notes,
+                    medicalHistory: medicalHistory.isEmpty ? nil : medicalHistory,
+                    allergies: allergies.isEmpty ? nil : allergies,
+                    knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
+                    medications: medications.isEmpty ? nil : medications,
+                    profileImageUrl: nil,
+                    fillersDate: nil,
+                    biostimulatorsDate: nil,
+                    consentSignature: nil,
+                    consentDate: nil
+                )
+
+                ClientHIPAAConsentView(client: tempClient, onConsent: { signature in
+                    consentSignature = signature
+                    saveClient()
+                })
+            }
         }
     }
 
@@ -75,16 +106,24 @@ struct AddClientView: View {
             Text("Basic Information")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(theme.primaryText)
-            
+
             VStack(spacing: 16) {
                 formField(
-                    title: "Name",
+                    title: "First Name",
                     icon: "person",
-                    placeholder: "Client name",
-                    text: $name,
-                    field: .name
+                    placeholder: "First name",
+                    text: $firstName,
+                    field: .firstName
                 )
-                
+
+                formField(
+                    title: "Last Name",
+                    icon: "person.fill",
+                    placeholder: "Last name",
+                    text: $lastName,
+                    field: .lastName
+                )
+
                 formField(
                     title: "Email",
                     icon: "envelope",
@@ -93,16 +132,19 @@ struct AddClientView: View {
                     field: .email,
                     keyboardType: .emailAddress
                 )
-                
+
                 formField(
                     title: "Phone",
                     icon: "phone",
-                    placeholder: "+1 (555) 123-4567",
-                    text: $phone,
+                    placeholder: "(555) 123-4567",
+                    text: Binding(
+                        get: { phone.formatPhoneNumber() },
+                        set: { phone = $0.unformatPhoneNumber() }
+                    ),
                     field: .phone,
                     keyboardType: .phonePad
                 )
-                
+
                 textEditorField(
                     title: "Notes",
                     icon: "note.text",
@@ -239,7 +281,7 @@ struct AddClientView: View {
     }
     
     private var isFormValid: Bool {
-        !name.isEmpty && !email.isEmpty && email.contains("@")
+        !firstName.isEmpty && !lastName.isEmpty && !email.isEmpty && email.contains("@")
     }
     
     private func saveClient() {
@@ -250,15 +292,21 @@ struct AddClientView: View {
             id: nil,
             userId: AuthenticationManager.shared.currentUser?.id,
             companyId: AuthenticationManager.shared.currentUser?.companyId,
-            name: name,
+            name: "\(firstName) \(lastName)",
+            firstName: firstName,
+            lastName: lastName,
             phone: phone,
             email: email,
-            notes: notes,
+            notes: notes.isEmpty ? nil : notes,
             medicalHistory: medicalHistory.isEmpty ? nil : medicalHistory,
             allergies: allergies.isEmpty ? nil : allergies,
             knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
             medications: medications.isEmpty ? nil : medications,
-            profileImageUrl: nil
+            profileImageUrl: nil,
+            fillersDate: nil,
+            biostimulatorsDate: nil,
+            consentSignature: consentSignature,
+            consentDate: ISO8601DateFormatter().string(from: Date())
         )
 
         Task {

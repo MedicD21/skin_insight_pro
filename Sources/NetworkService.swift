@@ -68,8 +68,9 @@ class NetworkService {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: loginData)
 
+        #if DEBUG
         print("-> Request: Login with Supabase Auth")
-        print("-> POST: \(url.absoluteString)")
+        #endif
 
         do {
             let (data, response) = try await session.data(for: request)
@@ -78,11 +79,14 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Login")
-            print("<- Status Code: \(httpResponse.statusCode)")
             if let jsonString = String(data: data, encoding: .utf8) {
+                #if DEBUG
                 print(jsonString)
+                #endif
             }
+            #endif
 
             guard (200...299).contains(httpResponse.statusCode) else {
                 if httpResponse.statusCode == 400 {
@@ -124,9 +128,11 @@ class NetworkService {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: signupData)
 
+        #if DEBUG
         print("-> Request: Signup with Supabase Auth")
         print("-> POST: \(url.absoluteString)")
 
+        #endif
         do {
             let (data, response) = try await session.data(for: request)
 
@@ -134,12 +140,14 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Signup")
             print("<- Status Code: \(httpResponse.statusCode)")
             if let jsonString = String(data: data, encoding: .utf8) {
                 print(jsonString)
             }
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -212,22 +220,26 @@ class NetworkService {
         }
         request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
+        #if DEBUG
         print("-> Request: Fetch User Profile")
         print("-> GET: \(url.absoluteString)")
         print("-> Headers: \(request.allHTTPHeaderFields ?? [:])")
 
+        #endif
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
 
+        #if DEBUG
         print("<- Response: Fetch User Profile")
         print("<- Status Code: \(httpResponse.statusCode)")
         if let jsonString = String(data: data, encoding: .utf8) {
             print("<- Body: \(jsonString)")
         }
 
+        #endif
         guard (200...299).contains(httpResponse.statusCode) else {
             throw NetworkError.serverError(httpResponse.statusCode)
         }
@@ -256,22 +268,26 @@ class NetworkService {
 
         createRequest.httpBody = try JSONSerialization.data(withJSONObject: userData)
 
+        #if DEBUG
         print("-> Request: Create User Profile")
         print("-> POST: \(createUrl.absoluteString)")
         print("-> Body: \(userData)")
 
+        #endif
         let (createData, createResponse) = try await session.data(for: createRequest)
 
         guard let createHttpResponse = createResponse as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
 
+        #if DEBUG
         print("<- Response: Create User Profile")
         print("<- Status Code: \(createHttpResponse.statusCode)")
         if let jsonString = String(data: createData, encoding: .utf8) {
             print("<- Body: \(jsonString)")
         }
 
+        #endif
         guard (200...299).contains(createHttpResponse.statusCode) else {
             throw NetworkError.serverError(createHttpResponse.statusCode)
         }
@@ -371,9 +387,11 @@ class NetworkService {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
+        #if DEBUG
         print("-> Request: Fetch Clients")
         print("-> GET: \(url.absoluteString)")
 
+        #endif
         do {
             let (data, response) = try await session.data(for: request)
 
@@ -381,9 +399,11 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Fetch Clients")
             print("<- Status Code: \(httpResponse.statusCode)")
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -416,9 +436,11 @@ class NetworkService {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
+        #if DEBUG
         print("-> Request: Fetch Clients by Company")
         print("-> GET: \(url.absoluteString)")
 
+        #endif
         do {
             let (data, response) = try await session.data(for: request)
 
@@ -426,9 +448,11 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Fetch Clients by Company")
             print("<- Status Code: \(httpResponse.statusCode)")
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -472,9 +496,11 @@ class NetworkService {
 
             request.httpBody = try JSONSerialization.data(withJSONObject: clientData.compactMapValues { $0 })
 
+            #if DEBUG
             print("-> Request: Update Client")
             print("-> PATCH: \(url.absoluteString)")
 
+            #endif
             do {
                 let (data, response) = try await session.data(for: request)
 
@@ -482,9 +508,11 @@ class NetworkService {
                     throw NetworkError.invalidResponse
                 }
 
+                #if DEBUG
                 print("<- Response: Update Client")
                 print("<- Status Code: \(httpResponse.statusCode)")
 
+                #endif
                 guard (200...299).contains(httpResponse.statusCode) else {
                     throw NetworkError.serverError(httpResponse.statusCode)
                 }
@@ -545,9 +573,11 @@ class NetworkService {
 
             request.httpBody = try JSONSerialization.data(withJSONObject: clientData)
 
+            #if DEBUG
             print("-> Request: Create Client")
             print("-> POST: \(url.absoluteString)")
 
+            #endif
             do {
                 let (data, response) = try await session.data(for: request)
 
@@ -555,9 +585,11 @@ class NetworkService {
                     throw NetworkError.invalidResponse
                 }
 
+                #if DEBUG
                 print("<- Response: Create Client")
                 print("<- Status Code: \(httpResponse.statusCode)")
 
+                #endif
                 guard (200...299).contains(httpResponse.statusCode) else {
                     throw NetworkError.serverError(httpResponse.statusCode)
                 }
@@ -619,22 +651,28 @@ class NetworkService {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: userData)
 
+        #if DEBUG
         print("-> Request: Update User Profile")
         print("-> PATCH: \(url.absoluteString)")
         print("-> Body: \(userData)")
 
+        #endif
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
 
+        #if DEBUG
         print("<- Response: Update User Profile")
         print("<- Status Code: \(httpResponse.statusCode)")
 
+        #endif
         guard (200...299).contains(httpResponse.statusCode) else {
             if let errorString = String(data: data, encoding: .utf8) {
+                #if DEBUG
                 print("<- Error Response: \(errorString)")
+                #endif
             }
             throw NetworkError.serverError(httpResponse.statusCode)
         }
@@ -666,7 +704,9 @@ class NetworkService {
 
         guard (200...299).contains(httpResponse.statusCode) else {
             if let errorString = String(data: data, encoding: .utf8) {
+                #if DEBUG
                 print("Password update error: \(errorString)")
+                #endif
             }
             throw NetworkError.serverError(httpResponse.statusCode)
         }
@@ -759,25 +799,31 @@ class NetworkService {
 
             request.httpBody = try JSONSerialization.data(withJSONObject: companyData)
 
+            #if DEBUG
             print("-> Request: Create Company")
             print("-> POST: \(url.absoluteString)")
             print("-> Headers: \(request.allHTTPHeaderFields ?? [:])")
             print("-> Body: \(companyData)")
             print("-> Access Token: \(accessToken ?? "NIL")")
 
+            #endif
             let (data, response) = try await session.data(for: request)
 
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Create Company")
             print("<- Status Code: \(httpResponse.statusCode)")
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 // Print error response body
                 if let errorString = String(data: data, encoding: .utf8) {
+                    #if DEBUG
                     print("<- Error Response: \(errorString)")
+                    #endif
                 }
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -867,15 +913,21 @@ class NetworkService {
 
         // Debug logging
         if let contentRange = httpResponse.value(forHTTPHeaderField: "Content-Range") {
+            #if DEBUG
             print("Team members Content-Range: \(contentRange)")
+            #endif
         }
 
         if let responseString = String(data: data, encoding: .utf8) {
+            #if DEBUG
             print("Team members response: \(responseString)")
+            #endif
         }
 
         let teamMembers = try JSONDecoder().decode([AppUser].self, from: data)
+        #if DEBUG
         print("Fetched \(teamMembers.count) team members for company: \(companyId)")
+        #endif
         return teamMembers
     }
 
@@ -931,9 +983,11 @@ class NetworkService {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
+        #if DEBUG
         print("-> Request: Fetch Analyses")
         print("-> GET: \(url.absoluteString)")
 
+        #endif
         do {
             let (data, response) = try await session.data(for: request)
 
@@ -941,9 +995,11 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Fetch Analyses")
             print("<- Status Code: \(httpResponse.statusCode)")
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -1014,9 +1070,11 @@ class NetworkService {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: analysisData)
 
+        #if DEBUG
         print("-> Request: Save Analysis")
         print("-> POST: \(url.absoluteString)")
 
+        #endif
         do {
             let (data, response) = try await session.data(for: request)
 
@@ -1024,9 +1082,11 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Save Analysis")
             print("<- Status Code: \(httpResponse.statusCode)")
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -1068,9 +1128,11 @@ class NetworkService {
 
         request.httpBody = imageData
 
+        #if DEBUG
         print("-> Request: Upload Image")
         print("-> POST: \(url.absoluteString)")
 
+        #endif
         do {
             let (data, response) = try await session.data(for: request)
 
@@ -1078,12 +1140,14 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Upload Image")
             print("<- Status Code: \(httpResponse.statusCode)")
             if let jsonString = String(data: data, encoding: .utf8) {
                 print(jsonString)
             }
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -1119,9 +1183,11 @@ class NetworkService {
 
         request.httpBody = imageData
 
+        #if DEBUG
         print("-> Request: Upload Product Image")
         print("-> POST: \(url.absoluteString)")
 
+        #endif
         do {
             let (data, response) = try await session.data(for: request)
 
@@ -1129,12 +1195,14 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Upload Product Image")
             print("<- Status Code: \(httpResponse.statusCode)")
             if let jsonString = String(data: data, encoding: .utf8) {
                 print(jsonString)
             }
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }
@@ -1704,9 +1772,11 @@ class NetworkService {
             request.setValue(value, forHTTPHeaderField: key)
         }
 
+        #if DEBUG
         print("-> Request: Delete User")
         print("-> DELETE: \(url.absoluteString)")
 
+        #endif
         do {
             let (_, response) = try await session.data(for: request)
 
@@ -1714,9 +1784,11 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
+            #if DEBUG
             print("<- Response: Delete User")
             print("<- Status Code: \(httpResponse.statusCode)")
 
+            #endif
             guard (200...299).contains(httpResponse.statusCode) else {
                 throw NetworkError.serverError(httpResponse.statusCode)
             }

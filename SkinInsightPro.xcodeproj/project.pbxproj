@@ -40,6 +40,13 @@
 		CB00CD052F05E930009ED8F1 /* CompleteProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD042F05E930009ED8F1 /* CompleteProfileView.swift */; };
 		CB00CD052F05F5F5009ED8F1 /* AIAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD042F05F5F5009ED8F1 /* AIAnalysisService.swift */; };
 		CB00CD072F061BB4009ED8F1 /* EmployeeImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD062F061BB4009ED8F1 /* EmployeeImportView.swift */; };
+		CB00CD092F063225009ED8F1 /* ClientHIPAAConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD082F063225009ED8F1 /* ClientHIPAAConsentView.swift */; };
+		CB00CD0B2F063279009ED8F1 /* HIPAAComplianceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD0A2F063279009ED8F1 /* HIPAAComplianceManager.swift */; };
+		CB00CD0D2F063288009ED8F1 /* HIPAADataManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD0C2F063288009ED8F1 /* HIPAADataManagementView.swift */; };
+		CB00CD0F2F06329B009ED8F1 /* SessionTimeoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD0E2F06329B009ED8F1 /* SessionTimeoutView.swift */; };
+		CB00CD112F0632B6009ED8F1 /* HIPAAConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD102F0632B6009ED8F1 /* HIPAAConsentView.swift */; };
+		CB00CD132F063847009ED8F1 /* ConsentHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD122F063847009ED8F1 /* ConsentHelpers.swift */; };
+		CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */; };
 		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
 		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
 /* End PBXBuildFile section */
@@ -76,6 +83,13 @@
 		CB00CD042F05E930009ED8F1 /* CompleteProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteProfileView.swift; sourceTree = "<group>"; };
 		CB00CD042F05F5F5009ED8F1 /* AIAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIAnalysisService.swift; sourceTree = "<group>"; };
 		CB00CD062F061BB4009ED8F1 /* EmployeeImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmployeeImportView.swift; sourceTree = "<group>"; };
+		CB00CD082F063225009ED8F1 /* ClientHIPAAConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientHIPAAConsentView.swift; sourceTree = "<group>"; };
+		CB00CD0A2F063279009ED8F1 /* HIPAAComplianceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIPAAComplianceManager.swift; sourceTree = "<group>"; };
+		CB00CD0C2F063288009ED8F1 /* HIPAADataManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIPAADataManagementView.swift; sourceTree = "<group>"; };
+		CB00CD0E2F06329B009ED8F1 /* SessionTimeoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTimeoutView.swift; sourceTree = "<group>"; };
+		CB00CD102F0632B6009ED8F1 /* HIPAAConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIPAAConsentView.swift; sourceTree = "<group>"; };
+		CB00CD122F063847009ED8F1 /* ConsentHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentHelpers.swift; sourceTree = "<group>"; };
+		CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberFormatter.swift; sourceTree = "<group>"; };
 		D25E0109231B05F82260E206 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInsightProApp.swift; sourceTree = "<group>"; };
 		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -119,6 +133,13 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */,
+				CB00CD122F063847009ED8F1 /* ConsentHelpers.swift */,
+				CB00CD102F0632B6009ED8F1 /* HIPAAConsentView.swift */,
+				CB00CD0E2F06329B009ED8F1 /* SessionTimeoutView.swift */,
+				CB00CD0C2F063288009ED8F1 /* HIPAADataManagementView.swift */,
+				CB00CD0A2F063279009ED8F1 /* HIPAAComplianceManager.swift */,
+				CB00CD082F063225009ED8F1 /* ClientHIPAAConsentView.swift */,
 				CB00CD062F061BB4009ED8F1 /* EmployeeImportView.swift */,
 				CB00CD042F05F5F5009ED8F1 /* AIAnalysisService.swift */,
 				CB00CD022F05F5A4009ED8F1 /* AIProviderSettingsView.swift */,
@@ -228,14 +249,17 @@
 				01C73F7497D77BEDBEE4D32C /* AddClientView.swift in Sources */,
 				80F8C9DA339CC87E395D9727 /* AddProductView.swift in Sources */,
 				343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */,
+				CB00CD092F063225009ED8F1 /* ClientHIPAAConsentView.swift in Sources */,
 				A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */,
 				C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */,
+				CB00CD112F0632B6009ED8F1 /* HIPAAConsentView.swift in Sources */,
 				97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */,
 				04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */,
 				2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */,
 				CB00CCFD2F05AF7E009ED8F1 /* EditProfileView.swift in Sources */,
 				2AFAB1D7333A1139E1BC0A42 /* ClientDetailView.swift in Sources */,
 				95E3875A1DEA138F758B6FF8 /* CompareAnalysesView.swift in Sources */,
+				CB00CD0D2F063288009ED8F1 /* HIPAADataManagementView.swift in Sources */,
 				2BE23140B0F1AE0A04F781FA /* EditClientView.swift in Sources */,
 				CB00CCFB2F05AF70009ED8F1 /* CompanyProfileView.swift in Sources */,
 				CB00CD032F05D820009ED8F1 /* JoinCompanyView.swift in Sources */,
@@ -247,7 +271,9 @@
 				CB00CD012F05C710009ED8F1 /* TeamMembersView.swift in Sources */,
 				79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */,
 				47D98A743BC65F40FEA03B78 /* ProductImportView.swift in Sources */,
+				CB00CD132F063847009ED8F1 /* ConsentHelpers.swift in Sources */,
 				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,
+				CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */,
 				9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */,
 				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,
 				C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */,
@@ -255,7 +281,9 @@
 				0A3D3F04A13CCAA0DA325484 /* SkinInsightProApp.swift in Sources */,
 				CB00CD032F05F5A4009ED8F1 /* AIProviderSettingsView.swift in Sources */,
 				3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */,
+				CB00CD0F2F06329B009ED8F1 /* SessionTimeoutView.swift in Sources */,
 				F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */,
+				CB00CD0B2F063279009ED8F1 /* HIPAAComplianceManager.swift in Sources */,
 				AC2862EB858577BBCCB79514 /* ThemedTextField.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -392,13 +420,14 @@
 				DEVELOPMENT_TEAM = 286LKF859M;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dushin.skininsightpro;
 				PRODUCT_NAME = SkinInsightPro;
 				SDKROOT = iphoneos;
@@ -418,13 +447,14 @@
 				DEVELOPMENT_TEAM = 286LKF859M;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.0.5;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dushin.skininsightpro;
 				PRODUCT_NAME = SkinInsightPro;
 				SDKROOT = iphoneos;

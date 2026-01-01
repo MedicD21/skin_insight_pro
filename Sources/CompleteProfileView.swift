@@ -114,7 +114,15 @@ struct CompleteProfileView: View {
         VStack(spacing: 20) {
             textField(title: "First Name", placeholder: "Enter first name", text: $firstName)
             textField(title: "Last Name", placeholder: "Enter last name", text: $lastName)
-            textField(title: "Phone Number", placeholder: "Enter phone number", text: $phoneNumber, keyboardType: .phonePad)
+            textField(
+                title: "Phone Number",
+                placeholder: "(555) 123-4567",
+                text: Binding(
+                    get: { self.phoneNumber.formatPhoneNumber() },
+                    set: { self.phoneNumber = $0.unformatPhoneNumber() }
+                ),
+                keyboardType: .phonePad
+            )
             textField(title: "Role/Title", placeholder: "e.g., Esthetician, Dermatologist", text: $role)
         }
         .padding(20)

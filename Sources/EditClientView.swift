@@ -123,8 +123,11 @@ struct EditClientView: View {
                 formField(
                     title: "Phone",
                     icon: "phone",
-                    placeholder: "+1 (555) 123-4567",
-                    text: $phone,
+                    placeholder: "(555) 123-4567",
+                    text: Binding(
+                        get: { phone.formatPhoneNumber() },
+                        set: { phone = $0.unformatPhoneNumber() }
+                    ),
                     field: .phone,
                     keyboardType: .phonePad
                 )

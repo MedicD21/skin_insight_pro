@@ -13,6 +13,7 @@ struct ProfileView: View {
     @State private var showEditProfile = false
     @State private var showCompanyProfile = false
     @State private var showJoinCompany = false
+    @State private var showPrivacySettings = false
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
@@ -42,6 +43,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showJoinCompany) {
                 JoinCompanyView()
+            }
+            .sheet(isPresented: $showPrivacySettings) {
+                HIPAADataManagementView()
             }
             .alert("Logout", isPresented: $showLogoutConfirmation) {
                 Button("Cancel", role: .cancel) {}
@@ -283,6 +287,13 @@ struct ProfileView: View {
 
                     Button(action: { showJoinCompany = true }) {
                         navigationRow(icon: "person.2.badge.gearshape", title: "Join Company", subtitle: "Enter a company code to join a team")
+                    }
+
+                    Divider()
+                        .padding(.leading, 56)
+
+                    Button(action: { showPrivacySettings = true }) {
+                        navigationRow(icon: "hand.raised.fill", title: "Privacy & Data", subtitle: "Manage your privacy rights and data")
                     }
 
                     Divider()

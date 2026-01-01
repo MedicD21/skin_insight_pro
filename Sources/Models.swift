@@ -33,6 +33,8 @@ struct AppClient: Identifiable, Hashable, Codable {
     var userId: String?
     var companyId: String?
     var name: String?
+    var firstName: String?
+    var lastName: String?
     var phone: String?
     var email: String?
     var notes: String?
@@ -43,12 +45,16 @@ struct AppClient: Identifiable, Hashable, Codable {
     var profileImageUrl: String?
     var fillersDate: String?
     var biostimulatorsDate: String?
+    var consentSignature: String?
+    var consentDate: String?
 
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
         case companyId = "company_id"
         case name
+        case firstName = "first_name"
+        case lastName = "last_name"
         case phone
         case email
         case notes
@@ -59,6 +65,8 @@ struct AppClient: Identifiable, Hashable, Codable {
         case profileImageUrl = "profile_image_url"
         case fillersDate = "fillers_date"
         case biostimulatorsDate = "biostimulators_date"
+        case consentSignature = "consent_signature"
+        case consentDate = "consent_date"
     }
 }
 

@@ -176,7 +176,10 @@ struct EditProfileView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(theme.secondaryText)
 
-                TextField("Phone number", text: $phoneNumber)
+                TextField("(555) 123-4567", text: Binding(
+                    get: { phoneNumber.formatPhoneNumber() },
+                    set: { phoneNumber = $0.unformatPhoneNumber() }
+                ))
                     .font(.system(size: 17))
                     .foregroundColor(theme.primaryText)
                     .keyboardType(.phonePad)
