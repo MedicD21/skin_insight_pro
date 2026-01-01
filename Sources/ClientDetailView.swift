@@ -89,7 +89,10 @@ struct ClientDetailView: View {
     private var hasMedicalInfo: Bool {
         (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
         (client.allergies != nil && !client.allergies!.isEmpty) ||
-        (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty)
+        (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
+        (client.medications != nil && !client.medications!.isEmpty) ||
+        client.fillersDate != nil ||
+        client.biostimulatorsDate != nil
     }
     
     private var clientInfoCard: some View {
@@ -211,10 +214,55 @@ struct ClientDetailView: View {
                     }
                     medicalInfoRow(
                         icon: "pills",
-                        title: "Current Medications",
+                        title: "Medications and/or Supplements",
                         content: medications,
                         color: theme.accent
                     )
+                }
+
+                if client.fillersDate != nil || client.biostimulatorsDate != nil {
+                    if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
+                       (client.allergies != nil && !client.allergies!.isEmpty) ||
+                       (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
+                       (client.medications != nil && !client.medications!.isEmpty) {
+                        Divider()
+                    }
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "cross.vial.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.accent)
+                            Text("Injectables History")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(theme.secondaryText)
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            if let fillersDate = client.fillersDate {
+                                HStack {
+                                    Text("Fillers:")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.secondaryText)
+                                    Text(formatInjectablesDate(fillersDate))
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(theme.primaryText)
+                                }
+                            }
+
+                            if let biostimulatorsDate = client.biostimulatorsDate {
+                                HStack {
+                                    Text("Biostimulators:")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.secondaryText)
+                                    Text(formatInjectablesDate(biostimulatorsDate))
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(theme.primaryText)
+                                }
+                            }
+                        }
+                        .padding(.leading, 24)
+                    }
                 }
             }
         }
@@ -438,6 +486,29 @@ struct ClientDetailView: View {
             let displayFormatter = DateFormatter()
             displayFormatter.dateFormat = "MM/dd/yyyy"
             return displayFormatter.string(from: date)
+        }
+
+        return dateString
+    }
+
+    private func formatInjectablesDate(_ dateString: String) -> String {
+        let isoFormatter = ISO8601DateFormatter()
+
+        // Try parsing the date
+        if let date = isoFormatter.date(from: dateString) {
+            let now = Date()
+            let calendar = Calendar.current
+            let components = calendar.dateComponents([.day, .month, .year], from: date, to: now)
+
+            if let years = components.year, years > 0 {
+                return years == 1 ? "1 year ago" : "\(years) years ago"
+            } else if let months = components.month, months > 0 {
+                return months == 1 ? "1 month ago" : "\(months) months ago"
+            } else if let days = components.day, days > 0 {
+                return days == 1 ? "1 day ago" : "\(days) days ago"
+            } else {
+                return "Today"
+            }
         }
 
         return dateString

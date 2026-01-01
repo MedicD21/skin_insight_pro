@@ -10,6 +10,7 @@ class AuthenticationManager: NSObject, ObservableObject {
     @Published var isLoading = true
     @Published var currentUser: AppUser?
     @Published var isGuestMode = false
+    @Published var needsProfileCompletion = false
     
     private let userIdKey = "user_id"
     private let userEmailKey = "user_email"
@@ -78,17 +79,23 @@ class AuthenticationManager: NSObject, ObservableObject {
     
     func createAccount(email: String, password: String) async throws {
         let user = try await NetworkService.shared.createUser(email: email, password: password)
-        
+
         if let userId = user.id {
             UserDefaults.standard.set(userId, forKey: userIdKey)
             UserDefaults.standard.set(email, forKey: userEmailKey)
             UserDefaults.standard.set("email", forKey: loginProviderKey)
             UserDefaults.standard.removeObject(forKey: guestModeKey)
             UserDefaults.standard.removeObject(forKey: guestUserIdKey)
-            
+
             currentUser = user
             isGuestMode = false
             isAuthenticated = true
+
+            // Check if profile needs completion (no first/last name)
+            if user.firstName == nil || user.firstName?.isEmpty == true ||
+               user.lastName == nil || user.lastName?.isEmpty == true {
+                needsProfileCompletion = true
+            }
         }
     }
     

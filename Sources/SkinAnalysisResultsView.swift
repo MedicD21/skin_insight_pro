@@ -58,7 +58,11 @@ struct SkinAnalysisResultsView: View {
                     if let recommendations = analysisResult.recommendations, !recommendations.isEmpty {
                         recommendationsCard
                     }
-                    
+
+                    if let productRecommendations = analysisResult.productRecommendations, !productRecommendations.isEmpty {
+                        productRecommendationsCard
+                    }
+
                     if let progressNotes = analysisResult.progressNotes, !progressNotes.isEmpty {
                         progressCard
                     }
@@ -551,7 +555,41 @@ struct SkinAnalysisResultsView: View {
                 .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
         )
     }
-    
+
+    private var productRecommendationsCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "cart.fill")
+                    .foregroundColor(theme.accent)
+                Text("Product Recommendations")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(Array((analysisResult.productRecommendations ?? []).enumerated()), id: \.offset) { index, product in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("\(index + 1).")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(theme.accent)
+                            .frame(width: 24, alignment: .leading)
+
+                        Text(product)
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.primaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .fill(theme.cardBackground)
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+        )
+    }
+
     private var notesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Additional Notes")

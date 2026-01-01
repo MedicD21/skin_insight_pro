@@ -11,7 +11,11 @@ struct SkinInsightProApp: App {
                 if authManager.isLoading {
                     SplashScreen()
                 } else if authManager.isAuthenticated {
-                    MainTabView()
+                    if authManager.needsProfileCompletion {
+                        CompleteProfileView()
+                    } else {
+                        MainTabView()
+                    }
                 } else {
                     AuthenticationView()
                 }

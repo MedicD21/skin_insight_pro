@@ -24,10 +24,16 @@ struct SkinAnalysisInputView: View {
     @State private var manualConcerns = ""
     @State private var productsUsed = ""
     @State private var treatmentsPerformed = ""
+    @State private var hasFillers = false
+    @State private var hasBiostimulators = false
+    @State private var fillersTimeAmount = ""
+    @State private var fillersTimeUnit = "months"
+    @State private var biostimulatorsTimeAmount = ""
+    @State private var biostimulatorsTimeUnit = "months"
     @FocusState private var focusedField: Field?
-    
+
     enum Field {
-        case skinType, hydration, sensitivity, pore, concerns, products, treatments
+        case skinType, hydration, sensitivity, pore, concerns, products, treatments, fillersTime, biostimulatorsTime
     }
     
     var body: some View {
@@ -49,8 +55,9 @@ struct SkinAnalysisInputView: View {
                         }
                         
                         if selectedImage != nil {
-                            manualInputSection
+                            fillersAndBiostimulatorsSection
                             treatmentSection
+                            manualInputSection
                             analyzeButton
                         }
                     }
@@ -424,6 +431,141 @@ struct SkinAnalysisInputView: View {
         )
     }
     
+    private var fillersAndBiostimulatorsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Injectables History")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(theme.primaryText)
+
+            Text("Select if client has had any of these treatments recently")
+                .font(.system(size: 13))
+                .foregroundColor(theme.secondaryText)
+
+            // Toggle buttons for Fillers and Biostimulators
+            HStack(spacing: 12) {
+                Button(action: { hasFillers.toggle() }) {
+                    HStack {
+                        Image(systemName: hasFillers ? "checkmark.circle.fill" : "circle")
+                        Text("Fillers")
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(hasFillers ? .white : theme.primaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(hasFillers ? theme.accent : theme.tertiaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.radiusMedium)
+                            .stroke(hasFillers ? theme.accent : theme.border, lineWidth: hasFillers ? 2 : 1)
+                    )
+                }
+
+                Button(action: { hasBiostimulators.toggle() }) {
+                    HStack {
+                        Image(systemName: hasBiostimulators ? "checkmark.circle.fill" : "circle")
+                        Text("Biostimulators")
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(hasBiostimulators ? .white : theme.primaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(hasBiostimulators ? theme.accent : theme.tertiaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.radiusMedium)
+                            .stroke(hasBiostimulators ? theme.accent : theme.border, lineWidth: hasBiostimulators ? 2 : 1)
+                    )
+                }
+            }
+
+            // Fillers time input
+            if hasFillers {
+                timeInputField(
+                    title: "How long ago were fillers administered?",
+                    amount: $fillersTimeAmount,
+                    unit: $fillersTimeUnit,
+                    field: .fillersTime
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // Biostimulators time input
+            if hasBiostimulators {
+                timeInputField(
+                    title: "How long ago were biostimulators administered?",
+                    amount: $biostimulatorsTimeAmount,
+                    unit: $biostimulatorsTimeUnit,
+                    field: .biostimulatorsTime
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .fill(theme.cardBackground)
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+        )
+        .animation(.spring(), value: hasFillers)
+        .animation(.spring(), value: hasBiostimulators)
+    }
+
+    private func timeInputField(
+        title: String,
+        amount: Binding<String>,
+        unit: Binding<String>,
+        field: Field
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(theme.secondaryText)
+
+            HStack(spacing: 12) {
+                // Number input
+                TextField("0", text: amount)
+                    .font(.system(size: 17))
+                    .foregroundColor(theme.primaryText)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 80)
+                    .padding(12)
+                    .background(theme.tertiaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.radiusMedium)
+                            .stroke(focusedField == field ? theme.accent : theme.border, lineWidth: focusedField == field ? 2 : 1)
+                    )
+                    .focused($focusedField, equals: field)
+
+                // Unit picker
+                Menu {
+                    Button("day(s)") { unit.wrappedValue = "day(s)" }
+                    Button("week(s)") { unit.wrappedValue = "week(s)" }
+                    Button("month(s)") { unit.wrappedValue = "month(s)" }
+                    Button("year(s)") { unit.wrappedValue = "year(s)" }
+                } label: {
+                    HStack {
+                        Text(unit.wrappedValue)
+                            .font(.system(size: 17))
+                            .foregroundColor(theme.primaryText)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.tertiaryText)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(theme.tertiaryBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.radiusMedium)
+                            .stroke(theme.border, lineWidth: 1)
+                    )
+                }
+            }
+        }
+    }
+
     private var treatmentSection: some View {
         VStack(alignment: .leading, spacing: 0) {
             DisclosureGroup {
@@ -565,12 +707,36 @@ struct SkinAnalysisInputView: View {
     
     private func performAnalysis() {
         guard let image = selectedImage else { return }
-        
+
         focusedField = nil
         isAnalyzing = true
-        
+
+        // Build injectables history string
+        var injectablesHistory: String? = nil
+        var historyParts: [String] = []
+
+        if hasFillers && !fillersTimeAmount.isEmpty {
+            historyParts.append("Fillers administered \(fillersTimeAmount) \(fillersTimeUnit) ago")
+        }
+
+        if hasBiostimulators && !biostimulatorsTimeAmount.isEmpty {
+            historyParts.append("Biostimulators administered \(biostimulatorsTimeAmount) \(biostimulatorsTimeUnit) ago")
+        }
+
+        if !historyParts.isEmpty {
+            injectablesHistory = historyParts.joined(separator: "; ")
+        }
+
         Task {
             do {
+                // Fetch AI rules for the current user
+                let aiRules: [AIRule]
+                if let userId = AuthenticationManager.shared.currentUser?.id {
+                    aiRules = try await NetworkService.shared.fetchAIRules(userId: userId)
+                } else {
+                    aiRules = []
+                }
+
                 let result = try await NetworkService.shared.analyzeImage(
                     image: image,
                     medicalHistory: client.medicalHistory,
@@ -584,7 +750,9 @@ struct SkinAnalysisInputView: View {
                     manualConcerns: manualConcerns.isEmpty ? nil : manualConcerns,
                     productsUsed: productsUsed.isEmpty ? nil : productsUsed,
                     treatmentsPerformed: treatmentsPerformed.isEmpty ? nil : treatmentsPerformed,
-                    previousAnalyses: viewModel.analyses
+                    injectablesHistory: injectablesHistory,
+                    previousAnalyses: viewModel.analyses,
+                    aiRules: aiRules
                 )
                 analysisResult = result
                 isAnalyzing = false

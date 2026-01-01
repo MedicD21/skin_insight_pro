@@ -117,14 +117,27 @@ struct AIRuleRowView: View {
                     .foregroundColor(theme.secondaryText)
             }
 
-            if let priority = rule.priority {
-                HStack {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 12))
-                    Text("Priority: \(priority)")
-                        .font(.system(size: 13, weight: .medium))
+            HStack {
+                if let priority = rule.priority {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 12))
+                        Text("Priority: \(priority)")
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundColor(theme.accent)
                 }
-                .foregroundColor(theme.accent)
+
+                if rule.companyId != nil {
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Image(systemName: "building.2.fill")
+                            .font(.system(size: 11))
+                        Text("Company Rule")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundColor(theme.secondaryText)
+                }
             }
         }
         .padding(16)
@@ -634,7 +647,7 @@ struct EditAIRuleView: View {
             .onAppear {
                 name = rule.name ?? ""
                 condition = rule.condition ?? ""
-                action = "" // Will need to update model to store action
+                action = rule.action ?? ""
                 priority = rule.priority ?? 5
                 isActive = rule.isActive ?? true
             }

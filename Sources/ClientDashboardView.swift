@@ -179,18 +179,26 @@ struct ClientRowView: View {
             }
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(client.name ?? "Unknown")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundColor(theme.primaryText)
-                    .lineLimit(1)
-                
+                HStack(spacing: 8) {
+                    Text(client.name ?? "Unknown")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
+                        .lineLimit(1)
+
+                    if !isOwnClient {
+                        Image(systemName: "person.2.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(theme.accent.opacity(0.6))
+                    }
+                }
+
                 if let email = client.email, !email.isEmpty {
                     Text(email)
                         .font(.system(size: 14))
                         .foregroundColor(theme.secondaryText)
                         .lineLimit(1)
                 }
-                
+
                 if let phone = client.phone, !phone.isEmpty {
                     Text(phone)
                         .font(.system(size: 14))
@@ -225,6 +233,14 @@ struct ClientRowView: View {
         } else {
             return String(name.prefix(2)).uppercased()
         }
+    }
+
+    private var isOwnClient: Bool {
+        guard let currentUserId = AuthenticationManager.shared.currentUser?.id,
+              let clientUserId = client.userId else {
+            return true
+        }
+        return clientUserId == currentUserId
     }
 }
 

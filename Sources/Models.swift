@@ -41,6 +41,8 @@ struct AppClient: Identifiable, Hashable, Codable {
     var knownSensitivities: String?
     var medications: String?
     var profileImageUrl: String?
+    var fillersDate: String?
+    var biostimulatorsDate: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -55,6 +57,8 @@ struct AppClient: Identifiable, Hashable, Codable {
         case knownSensitivities = "known_sensitivities"
         case medications
         case profileImageUrl = "profile_image_url"
+        case fillersDate = "fillers_date"
+        case biostimulatorsDate = "biostimulators_date"
     }
 }
 
@@ -90,9 +94,10 @@ struct AnalysisData: Hashable, Codable {
     var poreCondition: String?
     var skinHealthScore: Int?
     var recommendations: [String]?
+    var productRecommendations: [String]?
     var medicalConsiderations: [String]?
     var progressNotes: [String]?
-    
+
     enum CodingKeys: String, CodingKey {
         case skinType = "skin_type"
         case hydrationLevel = "hydration_level"
@@ -101,6 +106,7 @@ struct AnalysisData: Hashable, Codable {
         case poreCondition = "pore_condition"
         case skinHealthScore = "skin_health_score"
         case recommendations
+        case productRecommendations = "product_recommendations"
         case medicalConsiderations = "medical_considerations"
         case progressNotes = "progress_notes"
     }
@@ -304,6 +310,7 @@ struct AIAnalysisResponse: Codable {
     let poreCondition: String?
     let skinHealthScore: Int?
     let recommendations: [String]?
+    let productRecommendations: [String]?
     let medicalConsiderations: [String]?
     let progressNotes: [String]?
 
@@ -315,6 +322,7 @@ struct AIAnalysisResponse: Codable {
         case poreCondition = "pore_condition"
         case skinHealthScore = "skin_health_score"
         case recommendations
+        case productRecommendations = "product_recommendations"
         case medicalConsiderations = "medical_considerations"
         case progressNotes = "progress_notes"
     }
@@ -355,8 +363,10 @@ struct Product: Identifiable, Hashable, Codable {
 struct AIRule: Identifiable, Hashable, Codable {
     var id: String?
     var userId: String?
+    var companyId: String?
     var name: String?
     var condition: String?
+    var action: String?
     var productId: String?
     var priority: Int?
     var isActive: Bool?
@@ -365,8 +375,10 @@ struct AIRule: Identifiable, Hashable, Codable {
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
+        case companyId = "company_id"
         case name
         case condition
+        case action
         case productId = "product_id"
         case priority
         case isActive = "is_active"

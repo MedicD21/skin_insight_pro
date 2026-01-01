@@ -240,6 +240,13 @@ struct ProfileView: View {
                 NavigationLink(destination: AIRulesView()) {
                     navigationRow(icon: "brain", title: "AI Rules", subtitle: "Configure AI product suggestions")
                 }
+
+                Divider()
+                    .padding(.leading, 56)
+
+                NavigationLink(destination: AIProviderSettingsView()) {
+                    navigationRow(icon: "eye.fill", title: "AI Vision Provider", subtitle: "Switch between Apple Vision and Claude")
+                }
             }
             .background(
                 RoundedRectangle(cornerRadius: theme.radiusLarge)

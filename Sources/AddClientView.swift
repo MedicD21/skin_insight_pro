@@ -154,9 +154,9 @@ struct AddClientView: View {
                 )
 
                 textEditorField(
-                    title: "Current Medications",
+                    title: "Medications and/or Supplements",
                     icon: "pills",
-                    placeholder: "List any medications the client is currently taking",
+                    placeholder: "List any medications or supplements the client is currently taking",
                     text: $medications,
                     field: .medications
                 )

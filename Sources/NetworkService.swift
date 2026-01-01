@@ -212,10 +212,20 @@ class NetworkService {
         }
         request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
+        print("-> Request: Fetch User Profile")
+        print("-> GET: \(url.absoluteString)")
+        print("-> Headers: \(request.allHTTPHeaderFields ?? [:])")
+
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
+        }
+
+        print("<- Response: Fetch User Profile")
+        print("<- Status Code: \(httpResponse.statusCode)")
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("<- Body: \(jsonString)")
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -246,10 +256,20 @@ class NetworkService {
 
         createRequest.httpBody = try JSONSerialization.data(withJSONObject: userData)
 
+        print("-> Request: Create User Profile")
+        print("-> POST: \(createUrl.absoluteString)")
+        print("-> Body: \(userData)")
+
         let (createData, createResponse) = try await session.data(for: createRequest)
 
         guard let createHttpResponse = createResponse as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
+        }
+
+        print("<- Response: Create User Profile")
+        print("<- Status Code: \(createHttpResponse.statusCode)")
+        if let jsonString = String(data: createData, encoding: .utf8) {
+            print("<- Body: \(jsonString)")
         }
 
         guard (200...299).contains(createHttpResponse.statusCode) else {
@@ -445,7 +465,9 @@ class NetworkService {
                 "known_sensitivities": client.knownSensitivities,
                 "medications": client.medications,
                 "profile_image_url": client.profileImageUrl,
-                "company_id": client.companyId
+                "company_id": client.companyId,
+                "fillers_date": client.fillersDate,
+                "biostimulators_date": client.biostimulatorsDate
             ]
 
             request.httpBody = try JSONSerialization.data(withJSONObject: clientData.compactMapValues { $0 })
@@ -511,6 +533,14 @@ class NetworkService {
 
             if let companyId = client.companyId {
                 clientData["company_id"] = companyId
+            }
+
+            if let fillersDate = client.fillersDate {
+                clientData["fillers_date"] = fillersDate
+            }
+
+            if let biostimulatorsDate = client.biostimulatorsDate {
+                clientData["biostimulators_date"] = biostimulatorsDate
             }
 
             request.httpBody = try JSONSerialization.data(withJSONObject: clientData)
@@ -1053,9 +1083,48 @@ class NetworkService {
         manualConcerns: String?,
         productsUsed: String?,
         treatmentsPerformed: String?,
-        previousAnalyses: [SkinAnalysisResult]
+        injectablesHistory: String?,
+        previousAnalyses: [SkinAnalysisResult],
+        aiRules: [AIRule] = []
     ) async throws -> AnalysisData {
-        // AI analysis still uses the separate AI API endpoint
+        // Use new AI service (Apple Vision or Claude based on AppConstants.aiProvider)
+        return try await AIAnalysisService.shared.analyzeImage(
+            image: image,
+            medicalHistory: medicalHistory,
+            allergies: allergies,
+            knownSensitivities: knownSensitivities,
+            medications: medications,
+            manualSkinType: manualSkinType,
+            manualHydrationLevel: manualHydrationLevel,
+            manualSensitivity: manualSensitivity,
+            manualPoreCondition: manualPoreCondition,
+            manualConcerns: manualConcerns,
+            productsUsed: productsUsed,
+            treatmentsPerformed: treatmentsPerformed,
+            injectablesHistory: injectablesHistory,
+            previousAnalyses: previousAnalyses,
+            aiRules: aiRules
+        )
+    }
+
+    // Legacy API method - kept for reference, no longer used
+    private func analyzeImageWithOldAPI(
+        image: UIImage,
+        medicalHistory: String?,
+        allergies: String?,
+        knownSensitivities: String?,
+        medications: String?,
+        manualSkinType: String?,
+        manualHydrationLevel: String?,
+        manualSensitivity: String?,
+        manualPoreCondition: String?,
+        manualConcerns: String?,
+        productsUsed: String?,
+        treatmentsPerformed: String?,
+        injectablesHistory: String?,
+        previousAnalyses: [SkinAnalysisResult],
+        aiRules: [AIRule] = []
+    ) async throws -> AnalysisData {
         let url = URL(string: "\(AppConstants.aiApiUrl)/aiapi/answerimage")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -1135,12 +1204,28 @@ class NetworkService {
             body.append("\(treatmentsPerformed)\r\n".data(using: .utf8)!)
         }
 
+        if let injectablesHistory = injectablesHistory, !injectablesHistory.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"injectables_history\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(injectablesHistory)\r\n".data(using: .utf8)!)
+        }
+
         if !previousAnalyses.isEmpty {
             let recentAnalyses = Array(previousAnalyses.prefix(3))
             if let jsonData = try? JSONEncoder().encode(recentAnalyses),
                let jsonString = String(data: jsonData, encoding: .utf8) {
                 body.append("--\(boundary)\r\n".data(using: .utf8)!)
                 body.append("Content-Disposition: form-data; name=\"previous_analyses\"\r\n\r\n".data(using: .utf8)!)
+                body.append("\(jsonString)\r\n".data(using: .utf8)!)
+            }
+        }
+
+        if !aiRules.isEmpty {
+            let activeRules = aiRules.filter { $0.isActive == true }.sorted { ($0.priority ?? 0) > ($1.priority ?? 0) }
+            if let jsonData = try? JSONEncoder().encode(activeRules),
+               let jsonString = String(data: jsonData, encoding: .utf8) {
+                body.append("--\(boundary)\r\n".data(using: .utf8)!)
+                body.append("Content-Disposition: form-data; name=\"ai_rules\"\r\n\r\n".data(using: .utf8)!)
                 body.append("\(jsonString)\r\n".data(using: .utf8)!)
             }
         }
@@ -1183,6 +1268,7 @@ class NetworkService {
                 poreCondition: aiResponse.poreCondition,
                 skinHealthScore: aiResponse.skinHealthScore,
                 recommendations: aiResponse.recommendations,
+                productRecommendations: aiResponse.productRecommendations,
                 medicalConsiderations: aiResponse.medicalConsiderations,
                 progressNotes: aiResponse.progressNotes
             )
@@ -1325,11 +1411,28 @@ class NetworkService {
     // MARK: - AI Rules
 
     func fetchAIRules(userId: String) async throws -> [AIRule] {
+        // Fetch company-wide rules if user belongs to a company
+        let user = await MainActor.run { AuthenticationManager.shared.currentUser }
+
+        guard let user = user else {
+            throw NetworkError.invalidResponse
+        }
+
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules")!
-        components.queryItems = [
-            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
-            URLQueryItem(name: "order", value: "priority.desc")
-        ]
+
+        if let companyId = user.companyId {
+            // Fetch all rules for the company
+            components.queryItems = [
+                URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
+                URLQueryItem(name: "order", value: "priority.desc")
+            ]
+        } else {
+            // No company - fetch only personal rules
+            components.queryItems = [
+                URLQueryItem(name: "user_id", value: "eq.\(userId)"),
+                URLQueryItem(name: "order", value: "priority.desc")
+            ]
+        }
 
         guard let url = components.url else {
             throw NetworkError.invalidURL
@@ -1448,14 +1551,20 @@ class NetworkService {
         }
         request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
-        let ruleData: [String: Any] = [
+        var ruleData: [String: Any] = [
             "user_id": userId,
             "name": name,
             "condition": condition,
-            "product_id": action, // Store action in product_id field for now
+            "action": action,
             "priority": priority,
             "is_active": isActive
         ]
+
+        // Add company_id if user belongs to a company
+        let companyId = await MainActor.run { AuthenticationManager.shared.currentUser?.companyId }
+        if let companyId = companyId {
+            ruleData["company_id"] = companyId
+        }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: ruleData)
 
@@ -1497,7 +1606,7 @@ class NetworkService {
         let ruleData: [String: Any] = [
             "name": name,
             "condition": condition,
-            "product_id": action, // Store action in product_id field for now
+            "action": action,
             "priority": priority,
             "is_active": isActive
         ]
