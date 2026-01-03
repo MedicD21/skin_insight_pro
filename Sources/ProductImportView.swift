@@ -574,15 +574,3 @@ Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,
     }
 }
 
-// MARK: - Activity View Controller (if not already defined)
-#if !canImport(EmployeeImportView)
-struct ActivityViewController: UIViewControllerRepresentable {
-    let activityItems: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-#endif
