@@ -13,6 +13,8 @@ struct ProductImportView: View {
     @State private var csvText = ""
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showShareSheet = false
+    @State private var csvFileURL: URL?
 
     let validSkinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"]
     let validConcerns = ["Acne", "Aging", "Dark Spots", "Redness", "Dryness", "Oiliness", "Fine Lines", "Pores"]
@@ -44,6 +46,11 @@ struct ProductImportView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = csvFileURL {
+                    ActivityViewController(activityItems: [url])
+                }
             }
         }
     }
@@ -142,10 +149,10 @@ struct ProductImportView: View {
                 .foregroundColor(theme.primaryText)
 
             VStack(spacing: 12) {
-                Button(action: { copyTemplateToClipboard() }) {
+                Button(action: { downloadCSVTemplate() }) {
                     HStack {
-                        Image(systemName: "doc.on.doc")
-                        Text("Copy CSV Template")
+                        Image(systemName: "arrow.down.doc")
+                        Text("Download CSV Template")
                         Spacer()
                         Image(systemName: "chevron.right")
                     }
@@ -353,12 +360,22 @@ struct ProductImportView: View {
 
     // MARK: - Functions
 
-    private func copyTemplateToClipboard() {
+    private func downloadCSVTemplate() {
         let template = "name,brand,category,description,ingredients,skin_types,concerns,price,image_url,is_active\nHydrating Serum,CeraVe,Serum,Lightweight hydrating serum,Hyaluronic Acid,Normal,Dryness,24.99,,TRUE"
-        UIPasteboard.general.string = template
 
-        errorMessage = "CSV template copied to clipboard!"
-        showError = true
+        // Create temporary file
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileName = "product_import_template.csv"
+        let fileURL = tempDir.appendingPathComponent(fileName)
+
+        do {
+            try template.write(to: fileURL, atomically: true, encoding: .utf8)
+            csvFileURL = fileURL
+            showShareSheet = true
+        } catch {
+            errorMessage = "Failed to create CSV template file: \(error.localizedDescription)"
+            showError = true
+        }
     }
 
     private func pasteExampleData() {
@@ -556,3 +573,16 @@ Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,
         }
     }
 }
+
+// MARK: - Activity View Controller (if not already defined)
+#if !canImport(EmployeeImportView)
+struct ActivityViewController: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+#endif

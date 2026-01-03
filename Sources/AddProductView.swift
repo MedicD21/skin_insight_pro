@@ -13,6 +13,7 @@ struct AddProductView: View {
     @State private var category = ""
     @State private var description = ""
     @State private var ingredients = ""
+    @State private var allIngredients = ""
     @State private var priceText = ""
     @State private var selectedSkinTypes: Set<String> = []
     @State private var selectedConcerns: Set<String> = []
@@ -26,7 +27,7 @@ struct AddProductView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case name, brand, category, description, ingredients, price
+        case name, brand, category, description, ingredients, allIngredients, price
     }
 
     let skinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"]
@@ -83,6 +84,7 @@ struct AddProductView: View {
                     category = product.category ?? ""
                     description = product.description ?? ""
                     ingredients = product.ingredients ?? ""
+                    allIngredients = product.allIngredients ?? ""
                     imageUrl = product.imageUrl
                     isActive = product.isActive ?? true
 
@@ -205,7 +207,8 @@ struct AddProductView: View {
                 .foregroundColor(theme.primaryText)
 
             textEditorField(title: "Description", icon: "text.alignleft", placeholder: "Brief description of the product", text: $description, field: .description)
-            textEditorField(title: "Key Ingredients", icon: "list.bullet", placeholder: "List main active ingredients", text: $ingredients, field: .ingredients)
+            textEditorField(title: "Key Ingredients", icon: "list.bullet", placeholder: "List main active ingredients (e.g., Vitamin C, Hyaluronic Acid)", text: $ingredients, field: .ingredients)
+            textEditorField(title: "All Ingredients", icon: "text.badge.checkmark", placeholder: "Complete ingredient list for allergy checking (e.g., Water, Glycerin, Niacinamide, ...)", text: $allIngredients, field: .allIngredients)
         }
     }
 
@@ -376,6 +379,7 @@ struct AddProductView: View {
                 category: category,
                 description: description.isEmpty ? nil : description,
                 ingredients: ingredients.isEmpty ? nil : ingredients,
+                allIngredients: allIngredients.isEmpty ? nil : allIngredients,
                 skinTypes: Array(selectedSkinTypes),
                 concerns: Array(selectedConcerns),
                 imageUrl: uploadedImageUrl ?? imageUrl,  // Use new upload or keep existing

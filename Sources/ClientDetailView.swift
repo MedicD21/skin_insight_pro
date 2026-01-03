@@ -125,6 +125,7 @@ struct ClientDetailView: View {
         (client.allergies != nil && !client.allergies!.isEmpty) ||
         (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
         (client.medications != nil && !client.medications!.isEmpty) ||
+        (client.productsToAvoid != nil && !client.productsToAvoid!.isEmpty) ||
         client.fillersDate != nil ||
         client.biostimulatorsDate != nil
     }
@@ -271,11 +272,27 @@ struct ClientDetailView: View {
                     )
                 }
 
-                if client.fillersDate != nil || client.biostimulatorsDate != nil {
+                if let productsToAvoid = client.productsToAvoid, !productsToAvoid.isEmpty {
                     if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
                        (client.allergies != nil && !client.allergies!.isEmpty) ||
                        (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
                        (client.medications != nil && !client.medications!.isEmpty) {
+                        Divider()
+                    }
+                    medicalInfoRow(
+                        icon: "exclamationmark.shield",
+                        title: "Products to Avoid",
+                        content: productsToAvoid,
+                        color: theme.error
+                    )
+                }
+
+                if client.fillersDate != nil || client.biostimulatorsDate != nil {
+                    if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
+                       (client.allergies != nil && !client.allergies!.isEmpty) ||
+                       (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
+                       (client.medications != nil && !client.medications!.isEmpty) ||
+                       (client.productsToAvoid != nil && !client.productsToAvoid!.isEmpty) {
                         Divider()
                     }
 

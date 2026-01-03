@@ -150,7 +150,8 @@ struct SkinAnalysisInputView: View {
     private var hasMedicalInfo: Bool {
         (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
         (client.allergies != nil && !client.allergies!.isEmpty) ||
-        (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty)
+        (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
+        (client.productsToAvoid != nil && !client.productsToAvoid!.isEmpty)
     }
     
     private func getPreviousAnalysisImage() -> UIImage? {
@@ -746,6 +747,7 @@ struct SkinAnalysisInputView: View {
                     allergies: client.allergies,
                     knownSensitivities: client.knownSensitivities,
                     medications: client.medications,
+                    productsToAvoid: client.productsToAvoid,
                     manualSkinType: manualSkinType.isEmpty ? nil : manualSkinType,
                     manualHydrationLevel: manualHydrationLevel.isEmpty ? nil : manualHydrationLevel,
                     manualSensitivity: manualSensitivity.isEmpty ? nil : manualSensitivity,

@@ -13,6 +13,7 @@ struct EditClientView: View {
     @State private var allergies: String
     @State private var knownSensitivities: String
     @State private var medications: String
+    @State private var productsToAvoid: String
     @State private var fillersDate: Date?
     @State private var biostimulatorsDate: Date?
     @State private var isLoading = false
@@ -21,7 +22,7 @@ struct EditClientView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case name, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications
+        case name, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications, productsToAvoid
     }
 
     init(client: AppClient, onUpdate: @escaping (AppClient) -> Void) {
@@ -35,6 +36,7 @@ struct EditClientView: View {
         _allergies = State(initialValue: client.allergies ?? "")
         _knownSensitivities = State(initialValue: client.knownSensitivities ?? "")
         _medications = State(initialValue: client.medications ?? "")
+        _productsToAvoid = State(initialValue: client.productsToAvoid ?? "")
 
         // Parse dates from ISO strings if they exist
         if let fillersDateString = client.fillersDate,
@@ -188,6 +190,14 @@ struct EditClientView: View {
                     placeholder: "List any medications or supplements the client is currently taking",
                     text: $medications,
                     field: .medications
+                )
+
+                textEditorField(
+                    title: "Products to Avoid",
+                    icon: "exclamationmark.shield",
+                    placeholder: "Specific products or ingredients this client should NOT use",
+                    text: $productsToAvoid,
+                    field: .productsToAvoid
                 )
 
                 Divider()
@@ -381,6 +391,7 @@ struct EditClientView: View {
             allergies: allergies.isEmpty ? nil : allergies,
             knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
             medications: medications.isEmpty ? nil : medications,
+            productsToAvoid: productsToAvoid.isEmpty ? nil : productsToAvoid,
             profileImageUrl: client.profileImageUrl,
             fillersDate: fillersDateString,
             biostimulatorsDate: biostimulatorsDateString

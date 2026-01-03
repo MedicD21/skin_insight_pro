@@ -566,6 +566,33 @@ struct SkinAnalysisResultsView: View {
                     .foregroundColor(theme.primaryText)
             }
 
+            // Safety reminder if client has allergies, sensitivities, or products to avoid
+            if hasClientSafetyRestrictions {
+                HStack(alignment: .top, spacing: 12) {
+                    Image(systemName: "exclamationmark.shield.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(theme.warning)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Safety Check Reminder")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(theme.warning)
+
+                        Text(safetyReminderText)
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(12)
+                .background(theme.warning.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.radiusMedium)
+                        .stroke(theme.warning.opacity(0.3), lineWidth: 1)
+                )
+            }
+
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(Array((analysisResult.productRecommendations ?? []).enumerated()), id: \.offset) { index, product in
                     HStack(alignment: .top, spacing: 12) {
@@ -612,6 +639,29 @@ struct SkinAnalysisResultsView: View {
         }
     }
     
+    private var hasClientSafetyRestrictions: Bool {
+        (client.allergies != nil && !client.allergies!.isEmpty) ||
+        (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
+        (client.productsToAvoid != nil && !client.productsToAvoid!.isEmpty)
+    }
+
+    private var safetyReminderText: String {
+        var restrictions: [String] = []
+
+        if let allergies = client.allergies, !allergies.isEmpty {
+            restrictions.append("Allergies: \(allergies)")
+        }
+        if let sensitivities = client.knownSensitivities, !sensitivities.isEmpty {
+            restrictions.append("Sensitivities: \(sensitivities)")
+        }
+        if let productsToAvoid = client.productsToAvoid, !productsToAvoid.isEmpty {
+            restrictions.append("Products to Avoid: \(productsToAvoid)")
+        }
+
+        let restrictionText = restrictions.joined(separator: " • ")
+        return "AI has filtered recommendations based on: \(restrictionText). Always verify ingredient lists before use."
+    }
+
     private var saveButton: some View {
         Button(action: saveAnalysis) {
             HStack {

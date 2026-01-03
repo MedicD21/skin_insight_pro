@@ -13,6 +13,8 @@ struct EmployeeImportView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var defaultPassword = "Welcome123!"
+    @State private var showShareSheet = false
+    @State private var csvFileURL: URL?
 
     struct EmployeeImportData: Identifiable {
         let id = UUID()
@@ -50,6 +52,11 @@ struct EmployeeImportView: View {
                 Button("OK", role: .cancel) { }
             } message: {
                 Text(errorMessage)
+            }
+            .sheet(isPresented: $showShareSheet) {
+                if let url = csvFileURL {
+                    ActivityViewController(activityItems: [url])
+                }
             }
         }
     }
@@ -189,10 +196,10 @@ struct EmployeeImportView: View {
                 .foregroundColor(theme.primaryText)
 
             VStack(spacing: 12) {
-                Button(action: { copyTemplateToClipboard() }) {
+                Button(action: { downloadCSVTemplate() }) {
                     HStack {
-                        Image(systemName: "doc.on.doc")
-                        Text("Copy CSV Template")
+                        Image(systemName: "arrow.down.doc")
+                        Text("Download CSV Template")
                         Spacer()
                         Image(systemName: "chevron.right")
                     }
@@ -411,12 +418,22 @@ struct EmployeeImportView: View {
         return hasMinLength && hasCapital && hasSpecial
     }
 
-    private func copyTemplateToClipboard() {
+    private func downloadCSVTemplate() {
         let template = "email,first_name,last_name,role,is_admin\njohn.doe@example.com,John,Doe,Esthetician,FALSE"
-        UIPasteboard.general.string = template
 
-        errorMessage = "CSV template copied to clipboard!"
-        showError = true
+        // Create temporary file
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileName = "employee_import_template.csv"
+        let fileURL = tempDir.appendingPathComponent(fileName)
+
+        do {
+            try template.write(to: fileURL, atomically: true, encoding: .utf8)
+            csvFileURL = fileURL
+            showShareSheet = true
+        } catch {
+            errorMessage = "Failed to create CSV template file: \(error.localizedDescription)"
+            showError = true
+        }
     }
 
     private func pasteExampleData() {
@@ -564,4 +581,15 @@ alex.williams@example.com,Alex,Williams,Esthetician,FALSE
             }
         }
     }
+}
+
+// MARK: - Activity View Controller
+struct ActivityViewController: UIViewControllerRepresentable {
+    let activityItems: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

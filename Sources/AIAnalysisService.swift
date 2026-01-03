@@ -12,6 +12,7 @@ class AIAnalysisService {
         allergies: String?,
         knownSensitivities: String?,
         medications: String?,
+        productsToAvoid: String?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -32,6 +33,7 @@ class AIAnalysisService {
                 allergies: allergies,
                 knownSensitivities: knownSensitivities,
                 medications: medications,
+                productsToAvoid: productsToAvoid,
                 manualSkinType: manualSkinType,
                 manualHydrationLevel: manualHydrationLevel,
                 manualSensitivity: manualSensitivity,
@@ -51,6 +53,7 @@ class AIAnalysisService {
                 allergies: allergies,
                 knownSensitivities: knownSensitivities,
                 medications: medications,
+                productsToAvoid: productsToAvoid,
                 manualSkinType: manualSkinType,
                 manualHydrationLevel: manualHydrationLevel,
                 manualSensitivity: manualSensitivity,
@@ -73,6 +76,7 @@ class AIAnalysisService {
         allergies: String?,
         knownSensitivities: String?,
         medications: String?,
+        productsToAvoid: String?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -211,6 +215,7 @@ class AIAnalysisService {
         allergies: String?,
         knownSensitivities: String?,
         medications: String?,
+        productsToAvoid: String?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -243,6 +248,7 @@ class AIAnalysisService {
             allergies: allergies,
             knownSensitivities: knownSensitivities,
             medications: medications,
+            productsToAvoid: productsToAvoid,
             manualSkinType: manualSkinType,
             manualHydrationLevel: manualHydrationLevel,
             manualSensitivity: manualSensitivity,
@@ -517,6 +523,7 @@ class AIAnalysisService {
         allergies: String?,
         knownSensitivities: String?,
         medications: String?,
+        productsToAvoid: String?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -546,6 +553,9 @@ class AIAnalysisService {
         }
         if let medications = medications, !medications.isEmpty {
             prompt += "Medications: \(medications)\n"
+        }
+        if let productsToAvoid = productsToAvoid, !productsToAvoid.isEmpty {
+            prompt += "⚠️ PRODUCTS TO AVOID: \(productsToAvoid) - DO NOT recommend any products containing these ingredients or products\n"
         }
         if let injectablesHistory = injectablesHistory, !injectablesHistory.isEmpty {
             prompt += "Injectables History: \(injectablesHistory)\n"
@@ -587,6 +597,9 @@ class AIAnalysisService {
                         if let ingredients = product.ingredients, !ingredients.isEmpty {
                             productDetails += " | Key Ingredients: \(ingredients)"
                         }
+                        if let allIngredients = product.allIngredients, !allIngredients.isEmpty {
+                            productDetails += " | ALL Ingredients: \(allIngredients)"
+                        }
                         if let description = product.description, !description.isEmpty {
                             productDetails += " | Details: \(description)"
                         }
@@ -622,7 +635,11 @@ class AIAnalysisService {
            - Consider detected skin type and concerns
            - Select products that address the specific concerns
            - From multiple products addressing the same concern, choose the BEST 2-3 based on ingredients and efficacy
-           - CHECK INGREDIENTS: Skip any product if its ingredients contain items listed in the client's allergies or sensitivities
+           - ⚠️ CRITICAL SAFETY CHECK: For EACH product, check BOTH "Key Ingredients" AND "ALL Ingredients" lists against:
+             * Client's Allergies
+             * Client's Known Sensitivities
+             * Products to Avoid list
+           - SKIP ANY PRODUCT that contains ANY ingredient matching the above lists (check both partial and full matches)
            - Format products as: "Brand - Product Name"
            - DO NOT include AI rules here, they belong in "recommendations"
 

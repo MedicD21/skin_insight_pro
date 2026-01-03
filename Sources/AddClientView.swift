@@ -13,6 +13,7 @@ struct AddClientView: View {
     @State private var allergies = ""
     @State private var knownSensitivities = ""
     @State private var medications = ""
+    @State private var productsToAvoid = ""
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
@@ -21,7 +22,7 @@ struct AddClientView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case firstName, lastName, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications
+        case firstName, lastName, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications, productsToAvoid
     }
     
     var body: some View {
@@ -86,6 +87,7 @@ struct AddClientView: View {
                     allergies: allergies.isEmpty ? nil : allergies,
                     knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
                     medications: medications.isEmpty ? nil : medications,
+                    productsToAvoid: productsToAvoid.isEmpty ? nil : productsToAvoid,
                     profileImageUrl: nil,
                     fillersDate: nil,
                     biostimulatorsDate: nil,
@@ -202,6 +204,14 @@ struct AddClientView: View {
                     text: $medications,
                     field: .medications
                 )
+
+                textEditorField(
+                    title: "Products to Avoid",
+                    icon: "exclamationmark.shield",
+                    placeholder: "Specific products or ingredients this client should NOT use",
+                    text: $productsToAvoid,
+                    field: .productsToAvoid
+                )
             }
         }
         .padding(20)
@@ -302,6 +312,7 @@ struct AddClientView: View {
             allergies: allergies.isEmpty ? nil : allergies,
             knownSensitivities: knownSensitivities.isEmpty ? nil : knownSensitivities,
             medications: medications.isEmpty ? nil : medications,
+            productsToAvoid: productsToAvoid.isEmpty ? nil : productsToAvoid,
             profileImageUrl: nil,
             fillersDate: nil,
             biostimulatorsDate: nil,

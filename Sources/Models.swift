@@ -42,6 +42,7 @@ struct AppClient: Identifiable, Hashable, Codable {
     var allergies: String?
     var knownSensitivities: String?
     var medications: String?
+    var productsToAvoid: String?
     var profileImageUrl: String?
     var fillersDate: String?
     var biostimulatorsDate: String?
@@ -62,6 +63,7 @@ struct AppClient: Identifiable, Hashable, Codable {
         case allergies
         case knownSensitivities = "known_sensitivities"
         case medications
+        case productsToAvoid = "products_to_avoid"
         case profileImageUrl = "profile_image_url"
         case fillersDate = "fillers_date"
         case biostimulatorsDate = "biostimulators_date"
@@ -343,7 +345,8 @@ struct Product: Identifiable, Hashable, Codable {
     var brand: String?
     var category: String?
     var description: String?
-    var ingredients: String?
+    var ingredients: String?  // Key ingredients
+    var allIngredients: String?  // Complete ingredients list
     var skinTypes: [String]?
     var concerns: [String]?
     var imageUrl: String?
@@ -359,6 +362,7 @@ struct Product: Identifiable, Hashable, Codable {
         case category
         case description
         case ingredients
+        case allIngredients = "all_ingredients"
         case skinTypes = "skin_types"
         case concerns
         case imageUrl = "image_url"
@@ -413,6 +417,7 @@ struct CreateProductRequest: Codable {
         let category: String
         let description: String
         let ingredients: String
+        let allIngredients: String?
         let skinTypes: [String]
         let concerns: [String]
         let imageUrl: String?
@@ -427,6 +432,7 @@ struct CreateProductRequest: Codable {
             case category
             case description
             case ingredients
+            case allIngredients = "all_ingredients"
             case skinTypes = "skin_types"
             case concerns
             case imageUrl = "image_url"

@@ -331,16 +331,21 @@ struct TeamMembersView: View {
             do {
                 try await NetworkService.shared.updateUserAdminStatus(userId: memberId, isAdmin: isAdmin)
 
-                // Update local array
-                if let index = teamMembers.firstIndex(where: { $0.id == memberId }) {
-                    teamMembers[index].isAdmin = isAdmin
+                // Update local array - need to trigger view update
+                await MainActor.run {
+                    if let index = teamMembers.firstIndex(where: { $0.id == memberId }) {
+                        var updatedMember = teamMembers[index]
+                        updatedMember.isAdmin = isAdmin
+                        teamMembers[index] = updatedMember
+                    }
+                    updatingUserId = nil
                 }
-
-                updatingUserId = nil
             } catch {
-                updatingUserId = nil
-                errorMessage = error.localizedDescription
-                showError = true
+                await MainActor.run {
+                    updatingUserId = nil
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
             }
         }
     }
