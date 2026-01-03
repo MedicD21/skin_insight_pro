@@ -12,6 +12,7 @@ struct ClientDetailView: View {
     @State private var showConsentAlert = false
     @State private var currentClient: AppClient
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.dismiss) var dismiss
 
     init(client: AppClient, selectedClient: Binding<AppClient?>) {
         self.client = client
@@ -58,13 +59,29 @@ struct ClientDetailView: View {
                     .padding(.bottom, horizontalSizeClass == .regular ? 40 : 100)
                 }
                 .refreshable {
-                    await viewModel.loadAnalyses(clientId: client.id ?? "", userId: AuthenticationManager.shared.currentUser?.id ?? "")
+                    await viewModel.loadAnalyses(clientId: currentClient.id ?? "", userId: AuthenticationManager.shared.currentUser?.id ?? "")
+                    await viewModel.loadFlaggedProducts(for: currentClient)
                 }
             }
         }
-        .navigationTitle(client.name ?? "Client")
+        .navigationTitle(currentClient.name ?? "Client")
         .navigationBarTitleDisplayMode(horizontalSizeClass == .regular ? .large : .inline)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: {
+                    if horizontalSizeClass == .regular {
+                        selectedClient = nil
+                    } else {
+                        dismiss()
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                }
+            }
+
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button(action: { showEditClient = true }) {
                     Label("Edit", systemImage: "pencil")
@@ -84,22 +101,24 @@ struct ClientDetailView: View {
         }
         .navigationBarBackButtonHidden(false)
         .sheet(isPresented: $showAnalysisInput) {
-            SkinAnalysisInputView(client: client, viewModel: viewModel)
+            SkinAnalysisInputView(client: currentClient, viewModel: viewModel)
         }
         .sheet(isPresented: $showEditClient) {
-            EditClientView(client: client, onUpdate: { updatedClient in
+            EditClientView(client: currentClient, onUpdate: { updatedClient in
                 if let index = viewModel.clients.firstIndex(where: { $0.id == updatedClient.id }) {
                     viewModel.clients[index] = updatedClient
                 }
+                currentClient = updatedClient
                 selectedClient = updatedClient
             })
         }
         .sheet(isPresented: $showCompareAnalyses) {
-            CompareAnalysesView(client: client, analyses: viewModel.analyses)
+            CompareAnalysesView(client: currentClient, analyses: viewModel.analyses)
         }
         .sheet(isPresented: $showConsentForm) {
-            ClientHIPAAConsentView(client: client, onConsent: { signature in
-                viewModel.updateClientConsent(client: client, signature: signature) { updatedClient in
+            ClientHIPAAConsentView(client: currentClient, onConsent: { signature in
+                viewModel.updateClientConsent(client: currentClient, signature: signature) { updatedClient in
+                    currentClient = updatedClient
                     selectedClient = updatedClient
                 }
             })
@@ -110,25 +129,27 @@ struct ClientDetailView: View {
             }
             Button("Cancel", role: .cancel) { }
         } message: {
-            if client.hasExpiredConsent {
+            if currentClient.hasExpiredConsent {
                 Text("This client's HIPAA consent has expired. A new consent signature is required before performing skin analysis.")
             } else {
                 Text("This client has not signed a HIPAA consent form. A consent signature is required before performing skin analysis.")
             }
         }
         .task {
-            await viewModel.loadAnalyses(clientId: client.id ?? "", userId: AuthenticationManager.shared.currentUser?.id ?? "")
+            await viewModel.loadAnalyses(clientId: currentClient.id ?? "", userId: AuthenticationManager.shared.currentUser?.id ?? "")
+            await viewModel.loadFlaggedProducts(for: currentClient)
         }
     }
     
     private var hasMedicalInfo: Bool {
-        (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
-        (client.allergies != nil && !client.allergies!.isEmpty) ||
-        (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
-        (client.medications != nil && !client.medications!.isEmpty) ||
-        (client.productsToAvoid != nil && !client.productsToAvoid!.isEmpty) ||
-        client.fillersDate != nil ||
-        client.biostimulatorsDate != nil
+        (currentClient.medicalHistory != nil && !currentClient.medicalHistory!.isEmpty) ||
+        (currentClient.allergies != nil && !currentClient.allergies!.isEmpty) ||
+        (currentClient.knownSensitivities != nil && !currentClient.knownSensitivities!.isEmpty) ||
+        (currentClient.medications != nil && !currentClient.medications!.isEmpty) ||
+        (currentClient.productsToAvoid != nil && !currentClient.productsToAvoid!.isEmpty) ||
+        !viewModel.flaggedProducts.isEmpty ||
+        currentClient.fillersDate != nil ||
+        currentClient.biostimulatorsDate != nil
     }
     
     private var clientInfoCard: some View {
@@ -145,14 +166,14 @@ struct ClientDetailView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(client.name ?? "Unknown")
+                    Text(currentClient.name ?? "Unknown")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundColor(theme.primaryText)
 
                     // HIPAA Consent Status Badge
                     consentStatusBadge
 
-                    if let email = client.email, !email.isEmpty {
+                    if let email = currentClient.email, !email.isEmpty {
                         HStack(spacing: 8) {
                             Image(systemName: "envelope")
                                 .font(.system(size: 14))
@@ -162,7 +183,7 @@ struct ClientDetailView: View {
                         .foregroundColor(theme.secondaryText)
                     }
 
-                    if let phone = client.phone, !phone.isEmpty {
+                    if let phone = currentClient.phone, !phone.isEmpty {
                         HStack(spacing: 8) {
                             Image(systemName: "phone")
                                 .font(.system(size: 14))
@@ -177,7 +198,7 @@ struct ClientDetailView: View {
             }
 
             // Show consent date if available
-            if let consentDate = client.consentDate {
+            if let consentDate = currentClient.consentDate {
                 Divider()
 
                 HStack(spacing: 8) {
@@ -190,7 +211,7 @@ struct ClientDetailView: View {
                 }
             }
 
-            if let notes = client.notes, !notes.isEmpty {
+            if let notes = currentClient.notes, !notes.isEmpty {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 8) {
@@ -227,7 +248,7 @@ struct ClientDetailView: View {
             }
             
             VStack(alignment: .leading, spacing: 16) {
-                if let medicalHistory = client.medicalHistory, !medicalHistory.isEmpty {
+                if let medicalHistory = currentClient.medicalHistory, !medicalHistory.isEmpty {
                     medicalInfoRow(
                         icon: "heart.text.square",
                         title: "Medical History",
@@ -235,8 +256,8 @@ struct ClientDetailView: View {
                     )
                 }
                 
-                if let allergies = client.allergies, !allergies.isEmpty {
-                    if client.medicalHistory != nil && !client.medicalHistory!.isEmpty {
+                if let allergies = currentClient.allergies, !allergies.isEmpty {
+                    if currentClient.medicalHistory != nil && !currentClient.medicalHistory!.isEmpty {
                         Divider()
                     }
                     medicalInfoRow(
@@ -247,9 +268,9 @@ struct ClientDetailView: View {
                     )
                 }
                 
-                if let sensitivities = client.knownSensitivities, !sensitivities.isEmpty {
-                    if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
-                       (client.allergies != nil && !client.allergies!.isEmpty) {
+                if let sensitivities = currentClient.knownSensitivities, !sensitivities.isEmpty {
+                    if (currentClient.medicalHistory != nil && !currentClient.medicalHistory!.isEmpty) ||
+                       (currentClient.allergies != nil && !currentClient.allergies!.isEmpty) {
                         Divider()
                     }
                     medicalInfoRow(
@@ -259,10 +280,10 @@ struct ClientDetailView: View {
                     )
                 }
 
-                if let medications = client.medications, !medications.isEmpty {
-                    if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
-                       (client.allergies != nil && !client.allergies!.isEmpty) ||
-                       (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) {
+                if let medications = currentClient.medications, !medications.isEmpty {
+                    if (currentClient.medicalHistory != nil && !currentClient.medicalHistory!.isEmpty) ||
+                       (currentClient.allergies != nil && !currentClient.allergies!.isEmpty) ||
+                       (currentClient.knownSensitivities != nil && !currentClient.knownSensitivities!.isEmpty) {
                         Divider()
                     }
                     medicalInfoRow(
@@ -273,11 +294,11 @@ struct ClientDetailView: View {
                     )
                 }
 
-                if let productsToAvoid = client.productsToAvoid, !productsToAvoid.isEmpty {
-                    if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
-                       (client.allergies != nil && !client.allergies!.isEmpty) ||
-                       (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
-                       (client.medications != nil && !client.medications!.isEmpty) {
+                if let productsToAvoid = currentClient.productsToAvoid, !productsToAvoid.isEmpty {
+                    if (currentClient.medicalHistory != nil && !currentClient.medicalHistory!.isEmpty) ||
+                       (currentClient.allergies != nil && !currentClient.allergies!.isEmpty) ||
+                       (currentClient.knownSensitivities != nil && !currentClient.knownSensitivities!.isEmpty) ||
+                       (currentClient.medications != nil && !currentClient.medications!.isEmpty) {
                         Divider()
                     }
                     medicalInfoRow(
@@ -288,12 +309,33 @@ struct ClientDetailView: View {
                     )
                 }
 
-                if client.fillersDate != nil || client.biostimulatorsDate != nil {
-                    if (client.medicalHistory != nil && !client.medicalHistory!.isEmpty) ||
-                       (client.allergies != nil && !client.allergies!.isEmpty) ||
-                       (client.knownSensitivities != nil && !client.knownSensitivities!.isEmpty) ||
-                       (client.medications != nil && !client.medications!.isEmpty) ||
-                       (client.productsToAvoid != nil && !client.productsToAvoid!.isEmpty) {
+                if !viewModel.flaggedProducts.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "hand.raised.fill")
+                                .foregroundColor(theme.warning)
+                            Text("Flagged Products (allergy matches)")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundColor(theme.secondaryText)
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(viewModel.flaggedProducts) { product in
+                                Text("\(product.brand ?? "") \(product.name ?? "")".trimmingCharacters(in: .whitespaces))
+                                    .font(.system(size: 14))
+                                    .foregroundColor(theme.primaryText)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    }
+                }
+
+                if currentClient.fillersDate != nil || currentClient.biostimulatorsDate != nil {
+                    if (currentClient.medicalHistory != nil && !currentClient.medicalHistory!.isEmpty) ||
+                       (currentClient.allergies != nil && !currentClient.allergies!.isEmpty) ||
+                       (currentClient.knownSensitivities != nil && !currentClient.knownSensitivities!.isEmpty) ||
+                       (currentClient.medications != nil && !currentClient.medications!.isEmpty) ||
+                       (currentClient.productsToAvoid != nil && !currentClient.productsToAvoid!.isEmpty) {
                         Divider()
                     }
 
@@ -308,7 +350,7 @@ struct ClientDetailView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
-                            if let fillersDate = client.fillersDate {
+                            if let fillersDate = currentClient.fillersDate {
                                 HStack {
                                     Text("Fillers:")
                                         .font(.system(size: 15))
@@ -319,7 +361,7 @@ struct ClientDetailView: View {
                                 }
                             }
 
-                            if let biostimulatorsDate = client.biostimulatorsDate {
+                            if let biostimulatorsDate = currentClient.biostimulatorsDate {
                                 HStack {
                                     Text("Biostimulators:")
                                         .font(.system(size: 15))
@@ -368,7 +410,7 @@ struct ClientDetailView: View {
     private var newAnalysisButton: some View {
         Button(action: {
             // Check if consent is valid before allowing analysis
-            if client.hasValidConsent {
+            if currentClient.hasValidConsent {
                 showAnalysisInput = true
             } else {
                 showConsentAlert = true
@@ -638,7 +680,7 @@ struct ClientDetailView: View {
     }
     
     private var initials: String {
-        let name = client.name ?? "?"
+        let name = currentClient.name ?? "?"
         let components = name.split(separator: " ")
         if components.count >= 2 {
             return "\(components[0].prefix(1))\(components[1].prefix(1))".uppercased()
@@ -670,7 +712,7 @@ struct ClientDetailView: View {
 
     @ViewBuilder
     private var consentStatusBadge: some View {
-        let status = client.consentStatus
+        let status = currentClient.consentStatus
 
         HStack(spacing: 6) {
             Image(systemName: status.icon)
@@ -797,6 +839,7 @@ class ClientDetailViewModel: ObservableObject {
     @Published var showError = false
     @Published var errorMessage = ""
     @Published var clients: [AppClient] = []
+    @Published var flaggedProducts: [Product] = []
 
     func loadAnalyses(clientId: String, userId: String) async {
         isLoading = true
@@ -808,6 +851,50 @@ class ClientDetailViewModel: ObservableObject {
             analyses = fetchedAnalyses.sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
         } catch is CancellationError {
             return
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    func loadFlaggedProducts(for client: AppClient) async {
+        guard let userId = AuthenticationManager.shared.currentUser?.id else { return }
+
+        do {
+            let products = try await NetworkService.shared.fetchProducts(userId: userId)
+
+            // Build avoidance terms from allergies, sensitivities, and explicit products_to_avoid
+            var terms: [String] = []
+            [client.allergies, client.knownSensitivities, client.productsToAvoid].forEach { value in
+                value?
+                    .components(separatedBy: CharacterSet(charactersIn: ",\n"))
+                    .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                    .filter { !$0.isEmpty }
+                    .forEach { terms.append($0) }
+            }
+
+            if terms.isEmpty {
+                flaggedProducts = []
+                return
+            }
+
+            let matched = products.filter { product in
+                let ingredientFields = [
+                    product.ingredients?.lowercased() ?? "",
+                    product.allIngredients?.lowercased() ?? ""
+                ]
+                let nameFields = [
+                    product.name?.lowercased() ?? "",
+                    product.brand?.lowercased() ?? ""
+                ]
+
+                return terms.contains { term in
+                    ingredientFields.contains(where: { $0.contains(term) }) ||
+                    nameFields.contains(where: { $0.contains(term) })
+                }
+            }
+
+            flaggedProducts = matched
         } catch {
             errorMessage = error.localizedDescription
             showError = true

@@ -481,6 +481,8 @@ class NetworkService {
 
             let clientData: [String: Any?] = [
                 "name": client.name,
+                "first_name": client.firstName,
+                "last_name": client.lastName,
                 "phone": client.phone,
                 "email": client.email,
                 "notes": client.notes,
@@ -491,7 +493,9 @@ class NetworkService {
                 "profile_image_url": client.profileImageUrl,
                 "company_id": client.companyId,
                 "fillers_date": client.fillersDate,
-                "biostimulators_date": client.biostimulatorsDate
+                "biostimulators_date": client.biostimulatorsDate,
+                "consent_signature": (client.consentSignature?.isEmpty == false ? client.consentSignature : nil),
+                "consent_date": (client.consentDate?.isEmpty == false ? client.consentDate : nil)
             ]
 
             request.httpBody = try JSONSerialization.data(withJSONObject: clientData.compactMapValues { $0 })
@@ -543,35 +547,27 @@ class NetworkService {
             }
             request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
-            var clientData: [String: Any] = [
+            let clientData: [String: Any?] = [
                 "user_id": userId,
                 "name": client.name ?? "",
+                "first_name": client.firstName,
+                "last_name": client.lastName,
                 "phone": client.phone ?? "",
                 "email": client.email ?? "",
-                "notes": client.notes ?? "",
-                "medical_history": client.medicalHistory ?? "",
-                "allergies": client.allergies ?? "",
-                "known_sensitivities": client.knownSensitivities ?? "",
-                "medications": client.medications ?? ""
+                "notes": client.notes,
+                "medical_history": client.medicalHistory,
+                "allergies": client.allergies,
+                "known_sensitivities": client.knownSensitivities,
+                "medications": client.medications,
+                "profile_image_url": client.profileImageUrl,
+                "company_id": client.companyId,
+                "fillers_date": client.fillersDate,
+                "biostimulators_date": client.biostimulatorsDate,
+                "consent_signature": (client.consentSignature?.isEmpty == false ? client.consentSignature : nil),
+                "consent_date": (client.consentDate?.isEmpty == false ? client.consentDate : nil)
             ]
 
-            if let profileImageUrl = client.profileImageUrl {
-                clientData["profile_image_url"] = profileImageUrl
-            }
-
-            if let companyId = client.companyId {
-                clientData["company_id"] = companyId
-            }
-
-            if let fillersDate = client.fillersDate {
-                clientData["fillers_date"] = fillersDate
-            }
-
-            if let biostimulatorsDate = client.biostimulatorsDate {
-                clientData["biostimulators_date"] = biostimulatorsDate
-            }
-
-            request.httpBody = try JSONSerialization.data(withJSONObject: clientData)
+            request.httpBody = try JSONSerialization.data(withJSONObject: clientData.compactMapValues { $0 })
 
             #if DEBUG
             print("-> Request: Create Client")
@@ -1375,9 +1371,9 @@ class NetworkService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(AppConstants.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
         let updateData: [String: Any] = [
@@ -1386,13 +1382,32 @@ class NetworkService {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: updateData)
 
-        let (_, response) = try await session.data(for: request)
+        #if DEBUG
+        print("🌐 Updating user admin status:")
+        print("   URL: \(url.absoluteString)")
+        print("   UserID: \(userId)")
+        print("   isAdmin: \(isAdmin)")
+        #endif
+
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
         }
 
+        #if DEBUG
+        print("📡 Response status code: \(httpResponse.statusCode)")
+        if let responseString = String(data: data, encoding: .utf8) {
+            print("📡 Response body: \(responseString)")
+        }
+        #endif
+
         guard (200...299).contains(httpResponse.statusCode) else {
+            if let errorString = String(data: data, encoding: .utf8) {
+                #if DEBUG
+                print("❌ Server error response: \(errorString)")
+                #endif
+            }
             throw NetworkError.serverError(httpResponse.statusCode)
         }
     }
@@ -1447,6 +1462,7 @@ class NetworkService {
                 "category": product.category,
                 "description": product.description,
                 "ingredients": product.ingredients,
+                "all_ingredients": product.allIngredients,
                 "skin_types": product.skinTypes,
                 "concerns": product.concerns,
                 "image_url": product.imageUrl,
@@ -1489,6 +1505,7 @@ class NetworkService {
                 "category": product.category ?? "",
                 "description": product.description ?? "",
                 "ingredients": product.ingredients ?? "",
+                "all_ingredients": product.allIngredients ?? "",
                 "skin_types": product.skinTypes ?? [],
                 "concerns": product.concerns ?? [],
                 "is_active": product.isActive ?? true

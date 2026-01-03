@@ -17,6 +17,15 @@ struct ClientHIPAAConsentView: View {
     @State private var showError = false
     @State private var errorMessage = ""
 
+    // Skip signature when running in the simulator to speed up testing
+    private var signatureRequired: Bool {
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        return true
+        #endif
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -322,6 +331,14 @@ struct ClientHIPAAConsentView: View {
                             .foregroundColor(theme.accent.opacity(0.5))
                     )
                 }
+
+                if !signatureRequired {
+                    Text("Simulator mode: signature is optional. A placeholder will be used.")
+                        .font(.system(size: 12))
+                        .foregroundColor(theme.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.top, 8)
+                }
             }
         }
         .padding(20)
@@ -349,19 +366,23 @@ struct ClientHIPAAConsentView: View {
     }
 
     private var canSubmit: Bool {
-        hasReadNotice && agreedToTreatment && agreedToPhotos && signatureImage != nil
+        hasReadNotice && agreedToTreatment && agreedToPhotos && (signatureImage != nil || !signatureRequired)
     }
 
     private func handleConsent() {
-        guard let signature = signatureImage,
-              let signatureData = signature.pngData() else {
+        var signatureBase64 = ""
+
+        if let signature = signatureImage, let signatureData = signature.pngData() {
+            // Convert to base64 for storage
+            signatureBase64 = signatureData.base64EncodedString()
+        } else if signatureRequired {
             errorMessage = "Invalid signature"
             showError = true
             return
+        } else {
+            // Simulator shortcut to allow testing without drawing
+            signatureBase64 = "SIMULATOR_TEST_SIGNATURE"
         }
-
-        // Convert to base64 for storage
-        let signatureBase64 = signatureData.base64EncodedString()
 
         // Log consent
         if let userId = authManager.currentUser?.id,

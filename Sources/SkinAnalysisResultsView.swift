@@ -19,6 +19,7 @@ struct SkinAnalysisResultsView: View {
     @State private var errorMessage = ""
     @FocusState private var notesFieldFocused: Bool
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    private var flaggedProducts: [Product] { viewModel.flaggedProducts }
     
     private let medicalConditionKeywords = [
         "rosacea", "eczema", "psoriasis", "dermatitis", "acne", "melasma",
@@ -49,6 +50,10 @@ struct SkinAnalysisResultsView: View {
                     
                     if let medicalConsiderations = analysisResult.medicalConsiderations, !medicalConsiderations.isEmpty {
                         medicalConsiderationsCard
+                    }
+
+                    if !flaggedProducts.isEmpty {
+                        productsToAvoidCard
                     }
                     
                     if !productsUsed.isEmpty || !treatmentsPerformed.isEmpty {
@@ -99,6 +104,9 @@ struct SkinAnalysisResultsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage)
+        }
+        .task {
+            await viewModel.loadFlaggedProducts(for: client)
         }
     }
     
@@ -615,6 +623,53 @@ struct SkinAnalysisResultsView: View {
             RoundedRectangle(cornerRadius: theme.radiusXL)
                 .fill(theme.cardBackground)
                 .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+        )
+    }
+
+    private var productsToAvoidCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "hand.raised.fill")
+                    .foregroundColor(theme.warning)
+                Text("Do NOT Use (Allergies/Sensitivities)")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+            }
+
+            Text("The following products contain ingredients that match this client's allergies, sensitivities, or products-to-avoid list.")
+                .font(.system(size: 13))
+                .foregroundColor(theme.secondaryText)
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(flaggedProducts) { product in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(product.brand ?? "") \(product.name ?? "")".trimmingCharacters(in: .whitespaces))
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(theme.primaryText)
+
+                        if let ingredients = product.allIngredients, !ingredients.isEmpty {
+                            Text(ingredients)
+                                .font(.system(size: 13))
+                                .foregroundColor(theme.secondaryText)
+                                .lineLimit(2)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if product.id != flaggedProducts.last?.id {
+                        Divider()
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .fill(theme.cardBackground)
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .stroke(theme.warning.opacity(0.2), lineWidth: 1)
         )
     }
 

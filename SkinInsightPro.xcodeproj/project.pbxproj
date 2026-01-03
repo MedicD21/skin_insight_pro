@@ -420,6 +420,7 @@
 				DEVELOPMENT_TEAM = 286LKF859M;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Skin Insight Pro";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
@@ -447,6 +448,7 @@
 				DEVELOPMENT_TEAM = 286LKF859M;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Skin Insight Pro";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_PrivacyManifestPath = Resources/PrivacyInfo.xcprivacy;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;

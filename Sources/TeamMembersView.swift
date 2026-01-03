@@ -43,7 +43,12 @@ struct TeamMembersView: View {
                 if authManager.currentUser?.isAdmin == true {
                     if !pendingAdminChanges.isEmpty {
                         ToolbarItem(placement: .primaryAction) {
-                            Button(action: { saveAdminChanges() }) {
+                            Button(action: {
+                                #if DEBUG
+                                print("💾 Save button clicked")
+                                #endif
+                                saveAdminChanges()
+                            }) {
                                 if isSavingChanges {
                                     ProgressView()
                                         .scaleEffect(0.8)
@@ -375,9 +380,21 @@ struct TeamMembersView: View {
             var successCount = 0
             var failedUsers: [String] = []
 
+            #if DEBUG
+            print("🔄 Saving admin changes for \(pendingAdminChanges.count) users")
+            #endif
+
             for (userId, isAdmin) in pendingAdminChanges {
                 do {
+                    #if DEBUG
+                    print("🔄 Updating user \(userId) isAdmin to \(isAdmin)")
+                    #endif
+
                     try await NetworkService.shared.updateUserAdminStatus(userId: userId, isAdmin: isAdmin)
+
+                    #if DEBUG
+                    print("✅ Successfully updated user \(userId)")
+                    #endif
 
                     // Update local array
                     await MainActor.run {
@@ -390,6 +407,10 @@ struct TeamMembersView: View {
                     successCount += 1
                 } catch {
                     // Track failed user
+                    #if DEBUG
+                    print("❌ Failed to update user \(userId): \(error)")
+                    #endif
+
                     if let member = teamMembers.first(where: { $0.id == userId }) {
                         let name = "\(member.firstName ?? "") \(member.lastName ?? "")".trimmingCharacters(in: .whitespaces)
                         failedUsers.append(name)
@@ -400,11 +421,21 @@ struct TeamMembersView: View {
             await MainActor.run {
                 isSavingChanges = false
 
+                #if DEBUG
+                print("📊 Save complete: \(successCount) succeeded, \(failedUsers.count) failed")
+                #endif
+
                 if failedUsers.isEmpty {
                     // All succeeded - clear pending changes
+                    #if DEBUG
+                    print("✅ All admin changes saved successfully")
+                    #endif
                     pendingAdminChanges.removeAll()
                 } else {
                     // Some failed - show error and keep failed changes pending
+                    #if DEBUG
+                    print("⚠️ Some updates failed: \(failedUsers)")
+                    #endif
                     errorMessage = "Failed to update: \(failedUsers.joined(separator: ", "))"
                     showError = true
 

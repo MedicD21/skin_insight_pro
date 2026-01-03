@@ -5,7 +5,6 @@ struct SkinInsightProApp: App {
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var eventManager = SimpleForegroundLogger.shared
     @StateObject private var complianceManager = HIPAAComplianceManager.shared
-    @State private var showConsentScreen = false
     @State private var showSessionTimeout = false
 
     var body: some Scene {
@@ -15,12 +14,9 @@ struct SkinInsightProApp: App {
                     if authManager.isLoading {
                         SplashScreen()
                     } else if authManager.isAuthenticated {
-                        if !complianceManager.hasGivenConsent() {
+                        if !complianceManager.hasUserConsented {
                             // Show consent screen first
-                            HIPAAConsentView {
-                                // After consent, continue to profile completion or main app
-                                showConsentScreen = false
-                            }
+                            HIPAAConsentView { }
                         } else if authManager.needsProfileCompletion {
                             CompleteProfileView()
                                 .trackHIPAAActivity()

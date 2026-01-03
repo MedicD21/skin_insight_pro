@@ -10,65 +10,63 @@ struct ProductCatalogView: View {
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                theme.primaryBackground
-                    .ignoresSafeArea()
+        ZStack {
+            theme.primaryBackground
+                .ignoresSafeArea()
 
-                if viewModel.isLoading && viewModel.products.isEmpty {
-                    ProgressView()
-                        .scaleEffect(1.5)
-                        .tint(theme.accent)
-                } else if viewModel.products.isEmpty {
-                    emptyStateView
-                } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(filteredProducts) { product in
-                                ProductRowView(product: product)
-                                    .onTapGesture {
-                                        productToEdit = product
-                                    }
-                            }
+            if viewModel.isLoading && viewModel.products.isEmpty {
+                ProgressView()
+                    .scaleEffect(1.5)
+                    .tint(theme.accent)
+            } else if viewModel.products.isEmpty {
+                emptyStateView
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(filteredProducts) { product in
+                            ProductRowView(product: product)
+                                .onTapGesture {
+                                    productToEdit = product
+                                }
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 100)
                     }
-                    .refreshable {
-                        await viewModel.loadProducts()
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 100)
+                }
+                .refreshable {
+                    await viewModel.loadProducts()
                 }
             }
-            .navigationTitle("Product Catalog")
-            .toolbar {
-                ToolbarItemGroup(placement: .topBarTrailing) {
-                    Menu {
-                        Button(action: { showAddProduct = true }) {
-                            Label("Add Single Product", systemImage: "plus")
-                        }
-                        Button(action: { showImportProducts = true }) {
-                            Label("Import Products (CSV)", systemImage: "square.and.arrow.down")
-                        }
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 20))
+        }
+        .navigationTitle("Product Catalog")
+        .toolbar {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                Menu {
+                    Button(action: { showAddProduct = true }) {
+                        Label("Add Single Product", systemImage: "plus")
                     }
+                    Button(action: { showImportProducts = true }) {
+                        Label("Import Products (CSV)", systemImage: "square.and.arrow.down")
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 20))
                 }
             }
-            .searchable(text: $searchText, prompt: "Search products")
-            .sheet(isPresented: $showAddProduct) {
-                AddProductView(viewModel: viewModel)
-            }
-            .sheet(item: $productToEdit) { product in
-                AddProductView(viewModel: viewModel, editingProduct: product)
-            }
-            .sheet(isPresented: $showImportProducts) {
-                ProductImportView(viewModel: viewModel)
-            }
-            .task {
-                await viewModel.loadProducts()
-            }
+        }
+        .searchable(text: $searchText, prompt: "Search products")
+        .sheet(isPresented: $showAddProduct) {
+            AddProductView(viewModel: viewModel)
+        }
+        .sheet(item: $productToEdit) { product in
+            AddProductView(viewModel: viewModel, editingProduct: product)
+        }
+        .sheet(isPresented: $showImportProducts) {
+            ProductImportView(viewModel: viewModel)
+        }
+        .task {
+            await viewModel.loadProducts()
         }
     }
 

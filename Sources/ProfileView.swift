@@ -17,57 +17,55 @@ struct ProfileView: View {
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                theme.primaryBackground
-                    .ignoresSafeArea()
+        ZStack {
+            theme.primaryBackground
+                .ignoresSafeArea()
 
-                mainContent
+            mainContent
 
-                if isDeleting {
-                    deletingOverlay
-                }
+            if isDeleting {
+                deletingOverlay
             }
-            .navigationTitle("Profile")
-            .sheet(isPresented: $showAbout) {
-                AboutView()
+        }
+        .navigationTitle("Profile")
+        .sheet(isPresented: $showAbout) {
+            AboutView()
+        }
+        .sheet(isPresented: $showUpgradePrompt) {
+            UpgradePromptView()
+        }
+        .sheet(isPresented: $showEditProfile) {
+            EditProfileView()
+        }
+        .sheet(isPresented: $showCompanyProfile) {
+            CompanyProfileView()
+        }
+        .sheet(isPresented: $showJoinCompany) {
+            JoinCompanyView()
+        }
+        .sheet(isPresented: $showPrivacySettings) {
+            HIPAADataManagementView()
+        }
+        .alert("Logout", isPresented: $showLogoutConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Logout", role: .destructive) {
+                authManager.logout()
             }
-            .sheet(isPresented: $showUpgradePrompt) {
-                UpgradePromptView()
+        } message: {
+            Text("Are you sure you want to logout?")
+        }
+        .alert("Delete Account", isPresented: $showDeleteConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                deleteAccount()
             }
-            .sheet(isPresented: $showEditProfile) {
-                EditProfileView()
-            }
-            .sheet(isPresented: $showCompanyProfile) {
-                CompanyProfileView()
-            }
-            .sheet(isPresented: $showJoinCompany) {
-                JoinCompanyView()
-            }
-            .sheet(isPresented: $showPrivacySettings) {
-                HIPAADataManagementView()
-            }
-            .alert("Logout", isPresented: $showLogoutConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Logout", role: .destructive) {
-                    authManager.logout()
-                }
-            } message: {
-                Text("Are you sure you want to logout?")
-            }
-            .alert("Delete Account", isPresented: $showDeleteConfirmation) {
-                Button("Cancel", role: .cancel) {}
-                Button("Delete", role: .destructive) {
-                    deleteAccount()
-                }
-            } message: {
-                Text("This action cannot be undone. All your data will be permanently deleted.")
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
+        } message: {
+            Text("This action cannot be undone. All your data will be permanently deleted.")
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
         }
     }
 

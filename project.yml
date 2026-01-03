@@ -3,37 +3,37 @@ targets:
   SkinInsightPro:
     type: application
     platform: iOS
-    deploymentTarget: '18.0'
+    deploymentTarget: "18.0"
     sources:
-    - Sources
-    - Assets.xcassets
+      - Sources
+      - Assets.xcassets
     resources:
-    - Resources
-    - Assets.xcassets
+      - Resources
+      - Assets.xcassets
     dependencies: []
     settings:
       base:
         INFOPLIST_FILE: Sources/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: com.dustinschaaf.skininsightpro
         PRODUCT_NAME: SkinInsightPro
-        CURRENT_PROJECT_VERSION: '1'
-        MARKETING_VERSION: 1.0.0
+        CURRENT_PROJECT_VERSION: "1"
+        MARKETING_VERSION: 1.0.6
         BUNDLE_DISPLAY_NAME: Skin Insight Pro
-        IPHONEOS_DEPLOYMENT_TARGET: '18.0'
+        IPHONEOS_DEPLOYMENT_TARGET: "18.0"
         EXECUTABLE_NAME: $(PRODUCT_NAME)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: 'YES'
+        ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS: "YES"
         INFOPLIST_KEY_PrivacyManifestPath: Resources/PrivacyInfo.xcprivacy
     entitlements:
       path: Sources/SkinInsightPro.entitlements
 fileGroups:
-- Sources
-- Resources
-- Assets.xcassets
+  - Sources
+  - Resources
+  - Assets.xcassets
 options:
-  bundleIdPrefix: com.dustinschaaf
-  xcodeVersion: '16.2'
-  deploymentTarget: '18.0'
+  bundleIdPrefix: com.dushin
+  xcodeVersion: "16.2"
+  deploymentTarget: "18.0"
   usesTabs: false
   indentWidth: 2
   tabWidth: 2

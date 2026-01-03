@@ -44,6 +44,7 @@ class HIPAAComplianceManager: ObservableObject {
 
     @Published var sessionExpiryTime: Date?
     @Published var isSessionExpired = false
+    @Published var hasUserConsented: Bool
 
     private let sessionTimeout: TimeInterval = 15 * 60 // 15 minutes
     private var inactivityTimer: Timer?
@@ -56,6 +57,7 @@ class HIPAAComplianceManager: ObservableObject {
     private let consentDateKey = "HIPAA_ConsentDate"
 
     private init() {
+        self.hasUserConsented = userDefaults.bool(forKey: consentGivenKey)
         setupInactivityMonitoring()
     }
 
@@ -219,12 +221,13 @@ class HIPAAComplianceManager: ObservableObject {
     // MARK: - Privacy Consent
 
     func hasGivenConsent() -> Bool {
-        return userDefaults.bool(forKey: consentGivenKey)
+        return hasUserConsented
     }
 
     func recordConsent() {
         userDefaults.set(true, forKey: consentGivenKey)
         userDefaults.set(Date(), forKey: consentDateKey)
+        hasUserConsented = true
     }
 
     func getConsentDate() -> Date? {
@@ -234,6 +237,7 @@ class HIPAAComplianceManager: ObservableObject {
     func revokeConsent() {
         userDefaults.set(false, forKey: consentGivenKey)
         userDefaults.removeObject(forKey: consentDateKey)
+        hasUserConsented = false
     }
 
     // MARK: - Data Export (Right of Access)
