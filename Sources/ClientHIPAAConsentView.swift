@@ -62,8 +62,9 @@ struct ClientHIPAAConsentView: View {
             } message: {
                 Text(errorMessage)
             }
-            .sheet(isPresented: $showSignaturePad) {
+            .fullScreenCover(isPresented: $showSignaturePad) {
                 SignatureCaptureView(signatureImage: $signatureImage)
+                    .interactiveDismissDisabled()
             }
         }
     }
@@ -316,21 +317,22 @@ struct ClientHIPAAConsentView: View {
                     }
                 }
             } else {
-                Button(action: { showSignaturePad = true }) {
-                    HStack {
-                        Image(systemName: "signature")
-                        Text("Tap to Sign")
-                    }
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(theme.accent)
+                SignatureCanvasView(drawing: $drawing, lineWidth: 5, inkColor: .black)
                     .frame(maxWidth: .infinity)
-                    .padding(40)
+                    .frame(height: 320)
                     .background(
-                        RoundedRectangle(cornerRadius: theme.radiusMedium)
-                            .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [8, 4]))
-                            .foregroundColor(theme.accent.opacity(0.5))
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear { self.canvasSize = proxy.size }
+                                .onChange(of: proxy.size) { newSize in
+                                    self.canvasSize = newSize
+                                }
+                        }
                     )
-                }
+                    .background(Color.yellow.opacity(0.1))
+                    .border(Color.red, width: 2)
+                    .contentShape(Rectangle())
+                    .allowsHitTesting(true)
 
                 if !signatureRequired {
                     Text("Simulator mode: signature is optional. A placeholder will be used.")
@@ -399,6 +401,9 @@ struct ClientHIPAAConsentView: View {
         onConsent(signatureBase64)
         dismiss()
     }
+
+    @State private var drawing = PKDrawing()
+    @State private var canvasSize: CGSize = .zero
 }
 
 // MARK: - Signature Capture View
@@ -407,7 +412,8 @@ struct SignatureCaptureView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var signatureImage: UIImage?
 
-    @State private var canvasView = PKCanvasView()
+    @State private var drawing = PKDrawing()
+    @State private var canvasSize: CGSize = .zero
 
     var body: some View {
         NavigationStack {
@@ -421,8 +427,29 @@ struct SignatureCaptureView: View {
                         .foregroundColor(.gray)
                         .padding(.top, 20)
 
-                    SignatureCanvasView(canvasView: $canvasView)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    SignatureCanvasView(drawing: $drawing, lineWidth: 5, inkColor: .black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 320)
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear
+                                    .onAppear { self.canvasSize = proxy.size }
+                                    .onChange(of: proxy.size) { newSize in
+                                        self.canvasSize = newSize
+                                    }
+                            }
+                        )
+                        .background(Color.yellow.opacity(0.1))
+                        .border(Color.red, width: 2)
+                        .overlay(
+                            Text("Canvas")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                                .padding(4),
+                            alignment: .topLeading
+                        )
+                        .contentShape(Rectangle())
+                        .allowsHitTesting(true)
 
                     HStack(spacing: 16) {
                         Button(action: clearSignature) {
@@ -467,29 +494,128 @@ struct SignatureCaptureView: View {
     }
 
     private func clearSignature() {
-        canvasView.drawing = PKDrawing()
+        drawing = PKDrawing()
     }
 
     private func saveSignature() {
-        let drawing = canvasView.drawing
-        let image = drawing.image(from: canvasView.bounds, scale: UIScreen.main.scale)
+        guard canvasSize != .zero else {
+            print("saveSignature: canvasSize is zero; cannot render image")
+            return
+        }
+        let rect = CGRect(origin: .zero, size: canvasSize)
+        let image = drawing.image(from: rect, scale: UIScreen.main.scale)
         signatureImage = image
         dismiss()
     }
 }
 
+// Debug subclass for logging touches
+final class DebugLoggingCanvasView: PKCanvasView {
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        print("DebugLoggingCanvasView touchesBegan count: \(touches.count)")
+        super.touchesBegan(touches, with: event)
+    }
+}
+
 // MARK: - Canvas View Wrapper
 struct SignatureCanvasView: UIViewRepresentable {
-    @Binding var canvasView: PKCanvasView
+    @Binding var drawing: PKDrawing
+    var lineWidth: CGFloat = 5
+    var inkColor: UIColor = .black
+
+    class Coordinator: NSObject, PKCanvasViewDelegate {
+        var parent: SignatureCanvasView
+        var toolPicker: PKToolPicker?
+
+        init(parent: SignatureCanvasView) {
+            self.parent = parent
+        }
+        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            parent.drawing = canvasView.drawing
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
 
     func makeUIView(context: Context) -> PKCanvasView {
-        canvasView.drawingPolicy = .anyInput
-        canvasView.allowsFingerDrawing = true
+        print("SignatureCanvasView.makeUIView")
+        let canvasView = DebugLoggingCanvasView()
+        canvasView.delegate = context.coordinator
+        // Allow both Apple Pencil and finger input; replaces deprecated allowsFingerDrawing
+        if #available(iOS 14.0, *) {
+            canvasView.drawingPolicy = .anyInput
+        } else {
+            canvasView.allowsFingerDrawing = true
+        }
         canvasView.isScrollEnabled = false
-        canvasView.tool = PKInkingTool(.pen, color: .black, width: 2)
+        
+        canvasView.alwaysBounceVertical = false
+        canvasView.alwaysBounceHorizontal = false
+        canvasView.delaysContentTouches = false
+        canvasView.canCancelContentTouches = true
+        canvasView.contentInsetAdjustmentBehavior = .never
+        canvasView.minimumZoomScale = 1.0
+        canvasView.maximumZoomScale = 1.0
+        canvasView.isMultipleTouchEnabled = true
+
+        canvasView.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
         canvasView.backgroundColor = .white
+        canvasView.isOpaque = true
+        canvasView.isUserInteractionEnabled = true
+        // Removed onViewCreated block and becomeFirstResponder call here
         return canvasView
     }
 
-    func updateUIView(_ uiView: PKCanvasView, context: Context) { }
+    func updateUIView(_ uiView: PKCanvasView, context: Context) {
+        print("SignatureCanvasView.updateUIView window:", uiView.window as Any, "bounds:", uiView.bounds.size)
+        if uiView.drawing != drawing {
+            uiView.drawing = drawing
+        }
+        if let tool = uiView.tool as? PKInkingTool {
+            if tool.color != inkColor || tool.width != lineWidth {
+                uiView.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
+            }
+        } else {
+            uiView.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
+        }
+
+        if let window = uiView.window {
+            if context.coordinator.toolPicker == nil {
+                if let picker = PKToolPicker.shared(for: window) {
+                    context.coordinator.toolPicker = picker
+                    picker.setVisible(true, forFirstResponder: uiView)
+                    picker.addObserver(uiView)
+                    print("SignatureCanvasView.updateUIView: Attached PKToolPicker")
+                } else {
+                    print("SignatureCanvasView.updateUIView: PKToolPicker.shared returned nil")
+                }
+            }
+            if !uiView.isFirstResponder {
+                let became = uiView.becomeFirstResponder()
+                print("SignatureCanvasView.updateUIView: becomeFirstResponder -> \(became)")
+            }
+        } else {
+            print("SignatureCanvasView.updateUIView: uiView.window is nil")
+        }
+
+        uiView.isUserInteractionEnabled = true
+        uiView.isScrollEnabled = false
+    }
 }
+
+struct SizeLogger: View {
+    let name: String
+    var onChange: (CGSize) -> Void
+    var body: some View {
+        GeometryReader { proxy in
+            Color.clear
+                .onAppear { onChange(proxy.size) }
+                .onChange(of: proxy.size) { newSize in
+                    onChange(newSize)
+                }
+        }
+    }
+}
+
