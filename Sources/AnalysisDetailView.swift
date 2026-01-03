@@ -79,6 +79,7 @@ struct AnalysisDetailView: View {
         }
         .navigationTitle("Analysis Details")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
     }
     
     private func overviewCard(results: AnalysisData) -> some View {

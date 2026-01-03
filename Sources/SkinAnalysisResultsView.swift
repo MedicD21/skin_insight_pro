@@ -94,6 +94,7 @@ struct SkinAnalysisResultsView: View {
         }
         .navigationTitle("Analysis Results")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
         .alert("Error", isPresented: $showError) {
             Button("OK", role: .cancel) {}
         } message: {

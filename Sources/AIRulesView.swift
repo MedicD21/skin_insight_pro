@@ -35,6 +35,7 @@ struct AIRulesView: View {
             }
         }
         .navigationTitle("AI Rules")
+        .navigationBarBackButtonHidden(false)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button(action: { showAddRule = true }) {

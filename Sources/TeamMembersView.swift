@@ -14,6 +14,8 @@ struct TeamMembersView: View {
     @State private var updatingUserId: String?
     @State private var showEditCompanyCode = false
     @State private var showEmployeeImport = false
+    @State private var pendingAdminChanges: [String: Bool] = [:] // userId -> isAdmin
+    @State private var isSavingChanges = false
 
     var body: some View {
         NavigationStack {
@@ -39,9 +41,27 @@ struct TeamMembersView: View {
                 }
 
                 if authManager.currentUser?.isAdmin == true {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button(action: { showEmployeeImport = true }) {
-                            Image(systemName: "square.and.arrow.down")
+                    if !pendingAdminChanges.isEmpty {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button(action: { saveAdminChanges() }) {
+                                if isSavingChanges {
+                                    ProgressView()
+                                        .scaleEffect(0.8)
+                                } else {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                        Text("Save")
+                                    }
+                                    .foregroundColor(.green)
+                                }
+                            }
+                            .disabled(isSavingChanges)
+                        }
+                    } else {
+                        ToolbarItem(placement: .primaryAction) {
+                            Button(action: { showEmployeeImport = true }) {
+                                Image(systemName: "square.and.arrow.down")
+                            }
                         }
                     }
                 }
@@ -273,9 +293,32 @@ struct TeamMembersView: View {
 
             Spacer()
 
+            // Show pending change indicator
+            if let memberId = member.id, pendingAdminChanges[memberId] != nil {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 8, height: 8)
+                    Text("Unsaved")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(Color.orange)
+                }
+            }
+
             // Show admin toggle for admins, badge for everyone else
-            if member.isAdmin == true {
-                // Show admin badge for all users
+            if let memberId = member.id, let pendingValue = pendingAdminChanges[memberId] {
+                // Show pending admin status
+                if pendingValue {
+                    Text("Admin")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(theme.accent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(theme.accent.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+            } else if member.isAdmin == true {
+                // Show current admin badge
                 Text("Admin")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(theme.accent)
@@ -287,19 +330,22 @@ struct TeamMembersView: View {
 
             // Only show toggle if current user is admin
             if authManager.currentUser?.isAdmin == true {
-                if updatingUserId == member.id {
-                    ProgressView()
-                        .scaleEffect(0.8)
-                } else {
-                    Toggle("", isOn: Binding(
-                        get: { member.isAdmin ?? false },
-                        set: { newValue in
-                            toggleAdminStatus(for: member, isAdmin: newValue)
+                Toggle("", isOn: Binding(
+                    get: {
+                        // Check pending changes first, then fall back to member's current status
+                        if let memberId = member.id, let pendingValue = pendingAdminChanges[memberId] {
+                            return pendingValue
                         }
-                    ))
-                    .labelsHidden()
-                    .tint(theme.accent)
-                }
+                        return member.isAdmin ?? false
+                    },
+                    set: { newValue in
+                        if let memberId = member.id {
+                            pendingAdminChanges[memberId] = newValue
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .tint(theme.accent)
             }
         }
         .padding(.vertical, 8)
@@ -322,29 +368,53 @@ struct TeamMembersView: View {
         .animation(.spring(), value: showCopiedConfirmation)
     }
 
-    private func toggleAdminStatus(for member: AppUser, isAdmin: Bool) {
-        guard let memberId = member.id else { return }
-
-        updatingUserId = memberId
+    private func saveAdminChanges() {
+        isSavingChanges = true
 
         Task {
-            do {
-                try await NetworkService.shared.updateUserAdminStatus(userId: memberId, isAdmin: isAdmin)
+            var successCount = 0
+            var failedUsers: [String] = []
 
-                // Update local array - need to trigger view update
-                await MainActor.run {
-                    if let index = teamMembers.firstIndex(where: { $0.id == memberId }) {
-                        var updatedMember = teamMembers[index]
-                        updatedMember.isAdmin = isAdmin
-                        teamMembers[index] = updatedMember
+            for (userId, isAdmin) in pendingAdminChanges {
+                do {
+                    try await NetworkService.shared.updateUserAdminStatus(userId: userId, isAdmin: isAdmin)
+
+                    // Update local array
+                    await MainActor.run {
+                        if let index = teamMembers.firstIndex(where: { $0.id == userId }) {
+                            var updatedMember = teamMembers[index]
+                            updatedMember.isAdmin = isAdmin
+                            teamMembers[index] = updatedMember
+                        }
                     }
-                    updatingUserId = nil
+                    successCount += 1
+                } catch {
+                    // Track failed user
+                    if let member = teamMembers.first(where: { $0.id == userId }) {
+                        let name = "\(member.firstName ?? "") \(member.lastName ?? "")".trimmingCharacters(in: .whitespaces)
+                        failedUsers.append(name)
+                    }
                 }
-            } catch {
-                await MainActor.run {
-                    updatingUserId = nil
-                    errorMessage = error.localizedDescription
+            }
+
+            await MainActor.run {
+                isSavingChanges = false
+
+                if failedUsers.isEmpty {
+                    // All succeeded - clear pending changes
+                    pendingAdminChanges.removeAll()
+                } else {
+                    // Some failed - show error and keep failed changes pending
+                    errorMessage = "Failed to update: \(failedUsers.joined(separator: ", "))"
                     showError = true
+
+                    // Remove successful changes from pending
+                    let failedUserIds = teamMembers.filter { member in
+                        let name = "\(member.firstName ?? "") \(member.lastName ?? "")".trimmingCharacters(in: .whitespaces)
+                        return !name.isEmpty && failedUsers.contains(name)
+                    }.compactMap { $0.id }
+
+                    pendingAdminChanges = pendingAdminChanges.filter { failedUserIds.contains($0.key) }
                 }
             }
         }

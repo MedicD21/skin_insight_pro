@@ -55,6 +55,7 @@ struct AIProviderSettingsView: View {
         }
         .navigationTitle("AI Vision Provider")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
     }
 
     private var infoCard: some View {

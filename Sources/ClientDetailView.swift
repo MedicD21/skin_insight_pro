@@ -82,6 +82,7 @@ struct ClientDetailView: View {
                 .keyboardShortcut("a", modifiers: .command)
             }
         }
+        .navigationBarBackButtonHidden(false)
         .sheet(isPresented: $showAnalysisInput) {
             SkinAnalysisInputView(client: client, viewModel: viewModel)
         }
