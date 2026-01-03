@@ -484,6 +484,8 @@ struct SignatureCanvasView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         canvasView.drawingPolicy = .anyInput
+        canvasView.allowsFingerDrawing = true
+        canvasView.isScrollEnabled = false
         canvasView.tool = PKInkingTool(.pen, color: .black, width: 2)
         canvasView.backgroundColor = .white
         return canvasView
