@@ -8,6 +8,7 @@ struct ProductCatalogView: View {
     @State private var searchText = ""
     @State private var productToEdit: Product?
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         ZStack {
@@ -40,6 +41,8 @@ struct ProductCatalogView: View {
             }
         }
         .navigationTitle("Product Catalog")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {

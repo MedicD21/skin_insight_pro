@@ -16,7 +16,7 @@ struct MainTabView: View {
                             Label("Clients", systemImage: "person.2")
                         }
                         .tag(0)
-                    
+
                     NavigationStack {
                         ProfileView()
                     }

@@ -98,20 +98,14 @@ struct ClientDashboardView: View {
             }
 
             ToolbarItemGroup(placement: .topBarTrailing) {
-                if horizontalSizeClass == .regular {
-                    Button(action: { showAddClient = true }) {
+                Button(action: { showAddClient = true }) {
+                    if horizontalSizeClass == .regular {
                         Label("Add Client", systemImage: "plus")
-                    }
-                    .keyboardShortcut("n", modifiers: .command)
-                    
-                    NavigationLink(destination: ProfileView()) {
-                        Image(systemName: "person.circle")
-                    }
-                } else {
-                    Button(action: { showAddClient = true }) {
+                    } else {
                         Image(systemName: "plus")
                     }
                 }
+                .keyboardShortcut("n", modifiers: .command)
             }
         }
     }
