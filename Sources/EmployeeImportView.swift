@@ -545,6 +545,7 @@ alex.williams@example.com,Alex,Williams,Esthetician,FALSE
         }
 
         isImporting = true
+        importErrors.removeAll()
 
         Task {
             var successCount = 0
@@ -564,7 +565,9 @@ alex.williams@example.com,Alex,Williams,Esthetician,FALSE
                     successCount += 1
                 } catch {
                     failCount += 1
-                    importErrors.append("Failed to import \(employee.email): \(error.localizedDescription)")
+                    await MainActor.run {
+                        importErrors.append("Failed to import \(employee.email): \(error.localizedDescription)")
+                    }
                 }
             }
 

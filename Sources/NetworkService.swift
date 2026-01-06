@@ -609,6 +609,28 @@ class NetworkService {
         }
     }
 
+    func deleteClient(clientId: String) async throws {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/clients?id=eq.\(clientId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        #if DEBUG
+        print("-> Request: Delete Client")
+        print("-> DELETE: \(url.absoluteString)")
+        #endif
+
+        let (_, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+    }
+
     // MARK: - User Profile
 
     func updateUserProfile(_ user: AppUser) async throws -> AppUser {
@@ -1385,21 +1407,69 @@ class NetworkService {
         }
 
         // Parse the response to get the user ID
-        struct SignupResponse: Codable {
-            let user: SignupUser?
+        var newUserId: String?
+        var newAccessToken: String?
+        // Try full auth response to get access token for the new user (needed for RLS inserts)
+        if let authResponse = try? JSONDecoder().decode(SupabaseAuthResponse.self, from: data) {
+            newUserId = authResponse.user.id
+            newAccessToken = authResponse.accessToken
+        } else {
+            struct SignupResponse: Codable { let user: SignupUser? }
+            struct SignupUser: Codable { let id: String }
+            let signupResponse = try JSONDecoder().decode(SignupResponse.self, from: data)
+            newUserId = signupResponse.user?.id
         }
 
-        struct SignupUser: Codable {
-            let id: String
-        }
-
-        let signupResponse = try JSONDecoder().decode(SignupResponse.self, from: data)
-
-        guard let userId = signupResponse.user?.id else {
+        guard let userId = newUserId else {
             throw NetworkError.invalidResponse
         }
 
-        // Return a basic AppUser object
+        // Create user profile in users table
+        let profileUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        var profileRequest = URLRequest(url: profileUrl)
+        profileRequest.httpMethod = "POST"
+        var headers = supabaseHeaders(authenticated: false)
+        if let newAccessToken = newAccessToken {
+            headers["Authorization"] = "Bearer \(newAccessToken)"
+        } else if let token = accessToken {
+            headers["Authorization"] = "Bearer \(token)"
+        }
+        for (key, value) in headers {
+            profileRequest.setValue(value, forHTTPHeaderField: key)
+        }
+        profileRequest.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+        let profileData: [String: Any] = [
+            "id": userId,
+            "email": email,
+            "provider": "email",
+            "first_name": firstName,
+            "last_name": lastName,
+            "role": role,
+            "is_admin": isAdmin,
+            "company_id": companyId
+        ]
+
+        profileRequest.httpBody = try JSONSerialization.data(withJSONObject: profileData)
+
+        let (profileResponseData, profileResponse) = try await session.data(for: profileRequest)
+
+        guard let profileHttpResponse = profileResponse as? HTTPURLResponse,
+              (200...299).contains(profileHttpResponse.statusCode) else {
+            if let errorString = String(data: profileResponseData, encoding: .utf8) {
+                #if DEBUG
+                print("Profile create error: \(errorString)")
+                #endif
+            }
+            throw NetworkError.serverError((profileResponse as? HTTPURLResponse)?.statusCode ?? -1)
+        }
+
+        let users = try JSONDecoder().decode([AppUser].self, from: profileResponseData)
+        if let createdUser = users.first {
+            return createdUser
+        }
+
+        // Fallback: return basic AppUser object
         return AppUser(
             id: userId,
             email: email,

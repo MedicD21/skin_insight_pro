@@ -4,6 +4,7 @@ struct EditClientView: View {
     @ObservedObject var theme = ThemeManager.shared
     let client: AppClient
     let onUpdate: (AppClient) -> Void
+    var onDelete: ((AppClient) -> Void)? = nil
     @Environment(\.dismiss) var dismiss
     @State private var name: String
     @State private var email: String
@@ -19,15 +20,17 @@ struct EditClientView: View {
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showDeleteConfirm = false
     @FocusState private var focusedField: Field?
 
     enum Field {
         case name, email, phone, notes, medicalHistory, allergies, knownSensitivities, medications, productsToAvoid
     }
 
-    init(client: AppClient, onUpdate: @escaping (AppClient) -> Void) {
+    init(client: AppClient, onUpdate: @escaping (AppClient) -> Void, onDelete: ((AppClient) -> Void)? = nil) {
         self.client = client
         self.onUpdate = onUpdate
+        self.onDelete = onDelete
         _name = State(initialValue: client.name ?? "")
         _email = State(initialValue: client.email ?? "")
         _phone = State(initialValue: client.phone ?? "")
@@ -59,6 +62,7 @@ struct EditClientView: View {
                     VStack(spacing: 24) {
                         basicInfoSection
                         medicalInfoSection
+                        deleteSection
                     }
                     .padding(20)
                 }
@@ -94,6 +98,14 @@ struct EditClientView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
+            }
+            .alert("Delete Client", isPresented: $showDeleteConfirm) {
+                Button("Delete", role: .destructive) {
+                    Task { await deleteClient() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete this client? This action cannot be undone.")
             }
         }
     }
@@ -227,12 +239,30 @@ struct EditClientView: View {
                 }
             }
         }
-        .padding(20)
-        .background(
-            RoundedRectangle(cornerRadius: theme.radiusXL)
-                .fill(theme.cardBackground)
-                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
-        )
+    }
+
+    private var deleteSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Button(role: .destructive) {
+                showDeleteConfirm = true
+            } label: {
+                HStack {
+                    Spacer()
+                    Image(systemName: "trash")
+                    Text("Delete Client")
+                    Spacer()
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .padding()
+                .background(theme.tertiaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+            }
+
+            Text("This will remove the client and their data from your workspace.")
+                .font(.system(size: 13))
+                .foregroundColor(theme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .center)
+        }
     }
     
     private func formField(
@@ -419,5 +449,28 @@ struct EditClientView: View {
                 showError = true
             }
         }
+    }
+
+    private func deleteClient() async {
+        guard let clientId = client.id else {
+            errorMessage = "Client ID not found"
+            showError = true
+            return
+        }
+
+        isLoading = true
+        do {
+            try await NetworkService.shared.deleteClient(clientId: clientId)
+            await MainActor.run {
+                onDelete?(client)
+                dismiss()
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+        isLoading = false
     }
 }

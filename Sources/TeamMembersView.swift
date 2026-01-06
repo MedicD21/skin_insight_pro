@@ -452,6 +452,7 @@ struct TeamMembersView: View {
         }
     }
 
+    @MainActor
     private func loadTeamMembers() async {
         guard let companyId = authManager.currentUser?.companyId else {
             #if DEBUG
@@ -471,10 +472,7 @@ struct TeamMembersView: View {
         do {
             // Fetch company to get the company_code
             let company = try await NetworkService.shared.fetchCompany(id: companyId)
-
-            await MainActor.run {
-                companyCode = company.companyCode ?? companyId // Fallback to ID if no code set
-            }
+            companyCode = company.companyCode ?? companyId // Fallback to ID if no code set
 
             #if DEBUG
             print("📋 TeamMembersView: Company code: \(companyCode)")
@@ -486,20 +484,16 @@ struct TeamMembersView: View {
             print("📋 TeamMembersView: Members: \(members.map { "\($0.firstName ?? "") \($0.lastName ?? "") (\($0.email ?? ""))" })")
             #endif
 
-            await MainActor.run {
-                teamMembers = members
-                #if DEBUG
-                print("📋 TeamMembersView: teamMembers array updated with \(teamMembers.count) members")
-                #endif
-            }
+            teamMembers = members
+            #if DEBUG
+            print("📋 TeamMembersView: teamMembers array updated with \(teamMembers.count) members")
+            #endif
         } catch {
             #if DEBUG
             print("❌ TeamMembersView: Error loading team members: \(error)")
             #endif
-            await MainActor.run {
-                errorMessage = error.localizedDescription
-                showError = true
-            }
+            errorMessage = error.localizedDescription
+            showError = true
         }
     }
 }

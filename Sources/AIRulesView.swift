@@ -21,12 +21,16 @@ struct AIRulesView: View {
                 emptyStateView
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(viewModel.rules.sorted(by: { ($0.priority ?? 0) > ($1.priority ?? 0) })) { rule in
-                            Button(action: { selectedRule = rule }) {
-                                AIRuleRowView(rule: rule)
+                    VStack(spacing: 16) {
+                        addRuleButton
+
+                        LazyVStack(spacing: 12) {
+                            ForEach(viewModel.rules.sorted(by: { ($0.priority ?? 0) > ($1.priority ?? 0) })) { rule in
+                                Button(action: { selectedRule = rule }) {
+                                    AIRuleRowView(rule: rule)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -46,17 +50,16 @@ struct AIRulesView: View {
                     }
                 }
             }
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button(action: { showAddRule = true }) {
-                    Label("Add Rule", systemImage: "plus")
-                }
-            }
         }
         .sheet(isPresented: $showAddRule) {
-            AddAIRuleView(viewModel: viewModel)
+            NavigationStack {
+                AddAIRuleView(viewModel: viewModel)
+            }
         }
         .sheet(item: $selectedRule) { rule in
-            EditAIRuleView(rule: rule, viewModel: viewModel)
+            NavigationStack {
+                EditAIRuleView(rule: rule, viewModel: viewModel)
+            }
         }
         .task {
             await viewModel.loadRules()
@@ -79,21 +82,26 @@ struct AIRulesView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
-            Button(action: { showAddRule = true }) {
-                HStack {
-                    Image(systemName: "plus.circle.fill")
-                    Text("Add Rule")
-                }
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundColor(.white)
-                .padding(.horizontal, 32)
-                .padding(.vertical, 16)
-                .background(theme.accent)
-                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-            }
+            addRuleButton
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
+    }
+
+    private var addRuleButton: some View {
+        Button(action: { showAddRule = true }) {
+            HStack {
+                Image(systemName: "plus.circle.fill")
+                Text("Add Rule")
+            }
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 32)
+            .padding(.vertical, 16)
+            .frame(maxWidth: .infinity)
+            .background(theme.accent)
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        }
     }
 }
 

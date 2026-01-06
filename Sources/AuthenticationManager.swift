@@ -183,7 +183,7 @@ extension AuthenticationManager: ASAuthorizationControllerDelegate {
 }
 
 extension AuthenticationManager: ASAuthorizationControllerPresentationContextProviding {
-    nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+    @MainActor func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
         // Get the key window from the connected scenes
         guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let window = windowScene.windows.first else {

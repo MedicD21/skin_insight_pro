@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ClientDashboardView: View {
     @ObservedObject var theme = ThemeManager.shared
@@ -56,25 +57,29 @@ struct ClientDashboardView: View {
                 emptyStateView
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(filteredClients) { client in
-                            if horizontalSizeClass == .regular {
-                                ClientRowView(client: client)
-                                    .contentShape(Rectangle())
-                                    .background(
-                                        RoundedRectangle(cornerRadius: theme.radiusLarge)
-                                            .fill(selectedClient?.id == client.id ? theme.accentSubtle.opacity(0.3) : Color.clear)
-                                    )
-                                    .onTapGesture {
-                                        withAnimation(theme.springSnappy) {
-                                            selectedClient = client
-                                        }
-                                    }
-                            } else {
-                                NavigationLink(value: client) {
+                    VStack(spacing: 16) {
+                        searchBar
+
+                        LazyVStack(spacing: 12) {
+                            ForEach(filteredClients) { client in
+                                if horizontalSizeClass == .regular {
                                     ClientRowView(client: client)
+                                        .contentShape(Rectangle())
+                                        .background(
+                                            RoundedRectangle(cornerRadius: theme.radiusLarge)
+                                                .fill(selectedClient?.id == client.id ? theme.accentSubtle.opacity(0.3) : Color.clear)
+                                        )
+                                        .onTapGesture {
+                                            withAnimation(theme.springSnappy) {
+                                                selectedClient = client
+                                            }
+                                        }
+                                } else {
+                                    NavigationLink(value: client) {
+                                        ClientRowView(client: client)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
                         }
                     }
@@ -85,10 +90,12 @@ struct ClientDashboardView: View {
                 .refreshable {
                     await viewModel.loadClients()
                 }
+                .onTapGesture {
+                    dismissKeyboard()
+                }
             }
         }
         .navigationTitle("Clients")
-        .searchable(text: $searchText, prompt: "Search clients")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Image("logo")
@@ -111,13 +118,14 @@ struct ClientDashboardView: View {
     }
     
     private var filteredClients: [AppClient] {
-        if searchText.isEmpty {
+        let term = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if term.isEmpty {
             return viewModel.clients
         }
         return viewModel.clients.filter { client in
-            (client.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-            (client.email?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-            (client.phone?.localizedCaseInsensitiveContains(searchText) ?? false)
+            (client.name?.localizedCaseInsensitiveContains(term) ?? false) ||
+            (client.email?.localizedCaseInsensitiveContains(term) ?? false) ||
+            (client.phone?.localizedCaseInsensitiveContains(term) ?? false)
         }
     }
     
@@ -153,6 +161,40 @@ struct ClientDashboardView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(theme.tertiaryText)
+
+            TextField("Search clients", text: $searchText)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .submitLabel(.done)
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                    dismissKeyboard()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(theme.secondaryText)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(12)
+        .background(theme.tertiaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                .stroke(theme.border, lineWidth: 1)
+        )
+    }
+
+    private func dismissKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
 

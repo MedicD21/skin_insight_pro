@@ -95,10 +95,22 @@ struct ClientDetailView: View {
             SkinAnalysisInputView(client: currentClient, viewModel: viewModel)
         }
         .sheet(isPresented: $showEditClient) {
-            EditClientView(client: currentClient) { updatedClient in
-                currentClient = updatedClient
-                selectedClient = updatedClient
-            }
+            EditClientView(
+                client: currentClient,
+                onUpdate: { updatedClient in
+                    if let index = viewModel.clients.firstIndex(where: { $0.id == updatedClient.id }) {
+                        viewModel.clients[index] = updatedClient
+                    }
+                    currentClient = updatedClient
+                    selectedClient = updatedClient
+                    showEditClient = false
+                },
+                onDelete: { _ in
+                    selectedClient = nil
+                    showEditClient = false
+                    dismiss()
+                }
+            )
         }
         .sheet(isPresented: $showCompareAnalyses) {
             CompareAnalysesView(client: currentClient, analyses: viewModel.analyses)
