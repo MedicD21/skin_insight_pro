@@ -285,6 +285,7 @@ struct ClientHIPAAConsentView: View {
                 .foregroundColor(theme.primaryText)
 
             if let signature = signatureImage {
+                // Show captured signature
                 VStack(spacing: 12) {
                     Image(uiImage: signature)
                         .resizable()
@@ -317,22 +318,36 @@ struct ClientHIPAAConsentView: View {
                     }
                 }
             } else {
-                SignatureCanvasView(drawing: $drawing, lineWidth: 5, inkColor: .black)
+                // Show button to open signature pad
+                Button(action: {
+                    showSignaturePad = true
+                }) {
+                    VStack(spacing: 12) {
+                        Image(systemName: "pencil.tip.crop.circle")
+                            .font(.system(size: 50))
+                            .foregroundColor(theme.accent)
+
+                        Text("Tap to Sign")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundColor(theme.primaryText)
+
+                        Text("Please provide your signature")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.secondaryText)
+                    }
                     .frame(maxWidth: .infinity)
-                    .frame(height: 320)
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear
-                                .onAppear { self.canvasSize = proxy.size }
-                                .onChange(of: proxy.size) { newSize in
-                                    self.canvasSize = newSize
-                                }
-                        }
+                    .frame(height: 150)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: theme.radiusMedium)
+                            .stroke(theme.accent.opacity(0.3), lineWidth: 2)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                    .stroke(theme.accent.opacity(0.1), lineWidth: 4)
+                            )
                     )
-                    .background(Color.yellow.opacity(0.1))
-                    .border(Color.red, width: 2)
-                    .contentShape(Rectangle())
-                    .allowsHitTesting(true)
+                }
 
                 if !signatureRequired {
                     Text("Simulator mode: signature is optional. A placeholder will be used.")
@@ -401,9 +416,6 @@ struct ClientHIPAAConsentView: View {
         onConsent(signatureBase64)
         dismiss()
     }
-
-    @State private var drawing = PKDrawing()
-    @State private var canvasSize: CGSize = .zero
 }
 
 // MARK: - Signature Capture View
@@ -439,17 +451,12 @@ struct SignatureCaptureView: View {
                                     }
                             }
                         )
-                        .background(Color.yellow.opacity(0.1))
-                        .border(Color.red, width: 2)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(
-                            Text("Canvas")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                                .padding(4),
-                            alignment: .topLeading
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
                         )
-                        .contentShape(Rectangle())
-                        .allowsHitTesting(true)
 
                     HStack(spacing: 16) {
                         Button(action: clearSignature) {
@@ -499,7 +506,6 @@ struct SignatureCaptureView: View {
 
     private func saveSignature() {
         guard canvasSize != .zero else {
-            print("saveSignature: canvasSize is zero; cannot render image")
             return
         }
         let rect = CGRect(origin: .zero, size: canvasSize)
@@ -509,13 +515,6 @@ struct SignatureCaptureView: View {
     }
 }
 
-// Debug subclass for logging touches
-final class DebugLoggingCanvasView: PKCanvasView {
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        print("DebugLoggingCanvasView touchesBegan count: \(touches.count)")
-        super.touchesBegan(touches, with: event)
-    }
-}
 
 // MARK: - Canvas View Wrapper
 struct SignatureCanvasView: UIViewRepresentable {
@@ -540,8 +539,7 @@ struct SignatureCanvasView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> PKCanvasView {
-        print("SignatureCanvasView.makeUIView")
-        let canvasView = DebugLoggingCanvasView()
+        let canvasView = PKCanvasView()
         canvasView.delegate = context.coordinator
         // Allow both Apple Pencil and finger input; replaces deprecated allowsFingerDrawing
         if #available(iOS 14.0, *) {
@@ -569,7 +567,6 @@ struct SignatureCanvasView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
-        print("SignatureCanvasView.updateUIView window:", uiView.window as Any, "bounds:", uiView.bounds.size)
         if uiView.drawing != drawing {
             uiView.drawing = drawing
         }
@@ -587,35 +584,14 @@ struct SignatureCanvasView: UIViewRepresentable {
                     context.coordinator.toolPicker = picker
                     picker.setVisible(true, forFirstResponder: uiView)
                     picker.addObserver(uiView)
-                    print("SignatureCanvasView.updateUIView: Attached PKToolPicker")
-                } else {
-                    print("SignatureCanvasView.updateUIView: PKToolPicker.shared returned nil")
                 }
             }
             if !uiView.isFirstResponder {
-                let became = uiView.becomeFirstResponder()
-                print("SignatureCanvasView.updateUIView: becomeFirstResponder -> \(became)")
+                uiView.becomeFirstResponder()
             }
-        } else {
-            print("SignatureCanvasView.updateUIView: uiView.window is nil")
         }
 
         uiView.isUserInteractionEnabled = true
         uiView.isScrollEnabled = false
     }
 }
-
-struct SizeLogger: View {
-    let name: String
-    var onChange: (CGSize) -> Void
-    var body: some View {
-        GeometryReader { proxy in
-            Color.clear
-                .onAppear { onChange(proxy.size) }
-                .onChange(of: proxy.size) { newSize in
-                    onChange(newSize)
-                }
-        }
-    }
-}
-

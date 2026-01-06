@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"cd ''C:\\\\Users\\\\DScha\\\\OneDrive\\\\Desktop\\\\skin_insight_pro''; Get-ChildItem\")"
+    ]
+  }
+}
