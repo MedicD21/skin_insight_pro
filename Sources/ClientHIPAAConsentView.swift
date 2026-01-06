@@ -1,5 +1,5 @@
 import SwiftUI
-import PencilKit
+import UIKit
 
 struct ClientHIPAAConsentView: View {
     @ObservedObject var theme = ThemeManager.shared
@@ -424,7 +424,10 @@ struct SignatureCaptureView: View {
     @Environment(\.dismiss) var dismiss
     @Binding var signatureImage: UIImage?
 
-    @State private var drawing = PKDrawing()
+    @State private var strokes: [SignatureStroke] = []
+    @State private var currentStroke: [CGPoint] = []
+
+    private let captureSize = CGSize(width: UIScreen.main.bounds.width - 32, height: 320)
 
     var body: some View {
         NavigationStack {
@@ -438,15 +441,20 @@ struct SignatureCaptureView: View {
                         .foregroundColor(.gray)
                         .padding(.top, 20)
 
-                    SignatureCanvasView(drawing: $drawing, lineWidth: 5, inkColor: .black)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 320)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color.gray.opacity(0.3), lineWidth: 1)
-                        )
+                    SignaturePadView(
+                        strokes: $strokes,
+                        currentStroke: $currentStroke,
+                        lineWidth: 3,
+                        lineColor: .black
+                    )
+                    .frame(width: captureSize.width, height: captureSize.height)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                    )
+                    .padding(.horizontal, 16)
 
                     HStack(spacing: 16) {
                         Button(action: clearSignature) {
@@ -491,95 +499,99 @@ struct SignatureCaptureView: View {
     }
 
     private func clearSignature() {
-        drawing = PKDrawing()
+        strokes = []
+        currentStroke = []
     }
 
     private func saveSignature() {
-        let baseSize = CGSize(width: UIScreen.main.bounds.width - 32, height: 320)
-        let rect = CGRect(origin: .zero, size: baseSize)
-        let image = drawing.image(from: rect, scale: UIScreen.main.scale)
-        signatureImage = image
-        dismiss()
+        let image = renderSignatureImage()
+        if let image, image.size.width > 1 && image.size.height > 1 {
+            signatureImage = image
+            dismiss()
+        }
+    }
+
+    private func renderSignatureImage() -> UIImage? {
+        if !currentStroke.isEmpty {
+            strokes.append(SignatureStroke(points: currentStroke))
+            currentStroke = []
+        }
+        let allStrokes = strokes
+        guard !allStrokes.isEmpty else { return nil }
+
+        let renderer = UIGraphicsImageRenderer(size: captureSize)
+        let img = renderer.image { context in
+            UIColor.white.setFill()
+            context.fill(CGRect(origin: .zero, size: captureSize))
+
+            let path = UIBezierPath()
+            path.lineWidth = 3
+            path.lineCapStyle = .round
+            UIColor.black.setStroke()
+
+            for stroke in allStrokes {
+                guard let first = stroke.points.first else { continue }
+                path.move(to: first)
+                for point in stroke.points.dropFirst() {
+                    path.addLine(to: point)
+                }
+            }
+            path.stroke()
+        }
+        return img
     }
 }
 
 
-// MARK: - Canvas View Wrapper
-struct SignatureCanvasView: UIViewRepresentable {
-    @Binding var drawing: PKDrawing
-    var lineWidth: CGFloat = 5
-    var inkColor: UIColor = .black
+// MARK: - SwiftUI Signature Pad
+struct SignatureStroke: Identifiable {
+    let id = UUID()
+    var points: [CGPoint]
+}
 
-    class Coordinator: NSObject, PKCanvasViewDelegate {
-        var parent: SignatureCanvasView
-        var toolPicker: PKToolPicker?
+struct SignaturePadView: View {
+    @Binding var strokes: [SignatureStroke]
+    @Binding var currentStroke: [CGPoint]
+    var lineWidth: CGFloat
+    var lineColor: Color
 
-        init(parent: SignatureCanvasView) {
-            self.parent = parent
-        }
-        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
-            parent.drawing = canvasView.drawing
-        }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
-    }
-
-    func makeUIView(context: Context) -> PKCanvasView {
-        let canvasView = PKCanvasView()
-        canvasView.delegate = context.coordinator
-        // Allow both Apple Pencil and finger input
-        if #available(iOS 14.0, *) {
-            canvasView.drawingPolicy = .anyInput
-        }
-        canvasView.allowsFingerDrawing = true
-        canvasView.isScrollEnabled = false
-        
-        canvasView.alwaysBounceVertical = false
-        canvasView.alwaysBounceHorizontal = false
-        canvasView.delaysContentTouches = false
-        canvasView.canCancelContentTouches = true
-        canvasView.contentInsetAdjustmentBehavior = .never
-        canvasView.minimumZoomScale = 1.0
-        canvasView.maximumZoomScale = 1.0
-        canvasView.isMultipleTouchEnabled = true
-
-        canvasView.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
-        canvasView.backgroundColor = .white
-        canvasView.isOpaque = true
-        canvasView.isUserInteractionEnabled = true
-        // Removed onViewCreated block and becomeFirstResponder call here
-        canvasView.becomeFirstResponder()
-        return canvasView
-    }
-
-    func updateUIView(_ uiView: PKCanvasView, context: Context) {
-        if uiView.drawing != drawing {
-            uiView.drawing = drawing
-        }
-        if let tool = uiView.tool as? PKInkingTool {
-            if tool.color != inkColor || tool.width != lineWidth {
-                uiView.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
-            }
-        } else {
-            uiView.tool = PKInkingTool(.pen, color: inkColor, width: lineWidth)
-        }
-
-        if let window = uiView.window {
-            if context.coordinator.toolPicker == nil {
-                if let picker = PKToolPicker.shared(for: window) {
-                    context.coordinator.toolPicker = picker
-                    picker.setVisible(true, forFirstResponder: uiView)
-                    picker.addObserver(uiView)
+    var body: some View {
+        GeometryReader { geo in
+            let size = geo.size
+            ZStack {
+                Color.white
+                Path { path in
+                    for stroke in strokes {
+                        guard let first = stroke.points.first else { continue }
+                        path.move(to: first)
+                        for point in stroke.points.dropFirst() {
+                            path.addLine(to: point)
+                        }
+                    }
+                    if let first = currentStroke.first {
+                        path.move(to: first)
+                        for point in currentStroke.dropFirst() {
+                            path.addLine(to: point)
+                        }
+                    }
                 }
+                .stroke(lineColor, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
             }
-            if !uiView.isFirstResponder {
-                uiView.becomeFirstResponder()
-            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let point = value.location
+                        guard point.x >= 0, point.y >= 0, point.x <= size.width, point.y <= size.height else { return }
+                        currentStroke.append(point)
+                    }
+                    .onEnded { _ in
+                        if !currentStroke.isEmpty {
+                            strokes.append(SignatureStroke(points: currentStroke))
+                            currentStroke = []
+                        }
+                    }
+            )
         }
-
-        uiView.isUserInteractionEnabled = true
-        uiView.isScrollEnabled = false
     }
 }
