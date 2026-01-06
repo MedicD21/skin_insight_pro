@@ -6,10 +6,10 @@ struct ClientDetailView: View {
     @Binding var selectedClient: AppClient?
     @StateObject private var viewModel = ClientDetailViewModel()
     @State private var showAnalysisInput = false
-    @State private var showEditClient = false
     @State private var showCompareAnalyses = false
     @State private var showConsentForm = false
     @State private var showConsentAlert = false
+    @State private var showEditClient = false
     @State private var currentClient: AppClient
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.dismiss) var dismiss
@@ -82,21 +82,12 @@ struct ClientDetailView: View {
                 }
             }
 
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                Button(action: { showEditClient = true }) {
-                    Label("Edit", systemImage: "pencil")
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showEditClient = true
+                } label: {
+                    Image(systemName: "pencil")
                 }
-
-                Button(action: {
-                    if currentClient.hasValidConsent {
-                        showAnalysisInput = true
-                    } else {
-                        showConsentAlert = true
-                    }
-                }) {
-                    Label("New Analysis", systemImage: "camera")
-                }
-                .keyboardShortcut("a", modifiers: .command)
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -104,13 +95,10 @@ struct ClientDetailView: View {
             SkinAnalysisInputView(client: currentClient, viewModel: viewModel)
         }
         .sheet(isPresented: $showEditClient) {
-            EditClientView(client: currentClient, onUpdate: { updatedClient in
-                if let index = viewModel.clients.firstIndex(where: { $0.id == updatedClient.id }) {
-                    viewModel.clients[index] = updatedClient
-                }
+            EditClientView(client: currentClient) { updatedClient in
                 currentClient = updatedClient
                 selectedClient = updatedClient
-            })
+            }
         }
         .sheet(isPresented: $showCompareAnalyses) {
             CompareAnalysesView(client: currentClient, analyses: viewModel.analyses)

@@ -644,6 +644,9 @@ class NetworkService {
         if let companyId = user.companyId, !companyId.isEmpty {
             userData["company_id"] = companyId
         }
+        if let companyName = user.companyName, !companyName.isEmpty {
+            userData["company_name"] = companyName
+        }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: userData)
 
@@ -834,25 +837,13 @@ class NetworkService {
     }
 
     func updateCompanyId(oldId: String, newId: String) async throws {
-        // Update the company's ID
-        let updateCompanyUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(oldId)")!
-        var updateCompanyRequest = URLRequest(url: updateCompanyUrl)
-        updateCompanyRequest.httpMethod = "PATCH"
-        for (key, value) in supabaseHeaders(authenticated: true) {
-            updateCompanyRequest.setValue(value, forHTTPHeaderField: key)
-        }
+        #if DEBUG
+        print("🏢 Updating company ID from '\(oldId)' to '\(newId)'")
+        print("⚠️ Step 1: Updating foreign keys first (users and clients)")
+        #endif
 
-        let companyData: [String: Any] = ["id": newId]
-        updateCompanyRequest.httpBody = try JSONSerialization.data(withJSONObject: companyData)
-
-        let (_, companyResponse) = try await session.data(for: updateCompanyRequest)
-
-        guard let httpResponse = companyResponse as? HTTPURLResponse,
-              (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.serverError((companyResponse as? HTTPURLResponse)?.statusCode ?? 500)
-        }
-
-        // Update all users with the old company_id to the new company_id
+        // IMPORTANT: Update foreign keys FIRST before changing the primary key
+        // Step 1: Update all users with the old company_id to the new company_id
         let updateUsersUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?company_id=eq.\(oldId)")!
         var updateUsersRequest = URLRequest(url: updateUsersUrl)
         updateUsersRequest.httpMethod = "PATCH"
@@ -867,8 +858,97 @@ class NetworkService {
 
         guard let httpResponse2 = usersResponse as? HTTPURLResponse,
               (200...299).contains(httpResponse2.statusCode) else {
+            #if DEBUG
+            print("❌ Failed to update users: status \(String(describing: (usersResponse as? HTTPURLResponse)?.statusCode))")
+            #endif
             throw NetworkError.serverError((usersResponse as? HTTPURLResponse)?.statusCode ?? 500)
         }
+
+        #if DEBUG
+        print("✅ All users updated with new company ID")
+        #endif
+
+        // Step 2: Update all clients with the old company_id to the new company_id
+        let updateClientsUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/clients?company_id=eq.\(oldId)")!
+        var updateClientsRequest = URLRequest(url: updateClientsUrl)
+        updateClientsRequest.httpMethod = "PATCH"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            updateClientsRequest.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let clientData: [String: Any] = ["company_id": newId]
+        updateClientsRequest.httpBody = try JSONSerialization.data(withJSONObject: clientData)
+
+        let (_, clientsResponse) = try await session.data(for: updateClientsRequest)
+
+        guard let httpResponse3 = clientsResponse as? HTTPURLResponse,
+              (200...299).contains(httpResponse3.statusCode) else {
+            #if DEBUG
+            print("❌ Failed to update clients: status \(String(describing: (clientsResponse as? HTTPURLResponse)?.statusCode))")
+            #endif
+            throw NetworkError.serverError((clientsResponse as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+
+        #if DEBUG
+        print("✅ All clients updated with new company ID")
+        print("⚠️ Step 2: Now updating company primary key")
+        #endif
+
+        // Step 3: Now update the company's ID (primary key) - this must be done LAST
+        let updateCompanyUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(oldId)")!
+        var updateCompanyRequest = URLRequest(url: updateCompanyUrl)
+        updateCompanyRequest.httpMethod = "PATCH"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            updateCompanyRequest.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let companyData: [String: Any] = ["id": newId]
+        updateCompanyRequest.httpBody = try JSONSerialization.data(withJSONObject: companyData)
+
+        let (_, companyResponse) = try await session.data(for: updateCompanyRequest)
+
+        guard let httpResponse = companyResponse as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            #if DEBUG
+            print("❌ Failed to update company: status \(String(describing: (companyResponse as? HTTPURLResponse)?.statusCode))")
+            #endif
+            throw NetworkError.serverError((companyResponse as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+
+        #if DEBUG
+        print("✅ Company record updated successfully")
+        print("🎉 Company ID change complete: '\(oldId)' → '\(newId)'")
+        #endif
+    }
+
+    func updateCompanyCode(companyId: String, newCode: String) async throws {
+        #if DEBUG
+        print("🏢 Updating company_code for company '\(companyId)' to '\(newCode)'")
+        #endif
+
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(companyId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let data: [String: Any] = ["company_code": newCode]
+        request.httpBody = try JSONSerialization.data(withJSONObject: data)
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            #if DEBUG
+            print("❌ Failed to update company_code: status \(String(describing: (response as? HTTPURLResponse)?.statusCode))")
+            #endif
+            throw NetworkError.serverError((response as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+
+        #if DEBUG
+        print("✅ Company code updated successfully to '\(newCode)'")
+        #endif
     }
 
     // MARK: - Team Members

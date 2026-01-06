@@ -130,6 +130,7 @@ class AuthenticationManager: NSObject, ObservableObject {
 
         let authorizationController = ASAuthorizationController(authorizationRequests: [request])
         authorizationController.delegate = self
+        authorizationController.presentationContextProvider = self
         authorizationController.performRequests()
     }
 
@@ -178,5 +179,16 @@ extension AuthenticationManager: ASAuthorizationControllerDelegate {
         Task { @MainActor in
             print("Apple Sign In failed: \(error.localizedDescription)")
         }
+    }
+}
+
+extension AuthenticationManager: ASAuthorizationControllerPresentationContextProviding {
+    nonisolated func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        // Get the key window from the connected scenes
+        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = windowScene.windows.first else {
+            fatalError("No window available for Sign in with Apple")
+        }
+        return window
     }
 }

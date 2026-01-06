@@ -11,6 +11,7 @@ struct CompanyProfileView: View {
     @State private var errorMessage = ""
     @State private var showCreateCompany = false
     @State private var showTeamMembers = false
+    @State private var showDataExport = false
 
     var body: some View {
         NavigationStack {
@@ -67,6 +68,11 @@ struct CompanyProfileView: View {
                 companyInfoSection(company: company)
 
                 teamMembersSection
+
+                // Admin-only data export section
+                if authManager.currentUser?.isAdmin == true {
+                    dataExportSection
+                }
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
@@ -232,6 +238,46 @@ struct CompanyProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 100)
+    }
+
+    private var dataExportSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: "square.and.arrow.down.fill")
+                    .foregroundColor(theme.accent)
+                Text("Company Data Export")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("Export company data including client information and analyses. This feature is only available to administrators for HIPAA compliance and record-keeping.")
+                .font(.system(size: 14))
+                .foregroundColor(theme.secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button(action: { showDataExport = true }) {
+                HStack {
+                    Image(systemName: "arrow.down.doc.fill")
+                    Text("Export Company Data")
+                }
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 16)
+                .background(theme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+            }
+        }
+        .padding(20)
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusXL)
+                .fill(theme.cardBackground)
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
+        )
+        .sheet(isPresented: $showDataExport) {
+            AdminDataExportView()
+        }
     }
 
     private func loadCompany() async {

@@ -12,6 +12,7 @@ struct AppUser: Identifiable, Hashable, Codable {
     var phoneNumber: String?
     var profileImageUrl: String?
     var role: String?
+    var companyName: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -25,6 +26,7 @@ struct AppUser: Identifiable, Hashable, Codable {
         case phoneNumber = "phone_number"
         case profileImageUrl = "profile_image_url"
         case role
+        case companyName = "company_name"
     }
 }
 
@@ -256,6 +258,7 @@ struct AppleLoginRequest: Codable {
 
 struct Company: Identifiable, Hashable, Codable {
     var id: String?
+    var companyCode: String?
     var name: String?
     var address: String?
     var phone: String?
@@ -266,6 +269,7 @@ struct Company: Identifiable, Hashable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case id
+        case companyCode = "company_code"
         case name
         case address
         case phone
@@ -289,6 +293,7 @@ struct CreateCompanyRequest: Codable {
 
     struct CompanyData: Codable {
         var id: String?
+        var companyCode: String?
         let name: String
         let address: String
         let phone: String
@@ -298,6 +303,7 @@ struct CreateCompanyRequest: Codable {
 
         enum CodingKeys: String, CodingKey {
             case id
+            case companyCode = "company_code"
             case name
             case address
             case phone

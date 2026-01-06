@@ -242,9 +242,16 @@ class HIPAAComplianceManager: ObservableObject {
 
     // MARK: - Data Export (Right of Access)
 
-    func exportAllUserData(userId: String, completion: @escaping @Sendable (String) -> Void) {
+    struct ExportOptions {
+        var includeUserProfile: Bool = true
+        var includeClients: Bool = false
+        var includeAnalyses: Bool = false
+        var includeAuditLogs: Bool = true
+    }
+
+    func exportUserData(userId: String, options: ExportOptions = ExportOptions(), completion: @escaping @Sendable (String) -> Void) {
         Task {
-            let exportData = buildExportData(userId: userId)
+            let exportData = await buildExportData(userId: userId, options: options)
 
             await MainActor.run {
                 completion(exportData)
@@ -252,21 +259,179 @@ class HIPAAComplianceManager: ObservableObject {
         }
     }
 
-    private func buildExportData(userId: String) -> String {
+    // Legacy method for backwards compatibility
+    func exportAllUserData(userId: String, completion: @escaping @Sendable (String) -> Void) {
+        exportUserData(userId: userId, options: ExportOptions(), completion: completion)
+    }
+
+    private func buildExportData(userId: String, options: ExportOptions) async -> String {
         var exportData = "=== HIPAA DATA EXPORT ===\n"
         exportData += "Export Date: \(Date())\n"
         exportData += "User ID: \(userId)\n\n"
 
-        // Export audit logs
-        exportData += "=== AUDIT LOGS ===\n"
-        exportData += exportAuditLogs()
-        exportData += "\n"
+        // Export user profile
+        if options.includeUserProfile {
+            exportData += "=== USER PROFILE ===\n"
+            let user = await MainActor.run { AuthenticationManager.shared.currentUser }
+            if let user = user {
+                exportData += "Name: \(user.firstName ?? "") \(user.lastName ?? "")\n"
+                exportData += "Email: \(user.email ?? "")\n"
+                exportData += "Phone: \(user.phoneNumber ?? "")\n"
+                exportData += "Role: \(user.role ?? "")\n"
+                exportData += "Company ID: \(user.companyId ?? "")\n"
+                exportData += "Created: \(user.createdAt ?? "")\n"
+            }
+            exportData += "\n"
+        }
 
-        // Note: In a full implementation, you would also export:
-        // - All client data
-        // - All analysis data
-        // - User profile data
-        // This would require additional NetworkService methods
+        // Export client data
+        if options.includeClients {
+            exportData += "=== CLIENT DATA ===\n"
+            do {
+                let companyId = await MainActor.run { AuthenticationManager.shared.currentUser?.companyId ?? "" }
+                let clients = try await NetworkService.shared.fetchClientsByCompany(companyId: companyId)
+                for client in clients {
+                    exportData += "Client ID: \(client.id ?? "")\n"
+                    exportData += "Name: \(client.name ?? "")\n"
+                    exportData += "Email: \(client.email ?? "")\n"
+                    exportData += "Phone: \(client.phone ?? "")\n"
+
+                    // Medical Information (PHI)
+                    if let medicalHistory = client.medicalHistory, !medicalHistory.isEmpty {
+                        exportData += "Medical History: \(medicalHistory)\n"
+                    }
+                    if let allergies = client.allergies, !allergies.isEmpty {
+                        exportData += "Allergies: \(allergies)\n"
+                    }
+                    if let sensitivities = client.knownSensitivities, !sensitivities.isEmpty {
+                        exportData += "Known Sensitivities: \(sensitivities)\n"
+                    }
+                    if let medications = client.medications, !medications.isEmpty {
+                        exportData += "Medications/Supplements: \(medications)\n"
+                    }
+                    if let productsToAvoid = client.productsToAvoid, !productsToAvoid.isEmpty {
+                        exportData += "Products to Avoid: \(productsToAvoid)\n"
+                    }
+
+                    // Injectable History
+                    if let fillersDate = client.fillersDate {
+                        exportData += "Last Fillers: \(fillersDate)\n"
+                    }
+                    if let biostimulatorsDate = client.biostimulatorsDate {
+                        exportData += "Last Biostimulators: \(biostimulatorsDate)\n"
+                    }
+
+                    // Consent Information
+                    if let consentDate = client.consentDate {
+                        exportData += "HIPAA Consent Date: \(consentDate)\n"
+                    }
+                    if let consentSignature = client.consentSignature, !consentSignature.isEmpty {
+                        exportData += "Consent Signature: [SIGNED]\n"
+                    }
+
+                    // Notes
+                    if let notes = client.notes, !notes.isEmpty {
+                        exportData += "Notes: \(notes)\n"
+                    }
+
+                    exportData += "---\n"
+                }
+            } catch {
+                exportData += "Error fetching clients: \(error.localizedDescription)\n"
+            }
+            exportData += "\n"
+        }
+
+        // Export analysis data
+        if options.includeAnalyses {
+            exportData += "=== ANALYSIS DATA ===\n"
+            do {
+                let companyId = await MainActor.run { AuthenticationManager.shared.currentUser?.companyId ?? "" }
+                let clients = try await NetworkService.shared.fetchClientsByCompany(companyId: companyId)
+                for client in clients {
+                    if let clientId = client.id {
+                        let analyses = try await NetworkService.shared.fetchAnalyses(clientId: clientId, userId: userId)
+                        for analysis in analyses {
+                            exportData += "Analysis ID: \(analysis.id ?? "")\n"
+                            exportData += "Client: \(client.name ?? "")\n"
+                            exportData += "Date: \(analysis.createdAt ?? "")\n"
+
+                            // Image Reference
+                            if let imageUrl = analysis.imageUrl {
+                                exportData += "Image URL: \(imageUrl)\n"
+                            }
+
+                            // Analysis Results
+                            if let results = analysis.analysisResults {
+                                exportData += "\nAnalysis Results:\n"
+                                exportData += "  Skin Type: \(results.skinType ?? "N/A")\n"
+                                exportData += "  Hydration Level: \(results.hydrationLevel ?? 0)%\n"
+                                exportData += "  Sensitivity: \(results.sensitivity ?? "N/A")\n"
+                                exportData += "  Pore Condition: \(results.poreCondition ?? "N/A")\n"
+                                exportData += "  Health Score: \(results.skinHealthScore ?? 0)/10\n"
+
+                                if let concerns = results.concerns, !concerns.isEmpty {
+                                    exportData += "  Concerns: \(concerns.joined(separator: ", "))\n"
+                                }
+
+                                if let recommendations = results.recommendations, !recommendations.isEmpty {
+                                    exportData += "  Recommendations:\n"
+                                    for rec in recommendations {
+                                        exportData += "    - \(rec)\n"
+                                    }
+                                }
+
+                                if let productRecs = results.productRecommendations, !productRecs.isEmpty {
+                                    exportData += "  Product Recommendations:\n"
+                                    for product in productRecs {
+                                        exportData += "    - \(product)\n"
+                                    }
+                                }
+
+                                if let medicalConsiderations = results.medicalConsiderations, !medicalConsiderations.isEmpty {
+                                    exportData += "  Medical Considerations:\n"
+                                    for consideration in medicalConsiderations {
+                                        exportData += "    - \(consideration)\n"
+                                    }
+                                }
+
+                                if let progressNotes = results.progressNotes, !progressNotes.isEmpty {
+                                    exportData += "  Progress Notes:\n"
+                                    for note in progressNotes {
+                                        exportData += "    - \(note)\n"
+                                    }
+                                }
+                            }
+
+                            // Treatment Information
+                            if let productsUsed = analysis.productsUsed, !productsUsed.isEmpty {
+                                exportData += "\nProducts Used: \(productsUsed)\n"
+                            }
+                            if let treatments = analysis.treatmentsPerformed, !treatments.isEmpty {
+                                exportData += "Treatments Performed: \(treatments)\n"
+                            }
+
+                            // Provider Notes
+                            if let notes = analysis.notes, !notes.isEmpty {
+                                exportData += "Provider Notes: \(notes)\n"
+                            }
+
+                            exportData += "---\n"
+                        }
+                    }
+                }
+            } catch {
+                exportData += "Error fetching analyses: \(error.localizedDescription)\n"
+            }
+            exportData += "\n"
+        }
+
+        // Export audit logs
+        if options.includeAuditLogs {
+            exportData += "=== AUDIT LOGS ===\n"
+            exportData += exportAuditLogs()
+            exportData += "\n"
+        }
 
         return exportData
     }

@@ -10,6 +10,7 @@ struct TeamMembersView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var companyId: String = ""
+    @State private var companyCode: String = ""
     @State private var showCopiedConfirmation = false
     @State private var updatingUserId: String?
     @State private var showEditCompanyCode = false
@@ -83,7 +84,7 @@ struct TeamMembersView: View {
                 await loadTeamMembers()
             }
             .sheet(isPresented: $showEditCompanyCode) {
-                EditCompanyCodeView(companyId: $companyId)
+                EditCompanyCodeView(companyId: companyId, companyCode: $companyCode)
             }
             .sheet(isPresented: $showEmployeeImport, onDismiss: {
                 Task {
@@ -158,7 +159,7 @@ struct TeamMembersView: View {
                             .font(.system(size: 13))
                             .foregroundColor(theme.secondaryText)
 
-                        Text(companyId.isEmpty ? "No company" : companyId)
+                        Text(companyCode.isEmpty ? "No company" : companyCode)
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundColor(theme.primaryText)
                             .textSelection(.enabled)
@@ -166,9 +167,9 @@ struct TeamMembersView: View {
 
                     Spacer()
 
-                    if !companyId.isEmpty {
+                    if !companyCode.isEmpty {
                         Button {
-                            UIPasteboard.general.string = companyId
+                            UIPasteboard.general.string = companyCode
                             showCopiedConfirmation = true
 
                             // Hide confirmation after 2 seconds
@@ -468,21 +469,37 @@ struct TeamMembersView: View {
         defer { isLoading = false }
 
         do {
+            // Fetch company to get the company_code
+            let company = try await NetworkService.shared.fetchCompany(id: companyId)
+
+            await MainActor.run {
+                companyCode = company.companyCode ?? companyId // Fallback to ID if no code set
+            }
+
+            #if DEBUG
+            print("📋 TeamMembersView: Company code: \(companyCode)")
+            #endif
+
             let members = try await NetworkService.shared.fetchTeamMembers(companyId: companyId)
             #if DEBUG
             print("📋 TeamMembersView: Received \(members.count) members")
             print("📋 TeamMembersView: Members: \(members.map { "\($0.firstName ?? "") \($0.lastName ?? "") (\($0.email ?? ""))" })")
             #endif
-            teamMembers = members
-            #if DEBUG
-            print("📋 TeamMembersView: teamMembers array updated with \(teamMembers.count) members")
-            #endif
+
+            await MainActor.run {
+                teamMembers = members
+                #if DEBUG
+                print("📋 TeamMembersView: teamMembers array updated with \(teamMembers.count) members")
+                #endif
+            }
         } catch {
             #if DEBUG
             print("❌ TeamMembersView: Error loading team members: \(error)")
             #endif
-            errorMessage = error.localizedDescription
-            showError = true
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }
@@ -492,7 +509,8 @@ struct EditCompanyCodeView: View {
     @StateObject private var authManager = AuthenticationManager.shared
     @Environment(\.dismiss) var dismiss
 
-    @Binding var companyId: String
+    let companyId: String
+    @Binding var companyCode: String
     @State private var newCompanyCode: String = ""
     @State private var isSaving = false
     @State private var showError = false
@@ -582,26 +600,21 @@ struct EditCompanyCodeView: View {
                 Text(errorMessage)
             }
             .onAppear {
-                newCompanyCode = companyId
+                newCompanyCode = companyCode
             }
         }
     }
 
     private func saveCompanyCode() {
-        guard let currentCompanyId = authManager.currentUser?.companyId else { return }
-
         isSaving = true
 
         Task {
             do {
-                // Update the company ID in the database
-                try await NetworkService.shared.updateCompanyId(oldId: currentCompanyId, newId: newCompanyCode)
+                // Update only the company_code field (not the company ID)
+                try await NetworkService.shared.updateCompanyCode(companyId: companyId, newCode: newCompanyCode)
 
                 // Update local state
-                companyId = newCompanyCode
-
-                // Update current user's company ID
-                authManager.currentUser?.companyId = newCompanyCode
+                companyCode = newCompanyCode
 
                 isSaving = false
                 dismiss()

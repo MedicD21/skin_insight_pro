@@ -394,7 +394,9 @@ struct EditClientView: View {
             productsToAvoid: productsToAvoid.isEmpty ? nil : productsToAvoid,
             profileImageUrl: client.profileImageUrl,
             fillersDate: fillersDateString,
-            biostimulatorsDate: biostimulatorsDateString
+            biostimulatorsDate: biostimulatorsDateString,
+            consentSignature: client.consentSignature,
+            consentDate: client.consentDate
         )
         
         Task {

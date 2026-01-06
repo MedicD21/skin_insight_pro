@@ -73,7 +73,7 @@ struct HIPAADataManagementView: View {
                     deleteAllData()
                 }
             } message: {
-                Text("This will permanently delete your account and all your personal data. This action cannot be undone.")
+                Text("This will permanently delete your user account and personal activity logs. Client data will be preserved for your company. This action cannot be undone.")
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) { }
@@ -190,7 +190,7 @@ struct HIPAADataManagementView: View {
                     .foregroundColor(theme.primaryText)
             }
 
-            Text("Permanently delete all your data including your account, clients, analyses, and activity logs. This action cannot be undone.")
+            Text("Permanently delete your user account and personal activity logs. Note: Client data you created will be preserved and remain accessible to your company for continuity of care.")
                 .font(.system(size: 14))
                 .foregroundColor(theme.secondaryText)
 
@@ -358,6 +358,7 @@ struct ExportDataView: View {
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundColor(theme.primaryText)
                         .padding(20)
+                        .textSelection(.enabled)
                 }
             }
             .navigationTitle("Exported Data")
@@ -371,7 +372,7 @@ struct ExportDataView: View {
                 }
 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(action: shareData) {
+                    ShareLink(item: exportedDataAsText) {
                         Image(systemName: "square.and.arrow.up")
                     }
                 }
@@ -379,15 +380,7 @@ struct ExportDataView: View {
         }
     }
 
-    private func shareData() {
-        let activityVC = UIActivityViewController(
-            activityItems: [data],
-            applicationActivities: nil
-        )
-
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let rootVC = windowScene.windows.first?.rootViewController {
-            rootVC.present(activityVC, animated: true)
-        }
+    private var exportedDataAsText: String {
+        data
     }
 }

@@ -215,6 +215,25 @@ struct ClientHIPAAConsentView: View {
         }
     }
 
+    private var companyDisplayName: String {
+        let trimmedName = authManager.currentUser?.companyName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !trimmedName.isEmpty {
+            return trimmedName
+        }
+        if let companyId = authManager.currentUser?.companyId, !companyId.isEmpty {
+            return companyId
+        }
+        let providerName = [
+            authManager.currentUser?.firstName?.trimmingCharacters(in: .whitespacesAndNewlines),
+            authManager.currentUser?.lastName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty }
+        .joined(separator: " ")
+
+        return providerName.isEmpty ? "this provider" : providerName
+    }
+
     private var consentCheckboxes: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("ACKNOWLEDGMENTS")
@@ -244,7 +263,7 @@ struct ClientHIPAAConsentView: View {
                         .font(.system(size: 24))
                         .foregroundColor(agreedToTreatment ? theme.accent : theme.secondaryText)
 
-                    Text("I consent to skin analysis and treatment by \(authManager.currentUser?.companyId ?? "this provider")")
+                    Text("I consent to skin analysis and treatment by \(companyDisplayName)")
                         .font(.system(size: 15))
                         .foregroundColor(theme.primaryText)
                         .multilineTextAlignment(.leading)
