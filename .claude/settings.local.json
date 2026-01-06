@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Bash(powershell -Command \"cd ''C:\\\\Users\\\\DScha\\\\OneDrive\\\\Desktop\\\\skin_insight_pro''; Get-ChildItem\")"
+      "Bash(powershell -Command \"cd ''C:\\\\Users\\\\DScha\\\\OneDrive\\\\Desktop\\\\skin_insight_pro''; Get-ChildItem\")",
+      "Bash(git push:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(GIT_SEQUENCE_EDITOR=\"sed -i.bak ''/0c6d73d/d''\" git rebase -i 0c11696)",
+      "Bash(git stash:*)"
     ]
   }
 }

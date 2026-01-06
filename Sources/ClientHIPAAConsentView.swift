@@ -425,7 +425,6 @@ struct SignatureCaptureView: View {
     @Binding var signatureImage: UIImage?
 
     @State private var drawing = PKDrawing()
-    @State private var canvasSize: CGSize = .zero
 
     var body: some View {
         NavigationStack {
@@ -442,15 +441,6 @@ struct SignatureCaptureView: View {
                     SignatureCanvasView(drawing: $drawing, lineWidth: 5, inkColor: .black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 320)
-                        .background(
-                            GeometryReader { proxy in
-                                Color.clear
-                                    .onAppear { self.canvasSize = proxy.size }
-                                    .onChange(of: proxy.size) { newSize in
-                                        self.canvasSize = newSize
-                                    }
-                            }
-                        )
                         .background(Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(
@@ -505,10 +495,8 @@ struct SignatureCaptureView: View {
     }
 
     private func saveSignature() {
-        guard canvasSize != .zero else {
-            return
-        }
-        let rect = CGRect(origin: .zero, size: canvasSize)
+        let baseSize = CGSize(width: UIScreen.main.bounds.width - 32, height: 320)
+        let rect = CGRect(origin: .zero, size: baseSize)
         let image = drawing.image(from: rect, scale: UIScreen.main.scale)
         signatureImage = image
         dismiss()
@@ -541,12 +529,11 @@ struct SignatureCanvasView: UIViewRepresentable {
     func makeUIView(context: Context) -> PKCanvasView {
         let canvasView = PKCanvasView()
         canvasView.delegate = context.coordinator
-        // Allow both Apple Pencil and finger input; replaces deprecated allowsFingerDrawing
+        // Allow both Apple Pencil and finger input
         if #available(iOS 14.0, *) {
             canvasView.drawingPolicy = .anyInput
-        } else {
-            canvasView.allowsFingerDrawing = true
         }
+        canvasView.allowsFingerDrawing = true
         canvasView.isScrollEnabled = false
         
         canvasView.alwaysBounceVertical = false
@@ -563,6 +550,7 @@ struct SignatureCanvasView: UIViewRepresentable {
         canvasView.isOpaque = true
         canvasView.isUserInteractionEnabled = true
         // Removed onViewCreated block and becomeFirstResponder call here
+        canvasView.becomeFirstResponder()
         return canvasView
     }
 

@@ -6,6 +6,7 @@ struct AIRulesView: View {
     @State private var showAddRule = false
     @State private var selectedRule: AIRule?
     @State private var searchText = ""
+    @Environment(\.dismiss) var dismiss
 
     var body: some View {
         ZStack {
@@ -35,8 +36,16 @@ struct AIRulesView: View {
             }
         }
         .navigationTitle("AI Rules")
-        .navigationBarBackButtonHidden(false)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                }
+            }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button(action: { showAddRule = true }) {
                     Label("Add Rule", systemImage: "plus")

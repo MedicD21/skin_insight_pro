@@ -7,7 +7,6 @@ struct ProductCatalogView: View {
     @State private var showImportProducts = false
     @State private var searchText = ""
     @State private var productToEdit: Product?
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -42,8 +41,16 @@ struct ProductCatalogView: View {
         }
         .navigationTitle("Product Catalog")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                }
+            }
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Menu {
                     Button(action: { showAddProduct = true }) {
