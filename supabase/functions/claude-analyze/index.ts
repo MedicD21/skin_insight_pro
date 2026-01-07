@@ -36,17 +36,28 @@ serve(async (req) => {
       });
     }
 
-    const authClient = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: userData, error: userError } = await authClient.auth.getUser(token);
-    if (userError || !userData?.user) {
+    const payload = decodeJwtPayload(token);
+    if (!payload?.sub) {
       return new Response(
-        JSON.stringify({ error: "Invalid user token", details: userError?.message ?? null }),
+        JSON.stringify({ error: "Invalid user token", details: "missing sub claim" }),
         {
           status: 401,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         },
       );
     }
+
+    if (payload.exp && Date.now() / 1000 >= payload.exp) {
+      return new Response(
+        JSON.stringify({ error: "Invalid user token", details: "token expired" }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
+    }
+
+    const userId = payload.sub as string;
 
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: {
@@ -55,8 +66,6 @@ serve(async (req) => {
         },
       },
     });
-
-    const userId = userData.user.id;
 
     const { data: profile, error: profileError } = await supabase
       .from("users")
@@ -153,3 +162,18 @@ serve(async (req) => {
     });
   }
 });
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  if (parts.length < 2) {
+    return null;
+  }
+
+  const payload = parts[1];
+  try {
+    const decoded = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
