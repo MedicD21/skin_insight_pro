@@ -12,6 +12,10 @@ struct CompanyProfileView: View {
     @State private var showCreateCompany = false
     @State private var showTeamMembers = false
     @State private var showDataExport = false
+    @State private var isLoadingUsage = false
+    @State private var companyUsageCount: Int?
+    @State private var userUsageCount: Int?
+    @State private var usageErrorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -56,6 +60,7 @@ struct CompanyProfileView: View {
             }
             .task {
                 await loadCompany()
+                await loadUsageCounts()
             }
         }
     }
@@ -66,6 +71,8 @@ struct CompanyProfileView: View {
                 companyLogoSection(company: company)
 
                 companyInfoSection(company: company)
+
+                usageSection
 
                 teamMembersSection
 
@@ -173,6 +180,76 @@ struct CompanyProfileView: View {
             Spacer()
         }
         .padding(.vertical, 8)
+    }
+
+    private var usageSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("AI Usage (Claude)")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                Text("This month")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(theme.secondaryText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(theme.cardBackground.opacity(0.6))
+                    .clipShape(Capsule())
+            }
+
+            VStack(spacing: 12) {
+                if authManager.currentUser?.companyId?.isEmpty == false,
+                   authManager.currentUser?.id?.isEmpty == false {
+                    usageRow(title: "Your usage", value: userUsageCount, isLoading: isLoadingUsage)
+
+                    Divider()
+                        .background(theme.cardBorder)
+
+                    usageRow(title: "Company usage", value: companyUsageCount, isLoading: isLoadingUsage)
+                } else {
+                    Text("Join a company to see usage totals.")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if let usageErrorMessage {
+                    Text(usageErrorMessage)
+                        .font(.system(size: 12))
+                        .foregroundColor(theme.error)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .fill(theme.cardBackground)
+                    .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
+            )
+        }
+    }
+
+    private func usageRow(title: String, value: Int?, isLoading: Bool) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(theme.primaryText)
+
+            Spacer()
+
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.85)
+                    .tint(theme.accent)
+            } else {
+                Text(value.map(String.init) ?? "—")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(theme.primaryText)
+            }
+        }
     }
 
     private var teamMembersSection: some View {
@@ -292,6 +369,35 @@ struct CompanyProfileView: View {
         } catch {
             errorMessage = error.localizedDescription
             showError = true
+        }
+    }
+
+    private func loadUsageCounts() async {
+        guard !authManager.isGuestMode else { return }
+        guard let companyId = authManager.currentUser?.companyId, !companyId.isEmpty,
+              let userId = authManager.currentUser?.id, !userId.isEmpty else {
+            return
+        }
+
+        if isLoadingUsage {
+            return
+        }
+
+        isLoadingUsage = true
+        usageErrorMessage = nil
+
+        do {
+            let counts = try await NetworkService.shared.fetchClaudeUsageCounts(companyId: companyId, userId: userId)
+            await MainActor.run {
+                companyUsageCount = counts.companyCount
+                userUsageCount = counts.userCount
+                isLoadingUsage = false
+            }
+        } catch {
+            await MainActor.run {
+                usageErrorMessage = "Unable to load usage right now."
+                isLoadingUsage = false
+            }
         }
     }
 }

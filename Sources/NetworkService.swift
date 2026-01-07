@@ -1788,6 +1788,78 @@ class NetworkService {
         return try JSONDecoder().decode([Product].self, from: data)
     }
 
+    // MARK: - Usage Tracking
+
+    func fetchClaudeUsageCounts(companyId: String, userId: String) async throws -> (companyCount: Int, userCount: Int) {
+        let startOfMonth = currentMonthStartISO8601()
+
+        let companyCount = try await fetchUsageCount(queryItems: [
+            URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
+            URLQueryItem(name: "provider", value: "eq.claude"),
+            URLQueryItem(name: "created_at", value: "gte.\(startOfMonth)")
+        ])
+
+        let userCount = try await fetchUsageCount(queryItems: [
+            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
+            URLQueryItem(name: "provider", value: "eq.claude"),
+            URLQueryItem(name: "created_at", value: "gte.\(startOfMonth)")
+        ])
+
+        return (companyCount, userCount)
+    }
+
+    private func fetchUsageCount(queryItems: [URLQueryItem]) async throws -> Int {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_usage_events")!
+        components.queryItems = queryItems + [URLQueryItem(name: "select", value: "id")]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        request.setValue("0-0", forHTTPHeaderField: "Range")
+        request.setValue("count=exact", forHTTPHeaderField: "Prefer")
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let contentRange = httpResponse.value(forHTTPHeaderField: "Content-Range")
+        return parseContentRangeCount(contentRange)
+    }
+
+    private func parseContentRangeCount(_ contentRange: String?) -> Int {
+        guard let contentRange, let total = contentRange.split(separator: "/").last else {
+            return 0
+        }
+
+        return Int(total) ?? 0
+    }
+
+    private func currentMonthStartISO8601() -> String {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+
+        let components = calendar.dateComponents([.year, .month], from: Date())
+        let startOfMonth = calendar.date(from: components) ?? Date()
+
+        let formatter = ISO8601DateFormatter()
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: startOfMonth)
+    }
+
     func createOrUpdateProduct(product: Product, userId: String) async throws -> Product {
         if let productId = product.id {
             // Update existing product

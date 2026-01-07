@@ -14,6 +14,10 @@ struct ProfileView: View {
     @State private var showCompanyProfile = false
     @State private var showJoinCompany = false
     @State private var showPrivacySettings = false
+    @State private var isLoadingUsage = false
+    @State private var companyUsageCount: Int?
+    @State private var userUsageCount: Int?
+    @State private var usageErrorMessage: String?
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
@@ -95,6 +99,14 @@ struct ProfileView: View {
             .padding(.horizontal, horizontalSizeClass == .regular ? 32 : 16)
             .padding(.top, 20)
             .padding(.bottom, horizontalSizeClass == .regular ? 40 : 100)
+        }
+        .task {
+            await loadUsageCounts()
+        }
+        .onChange(of: authManager.currentUser?.companyId) { _, _ in
+            Task {
+                await loadUsageCounts()
+            }
         }
     }
 
@@ -269,6 +281,7 @@ struct ProfileView: View {
 
             if !authManager.isGuestMode {
                 accountActionsCard
+                usageSection
                 metricsInfoSection
             }
 
@@ -311,6 +324,59 @@ struct ProfileView: View {
             RoundedRectangle(cornerRadius: theme.radiusLarge)
                 .stroke(theme.cardBorder, lineWidth: 1)
         )
+    }
+
+    private var usageSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("AI Usage (Claude)")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                Text("This month")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(theme.secondaryText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(theme.cardBackground.opacity(0.6))
+                    .clipShape(Capsule())
+            }
+
+            VStack(spacing: 12) {
+                if authManager.currentUser?.companyId?.isEmpty == false,
+                   authManager.currentUser?.id?.isEmpty == false {
+                    usageRow(title: "Your usage", value: userUsageCount, isLoading: isLoadingUsage)
+
+                    Divider()
+                        .background(theme.cardBorder)
+
+                    usageRow(title: "Company usage", value: companyUsageCount, isLoading: isLoadingUsage)
+                } else {
+                    Text("Join a company to see usage totals.")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                if let usageErrorMessage {
+                    Text(usageErrorMessage)
+                        .font(.system(size: 12))
+                        .foregroundColor(theme.error)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .fill(theme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .stroke(theme.cardBorder, lineWidth: 1)
+            )
+        }
     }
 
     private var accountSettingsCard: some View {
@@ -497,6 +563,26 @@ struct ProfileView: View {
         }
         .padding(16)
     }
+
+    private func usageRow(title: String, value: Int?, isLoading: Bool) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(theme.primaryText)
+
+            Spacer()
+
+            if isLoading {
+                ProgressView()
+                    .scaleEffect(0.85)
+                    .tint(theme.accent)
+            } else {
+                Text(value.map(String.init) ?? "—")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(theme.primaryText)
+            }
+        }
+    }
     
     private func deleteAccount() {
         isDeleting = true
@@ -512,6 +598,35 @@ struct ProfileView: View {
                 isDeleting = false
                 errorMessage = error.localizedDescription
                 showError = true
+            }
+        }
+    }
+
+    private func loadUsageCounts() async {
+        guard !authManager.isGuestMode else { return }
+        guard let companyId = authManager.currentUser?.companyId, !companyId.isEmpty,
+              let userId = authManager.currentUser?.id, !userId.isEmpty else {
+            return
+        }
+
+        if isLoadingUsage {
+            return
+        }
+
+        isLoadingUsage = true
+        usageErrorMessage = nil
+
+        do {
+            let counts = try await NetworkService.shared.fetchClaudeUsageCounts(companyId: companyId, userId: userId)
+            await MainActor.run {
+                companyUsageCount = counts.companyCount
+                userUsageCount = counts.userCount
+                isLoadingUsage = false
+            }
+        } catch {
+            await MainActor.run {
+                usageErrorMessage = "Unable to load usage right now."
+                isLoadingUsage = false
             }
         }
     }

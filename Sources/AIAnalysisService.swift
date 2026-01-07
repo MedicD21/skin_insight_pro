@@ -244,12 +244,6 @@ class AIAnalysisService {
         aiRules: [AIRule],
         products: [Product]
     ) async throws -> AnalysisData {
-        guard !AppConstants.claudeApiKey.isEmpty else {
-            throw NSError(domain: "AIAnalysisService", code: 1, userInfo: [
-                NSLocalizedDescriptionKey: "Claude API key not configured. Add your key to AppConstants.claudeApiKey"
-            ])
-        }
-
         // Convert image to base64
         guard let imageData = image.jpegData(compressionQuality: 0.8) else {
             throw NSError(domain: "AIAnalysisService", code: 2, userInfo: [
@@ -278,36 +272,25 @@ class AIAnalysisService {
             products: products
         )
 
-        // Call Claude API
-        let url = URL(string: "https://api.anthropic.com/v1/messages")!
+        // Call Supabase Edge Function (enforces usage caps)
+        let url = URL(string: "\(AppConstants.supabaseUrl)/functions/v1/claude-analyze")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(AppConstants.claudeApiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
+
+        guard let accessToken = UserDefaults.standard.string(forKey: AppConstants.accessTokenKey),
+              !accessToken.isEmpty else {
+            throw NSError(domain: "AIAnalysisService", code: 3, userInfo: [
+                NSLocalizedDescriptionKey: "Missing authentication token. Please log in again."
+            ])
+        }
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
         let requestBody: [String: Any] = [
             "model": "claude-sonnet-4-5-20250929",
-            "max_tokens": 2048,
-            "messages": [
-                [
-                    "role": "user",
-                    "content": [
-                        [
-                            "type": "image",
-                            "source": [
-                                "type": "base64",
-                                "media_type": "image/jpeg",
-                                "data": base64Image
-                            ]
-                        ],
-                        [
-                            "type": "text",
-                            "text": prompt
-                        ]
-                    ]
-                ]
-            ]
+            "prompt": prompt,
+            "image_base64": base64Image
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
@@ -316,14 +299,36 @@ class AIAnalysisService {
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(domain: "AIAnalysisService", code: 3, userInfo: [
-                NSLocalizedDescriptionKey: "Invalid response from Claude API"
+                NSLocalizedDescriptionKey: "Invalid response from Claude service"
             ])
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 402 {
+                return try await analyzeWithAppleVision(
+                    image: image,
+                    medicalHistory: medicalHistory,
+                    allergies: allergies,
+                    knownSensitivities: knownSensitivities,
+                    medications: medications,
+                    productsToAvoid: productsToAvoid,
+                    manualSkinType: manualSkinType,
+                    manualHydrationLevel: manualHydrationLevel,
+                    manualSensitivity: manualSensitivity,
+                    manualPoreCondition: manualPoreCondition,
+                    manualConcerns: manualConcerns,
+                    productsUsed: productsUsed,
+                    treatmentsPerformed: treatmentsPerformed,
+                    injectablesHistory: injectablesHistory,
+                    previousAnalyses: previousAnalyses,
+                    aiRules: aiRules,
+                    products: products
+                )
+            }
+
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
             throw NSError(domain: "AIAnalysisService", code: httpResponse.statusCode, userInfo: [
-                NSLocalizedDescriptionKey: "Claude API error: \(errorMessage)"
+                NSLocalizedDescriptionKey: errorMessage
             ])
         }
 
