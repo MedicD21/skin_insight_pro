@@ -12,6 +12,8 @@ struct AppConstants {
     }
 
     // AI provider is now controlled via settings (Admin → AI Vision Provider)
+    // Defaults to Apple Vision (free), Claude requires active subscription
+    // The AI Provider Settings view automatically resets to Apple Vision if subscription expires
     static var aiProvider: AIProvider {
         let savedProvider = UserDefaults.standard.string(forKey: "ai_provider") ?? "appleVision"
         return savedProvider == "claude" ? .claude : .appleVision

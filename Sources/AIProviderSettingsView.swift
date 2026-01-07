@@ -58,6 +58,13 @@ struct AIProviderSettingsView: View {
         .navigationTitle("AI Vision Provider")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            // Reset to Apple Vision if subscription expired and Claude is selected
+            if selectedProvider == "claude" && !storeManager.hasActiveSubscription() {
+                selectedProvider = "appleVision"
+                print("⚠️ Reset to Apple Vision - subscription required for Claude")
+            }
+        }
         .alert("Subscription Required", isPresented: $showSubscriptionRequired) {
             Button("OK", role: .cancel) {}
         } message: {

@@ -22,6 +22,8 @@ struct SubscriptionView: View {
                     VStack(spacing: 32) {
                         headerSection
 
+                        featuresSection
+
                         if storeManager.isLoading {
                             ProgressView()
                                 .scaleEffect(1.5)
@@ -32,8 +34,6 @@ struct SubscriptionView: View {
                         } else {
                             plansSection
                         }
-
-                        featuresSection
 
                         footerSection
                     }
@@ -102,7 +102,45 @@ struct SubscriptionView: View {
 
     private var plansSection: some View {
         VStack(spacing: 16) {
-            ForEach(storeManager.products, id: \.id) { product in
+            // Separate products into categories
+            let soloProducts = storeManager.products.filter { $0.id.contains("solo") }
+            let starterProducts = storeManager.products.filter { $0.id.contains("starter") }
+            let premiumProducts = storeManager.products.filter {
+                $0.id.contains("professional") || $0.id.contains("business") || $0.id.contains("enterprise")
+            }
+
+            // Two-column grid for Solo tiers
+            if !soloProducts.isEmpty {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    ForEach(soloProducts, id: \.id) { product in
+                        PlanCard(
+                            product: product,
+                            isSelected: selectedProduct?.id == product.id,
+                            isActive: storeManager.isSubscribed(to: product.id),
+                            onSelect: { selectedProduct = product },
+                            onPurchase: { purchasePlan(product) }
+                        )
+                    }
+                }
+            }
+
+            // Two-column grid for Starter tiers
+            if !starterProducts.isEmpty {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                    ForEach(starterProducts, id: \.id) { product in
+                        PlanCard(
+                            product: product,
+                            isSelected: selectedProduct?.id == product.id,
+                            isActive: storeManager.isSubscribed(to: product.id),
+                            onSelect: { selectedProduct = product },
+                            onPurchase: { purchasePlan(product) }
+                        )
+                    }
+                }
+            }
+
+            // Single column for Professional, Business, Enterprise
+            ForEach(premiumProducts, id: \.id) { product in
                 PlanCard(
                     product: product,
                     isSelected: selectedProduct?.id == product.id,
@@ -228,11 +266,11 @@ struct PlanCard: View {
         case "com.skininsightpro.solo.monthly":
             return ("Solo", "100", "Individual practitioners")
         case "com.skininsightpro.solo.annual":
-            return ("Solo", "100", "Individual practitioners")
+            return ("Solo Annual", "100", "Individual practitioners")
         case "com.skininsightpro.starter.monthly":
             return ("Starter", "400", "Small practices (1-2 providers)")
         case "com.skininsightpro.starter.annual":
-            return ("Starter", "400", "Small practices (1-2 providers)")
+            return ("Starter Annual", "400", "Small practices (1-2 providers)")
         case "com.skininsightpro.professional.monthly":
             return ("Professional", "1,500", "Growing practices (2-4 providers)")
         case "com.skininsightpro.business.monthly":
