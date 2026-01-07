@@ -16,7 +16,13 @@ struct ClientDashboardView: View {
                     clientListView
                 } detail: {
                     if let client = selectedClient {
-                        ClientDetailView(client: client, selectedClient: $selectedClient)
+                        ClientDetailView(
+                            client: client,
+                            selectedClient: $selectedClient,
+                            onClientUpdated: { updatedClient in
+                                viewModel.updateClient(updatedClient)
+                            }
+                        )
                             .id(client.id)
                     } else {
                         ContentUnavailableView(
@@ -31,7 +37,13 @@ struct ClientDashboardView: View {
                 NavigationStack {
                     clientListView
                         .navigationDestination(for: AppClient.self) { client in
-                            ClientDetailView(client: client, selectedClient: $selectedClient)
+                            ClientDetailView(
+                                client: client,
+                                selectedClient: $selectedClient,
+                                onClientUpdated: { updatedClient in
+                                    viewModel.updateClient(updatedClient)
+                                }
+                            )
                         }
                 }
             }
@@ -201,18 +213,11 @@ struct ClientDashboardView: View {
 struct ClientRowView: View {
     @ObservedObject var theme = ThemeManager.shared
     let client: AppClient
+    @State private var latestAnalysisImageUrl: String?
     
     var body: some View {
         HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(theme.accent.opacity(0.15))
-                    .frame(width: 56, height: 56)
-                
-                Text(initials)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundColor(theme.accent)
-            }
+            profileImageView
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
@@ -262,6 +267,69 @@ struct ClientRowView: View {
             RoundedRectangle(cornerRadius: theme.radiusLarge)
                 .stroke(theme.cardBorder, lineWidth: 1)
         )
+        .task {
+            await loadLatestAnalysisImage()
+        }
+    }
+
+    private var profileImageView: some View {
+        Group {
+            if let imageUrl = latestAnalysisImageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 56, height: 56)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        fallbackInitialsView
+                    @unknown default:
+                        fallbackInitialsView
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .background(theme.tertiaryBackground)
+                .clipShape(Circle())
+            } else if let profileImageUrl = client.profileImageUrl,
+                      let url = URL(string: profileImageUrl),
+                      !profileImageUrl.isEmpty {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 56, height: 56)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        fallbackInitialsView
+                    @unknown default:
+                        fallbackInitialsView
+                    }
+                }
+                .frame(width: 56, height: 56)
+                .background(theme.tertiaryBackground)
+                .clipShape(Circle())
+            } else {
+                fallbackInitialsView
+            }
+        }
+    }
+
+    private var fallbackInitialsView: some View {
+        ZStack {
+            Circle()
+                .fill(theme.accent.opacity(0.15))
+                .frame(width: 56, height: 56)
+
+            Text(initials)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(theme.accent)
+        }
     }
     
     private var initials: String {
@@ -295,6 +363,20 @@ struct ClientRowView: View {
             Image(systemName: status.icon)
                 .font(.system(size: 18))
                 .foregroundColor(Color(red: status.color.red, green: status.color.green, blue: status.color.blue))
+        }
+    }
+
+    @MainActor
+    private func loadLatestAnalysisImage() async {
+        if latestAnalysisImageUrl != nil || AuthenticationManager.shared.isGuestMode {
+            return
+        }
+        guard let clientId = client.id else { return }
+        do {
+            let imageUrl = try await NetworkService.shared.fetchLatestAnalysisImageUrl(clientId: clientId)
+            latestAnalysisImageUrl = imageUrl
+        } catch {
+            latestAnalysisImageUrl = nil
         }
     }
 }
@@ -358,6 +440,21 @@ class ClientDashboardViewModel: ObservableObject {
             showError = true
         }
     }
+
+    func updateClient(_ client: AppClient) {
+        guard let userId = AuthenticationManager.shared.currentUser?.id else { return }
+
+        if let index = clients.firstIndex(where: { $0.id == client.id }) {
+            clients[index] = client
+        } else {
+            clients.append(client)
+        }
+        clients.sort { ($0.name ?? "") < ($1.name ?? "") }
+
+        if AuthenticationManager.shared.isGuestMode {
+            persistLocalClients(userId: userId)
+        }
+    }
     
     private func loadLocalClients(userId: String) {
         if let data = UserDefaults.standard.data(forKey: "local_clients_\(userId)"),
@@ -373,6 +470,10 @@ class ClientDashboardViewModel: ObservableObject {
         clients.append(newClient)
         clients.sort { ($0.name ?? "") < ($1.name ?? "") }
         
+        persistLocalClients(userId: userId)
+    }
+
+    private func persistLocalClients(userId: String) {
         if let encoded = try? JSONEncoder().encode(clients) {
             UserDefaults.standard.set(encoded, forKey: "local_clients_\(userId)")
         }

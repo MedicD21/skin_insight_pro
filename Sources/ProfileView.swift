@@ -267,60 +267,118 @@ struct ProfileView: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(theme.primaryText)
 
-            VStack(spacing: 0) {
-                if !authManager.isGuestMode {
-                    Button(action: { showEditProfile = true }) {
-                        navigationRow(icon: "person.circle", title: "Edit Profile", subtitle: "Update your personal information")
-                    }
-
-                    Divider()
-                        .padding(.leading, 56)
-
-                    Button(action: { showCompanyProfile = true }) {
-                        navigationRow(icon: "building.2", title: "Company Profile", subtitle: "Manage company information")
-                    }
-
-                    Divider()
-                        .padding(.leading, 56)
-
-                    Button(action: { showJoinCompany = true }) {
-                        navigationRow(icon: "person.2.badge.gearshape", title: "Join Company", subtitle: "Enter a company code to join a team")
-                    }
-
-                    Divider()
-                        .padding(.leading, 56)
-
-                    Button(action: { showPrivacySettings = true }) {
-                        navigationRow(icon: "hand.raised.fill", title: "Privacy & Data", subtitle: "Manage your privacy rights and data")
-                    }
-
-                    Divider()
-                        .padding(.leading, 56)
-                }
-
-                settingRow(
-                    icon: "envelope",
-                    title: "Email",
-                    value: authManager.currentUser?.email ?? "Not available"
-                )
-
-                Divider()
-                    .padding(.leading, 56)
-
-                settingRow(
-                    icon: "key",
-                    title: "Provider",
-                    value: authManager.isGuestMode ? "Guest" : "Email"
-                )
+            if !authManager.isGuestMode {
+                accountActionsCard
+                metricsInfoSection
             }
+
+            accountSettingsCard
+        }
+    }
+
+    private var accountActionsCard: some View {
+        VStack(spacing: 0) {
+            Button(action: { showEditProfile = true }) {
+                navigationRow(icon: "person.circle", title: "Edit Profile", subtitle: "Update your personal information")
+            }
+
+            Divider()
+                .padding(.leading, 56)
+
+            Button(action: { showCompanyProfile = true }) {
+                navigationRow(icon: "building.2", title: "Company Profile", subtitle: "Manage company information")
+            }
+
+            Divider()
+                .padding(.leading, 56)
+
+            Button(action: { showJoinCompany = true }) {
+                navigationRow(icon: "person.2.badge.gearshape", title: "Join Company", subtitle: "Enter a company code to join a team")
+            }
+
+            Divider()
+                .padding(.leading, 56)
+
+            Button(action: { showPrivacySettings = true }) {
+                navigationRow(icon: "hand.raised.fill", title: "Privacy & Data", subtitle: "Manage your privacy rights and data")
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusLarge)
+                .fill(theme.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusLarge)
+                .stroke(theme.cardBorder, lineWidth: 1)
+        )
+    }
+
+    private var accountSettingsCard: some View {
+        VStack(spacing: 0) {
+            settingRow(
+                icon: "envelope",
+                title: "Email",
+                value: authManager.currentUser?.email ?? "Not available"
+            )
+
+            Divider()
+                .padding(.leading, 56)
+
+            settingRow(
+                icon: "key",
+                title: "Provider",
+                value: authManager.isGuestMode ? "Guest" : "Email"
+            )
+        }
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusLarge)
+                .fill(theme.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusLarge)
+                .stroke(theme.cardBorder, lineWidth: 1)
+        )
+    }
+
+    private var metricsInfoSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("How We Measure Skin Metrics")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundColor(theme.primaryText)
+
+            VStack(alignment: .leading, spacing: 10) {
+                metricRow(title: "Skin Type", description: "Estimated from oiliness, dryness, and texture cues in the photo.")
+                metricRow(title: "Hydration Level", description: "Photo-based moisture appearance estimate (0-100). Higher means more hydrated-looking skin.")
+                metricRow(title: "Sensitivity", description: "Based on visible redness or irritation patterns.")
+                metricRow(title: "Pore Condition", description: "Estimated from pore visibility and texture detail.")
+                metricRow(title: "Skin Health Score", description: "Overall score (0-100) combining concerns, hydration, and sensitivity.")
+            }
+            .padding(20)
             .background(
-                RoundedRectangle(cornerRadius: theme.radiusLarge)
+                RoundedRectangle(cornerRadius: theme.radiusXL)
                     .fill(theme.cardBackground)
+                    .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.radiusLarge)
-                    .stroke(theme.cardBorder, lineWidth: 1)
-            )
+        }
+    }
+
+    private func metricRow(title: String, description: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 14))
+                .foregroundColor(theme.accent)
+                .padding(.top, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.primaryText)
+                Text(description)
+                    .font(.system(size: 13))
+                    .foregroundColor(theme.secondaryText)
+            }
+
+            Spacer()
         }
     }
     

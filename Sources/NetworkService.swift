@@ -1143,6 +1143,39 @@ class NetworkService {
         }
     }
 
+    func fetchLatestAnalysisImageUrl(clientId: String) async throws -> String? {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
+        components.queryItems = [
+            URLQueryItem(name: "client_id", value: "eq.\(clientId)"),
+            URLQueryItem(name: "select", value: "image_url,created_at"),
+            URLQueryItem(name: "order", value: "created_at.desc"),
+            URLQueryItem(name: "limit", value: "1")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let analyses = try JSONDecoder().decode([SkinAnalysisResult].self, from: data)
+        return analyses.first?.imageUrl
+    }
+
     func saveAnalysis(
         clientId: String,
         userId: String,
@@ -1231,6 +1264,25 @@ class NetworkService {
             throw CancellationError()
         } catch {
             throw error
+        }
+    }
+
+    func deleteAnalysis(analysisId: String) async throws {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses?id=eq.\(analysisId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
         }
     }
 

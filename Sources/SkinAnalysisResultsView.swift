@@ -17,6 +17,7 @@ struct SkinAnalysisResultsView: View {
     @State private var isSaving = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var activeMetricInfo: MetricInfo?
     @FocusState private var notesFieldFocused: Bool
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     private var flaggedProducts: [Product] { viewModel.flaggedProducts }
@@ -105,6 +106,13 @@ struct SkinAnalysisResultsView: View {
         } message: {
             Text(errorMessage)
         }
+        .alert(item: $activeMetricInfo) { info in
+            Alert(
+                title: Text(info.title),
+                message: Text(info.description),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .task {
             await viewModel.loadFlaggedProducts(for: client)
         }
@@ -154,9 +162,18 @@ struct SkinAnalysisResultsView: View {
                             .font(.system(size: 20))
                             .foregroundColor(theme.accent)
 
-                        Text("Skin Health Score")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(theme.primaryText)
+                        Button {
+                            showMetricInfo(title: "Skin Health Score")
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("Skin Health Score")
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 12))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
 
                         Spacer()
 
@@ -261,9 +278,18 @@ struct SkinAnalysisResultsView: View {
                 .foregroundColor(theme.accent)
                 .frame(width: 24)
 
-            Text(label)
-                .font(.system(size: 15))
-                .foregroundColor(theme.secondaryText)
+            Button {
+                showMetricInfo(title: label)
+            } label: {
+                HStack(spacing: 6) {
+                    Text(label)
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 12))
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 15))
+            .foregroundColor(theme.secondaryText)
 
             Spacer()
 
@@ -740,10 +766,19 @@ struct SkinAnalysisResultsView: View {
                 .font(.system(size: 16))
                 .foregroundColor(theme.accent)
                 .frame(width: 24)
-            
-            Text(label)
-                .font(.system(size: 15))
-                .foregroundColor(theme.secondaryText)
+
+            Button {
+                showMetricInfo(title: label)
+            } label: {
+                HStack(spacing: 6) {
+                    Text(label)
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 12))
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 15))
+            .foregroundColor(theme.secondaryText)
             
             Spacer()
             
@@ -825,5 +860,26 @@ struct SkinAnalysisResultsView: View {
                 showError = true
             }
         }
+    }
+
+    private func showMetricInfo(title: String) {
+        guard let description = metricDescriptions[title] else { return }
+        activeMetricInfo = MetricInfo(title: title, description: description)
+    }
+
+    private var metricDescriptions: [String: String] {
+        [
+            "Skin Type": "Estimated from oiliness, dryness, and texture cues in the photo.",
+            "Hydration Level": "Photo-based moisture appearance estimate (0-100). Higher means more hydrated-looking skin.",
+            "Sensitivity": "Based on visible redness or irritation patterns.",
+            "Pore Condition": "Estimated from pore visibility and texture detail.",
+            "Skin Health Score": "Overall score (0-100) combining concerns, hydration, and sensitivity."
+        ]
+    }
+
+    private struct MetricInfo: Identifiable {
+        let title: String
+        let description: String
+        var id: String { title }
     }
 }

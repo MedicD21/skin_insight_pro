@@ -93,6 +93,7 @@ class AIAnalysisService {
         var concerns: [String] = []
         var recommendations: [String] = []
         var productRecommendations: [String] = []
+        var imageMetrics: ImageMetrics?
 
         // Use manual inputs if provided
         if let manualConcerns = manualConcerns, !manualConcerns.isEmpty {
@@ -101,40 +102,47 @@ class AIAnalysisService {
 
         // Perform enhanced image analysis
         if let cgImage = image.cgImage {
-            let imageMetrics = await analyzeImageMetrics(cgImage: cgImage)
+            imageMetrics = await analyzeImageMetrics(cgImage: cgImage)
 
             // Analyze brightness for dark spots and hyperpigmentation
-            if imageMetrics.brightness < 0.35 {
+            if let imageMetrics, imageMetrics.brightness < 0.35 {
                 if !concerns.contains("Dark spots") {
                     concerns.append("Dark spots")
                 }
             }
 
             // Analyze redness
-            if imageMetrics.rednessLevel > 0.45 {
+            if let imageMetrics, imageMetrics.rednessLevel > 0.45 {
                 if !concerns.contains("Redness") {
                     concerns.append("Redness")
                 }
             }
 
             // Analyze texture/smoothness
-            if imageMetrics.textureVariance > 0.6 {
+            if let imageMetrics, imageMetrics.textureVariance > 0.6 {
                 if !concerns.contains("Uneven texture") {
                     concerns.append("Uneven texture")
                 }
             }
 
             // Analyze oiliness (high brightness + color saturation)
-            if imageMetrics.brightness > 0.7 && imageMetrics.saturation > 0.5 {
+            if let imageMetrics, imageMetrics.brightness > 0.7 && imageMetrics.saturation > 0.5 {
                 if !concerns.contains("Excess oil") {
                     concerns.append("Excess oil")
                 }
             }
 
             // Analyze dryness (low saturation, uneven texture)
-            if imageMetrics.saturation < 0.3 && imageMetrics.textureVariance > 0.5 {
+            if let imageMetrics, imageMetrics.saturation < 0.3 && imageMetrics.textureVariance > 0.5 {
                 if !concerns.contains("Dryness") {
                     concerns.append("Dryness")
+                }
+            }
+
+            // Indicate pores when texture variance is elevated
+            if let imageMetrics, imageMetrics.textureVariance > 0.55 {
+                if !concerns.contains("Enlarged pores") {
+                    concerns.append("Enlarged pores")
                 }
             }
         }
@@ -178,24 +186,32 @@ class AIAnalysisService {
             recommendations.append("Apply a rich moisturizer with ceramides and hyaluronic acid")
             recommendations.append("Consider adding a facial oil for extra hydration")
         }
+        if concerns.contains("Enlarged pores") {
+            recommendations.append("Use niacinamide or salicylic acid to help minimize pore appearance")
+            recommendations.append("Avoid heavy, occlusive products that can clog pores")
+        }
         if concerns.isEmpty {
             recommendations.append("Skin appears healthy - maintain current routine")
             recommendations.append("Continue daily SPF protection")
             recommendations.append("Keep skin hydrated with regular moisturizer use")
         }
 
-        // Determine skin type from manual input or default
-        let skinType = manualSkinType ?? "Normal"
+        // Determine skin type and key metrics
+        let skinType = manualSkinType ?? inferSkinType(metrics: imageMetrics)
+        let hydrationLevel = parseManualHydrationLevel(manualHydrationLevel)
+            ?? estimateHydrationLevel(metrics: imageMetrics)
+        let sensitivity = manualSensitivity ?? inferSensitivity(metrics: imageMetrics, concerns: concerns)
+        let poreCondition = manualPoreCondition ?? inferPoreCondition(metrics: imageMetrics, concerns: concerns)
 
         // Calculate basic health score
         let healthScore = calculateHealthScore(concerns: concerns)
 
         return AnalysisData(
             skinType: skinType,
-            hydrationLevel: manualHydrationLevel.flatMap { Int($0) },
-            sensitivity: manualSensitivity ?? "Normal",
+            hydrationLevel: hydrationLevel,
+            sensitivity: sensitivity,
             concerns: concerns.isEmpty ? nil : concerns,
-            poreCondition: manualPoreCondition ?? "Normal",
+            poreCondition: poreCondition,
             skinHealthScore: healthScore,
             recommendations: recommendations,
             productRecommendations: productRecommendations.isEmpty ? nil : productRecommendations,
@@ -495,6 +511,74 @@ class AIAnalysisService {
         return max(0, min(100, baseScore - deduction))
     }
 
+    private func parseManualHydrationLevel(_ manualHydrationLevel: String?) -> Int? {
+        guard let manualHydrationLevel else { return nil }
+        let digits = manualHydrationLevel.compactMap { $0.isNumber ? $0 : nil }
+        let value = Int(String(digits))
+        guard let parsed = value else { return nil }
+        return max(0, min(100, parsed))
+    }
+
+    private func estimateHydrationLevel(metrics: ImageMetrics?) -> Int {
+        guard let metrics else { return 65 }
+
+        var hydration = 65.0
+        hydration -= max(0.0, (0.35 - metrics.saturation)) * 140.0
+        hydration -= max(0.0, (metrics.textureVariance - 0.5)) * 80.0
+        hydration += max(0.0, (metrics.saturation - 0.5)) * 40.0
+        hydration -= max(0.0, (metrics.rednessLevel - 0.6)) * 15.0
+
+        return max(0, min(100, Int(hydration.rounded())))
+    }
+
+    private func inferSkinType(metrics: ImageMetrics?) -> String {
+        guard let metrics else { return "Normal" }
+
+        let isDry = metrics.saturation < 0.35 && metrics.textureVariance > 0.5
+        let isOily = metrics.brightness > 0.65 && metrics.saturation > 0.45
+
+        if isDry && isOily {
+            return "Combination"
+        }
+        if isOily {
+            return "Oily"
+        }
+        if isDry {
+            return "Dry"
+        }
+        return "Normal"
+    }
+
+    private func inferSensitivity(metrics: ImageMetrics?, concerns: [String]) -> String {
+        if concerns.contains("Redness") {
+            return "High"
+        }
+        guard let metrics else { return "Normal" }
+
+        if metrics.rednessLevel > 0.6 {
+            return "High"
+        }
+        if metrics.rednessLevel > 0.45 {
+            return "Moderate"
+        }
+        return "Normal"
+    }
+
+    private func inferPoreCondition(metrics: ImageMetrics?, concerns: [String]) -> String {
+        if concerns.contains("Enlarged pores") {
+            return "Enlarged"
+        }
+        guard let metrics else { return "Normal" }
+
+        if metrics.textureVariance > 0.6 {
+            return "Enlarged"
+        }
+        if metrics.textureVariance < 0.3 {
+            return "Fine"
+        }
+        return "Normal"
+    }
+
     private func buildMedicalConsiderations(medicalHistory: String?, allergies: String?, medications: String?) -> [String]? {
         var considerations: [String] = []
 
@@ -565,6 +649,9 @@ class AIAnalysisService {
         if let manualSkinType = manualSkinType {
             prompt += "Esthetician's skin type assessment: \(manualSkinType)\n"
         }
+        if let manualHydrationLevel = manualHydrationLevel, !manualHydrationLevel.isEmpty {
+            prompt += "Esthetician's hydration assessment (percent): \(manualHydrationLevel)\n"
+        }
 
         // Add AI Rules
         if !aiRules.isEmpty {
@@ -615,7 +702,7 @@ class AIAnalysisService {
         Provide your analysis in this EXACT JSON format:
         {
           "skin_type": "Normal/Dry/Oily/Combination/Sensitive",
-          "hydration_level": 1-10,
+          "hydration_level": 0-100,
           "sensitivity": "Low/Normal/High",
           "concerns": ["concern1", "concern2"],
           "pore_condition": "Fine/Normal/Enlarged",
@@ -624,6 +711,18 @@ class AIAnalysisService {
           "product_recommendations": ["product1", "product2"],
           "medical_considerations": ["consideration1"]
         }
+
+        HYDRATION GUIDANCE:
+        - "hydration_level" is an estimated percent (0-100) of moisture appearance.
+        - Avoid single-digit values unless the skin is extremely dehydrated.
+        - Typical ranges: 20-35 severely dehydrated, 36-50 low, 51-65 moderate, 66-80 good, 81-95 excellent.
+        - Use the esthetician’s hydration assessment if provided, adjusted only if the photo strongly contradicts it.
+
+        METRIC GUIDANCE:
+        - "skin_type" should reflect oil vs dryness cues in the photo (shine, texture, flaking) and avoid defaulting to Normal.
+        - "sensitivity" should be Low/Normal/High and based on visible redness/irritation or reactive indicators.
+        - "pore_condition" should be Fine/Normal/Enlarged based on visible pore size/texture.
+        - "skin_health_score" should be 0-100 and reflect the overall condition given concerns, hydration, and sensitivity.
 
         CRITICAL INSTRUCTIONS FOR TWO SEPARATE FIELDS:
 
@@ -683,18 +782,86 @@ class AIAnalysisService {
 
         let analysisResponse = try JSONDecoder().decode(AIAnalysisResponse.self, from: jsonData)
 
+        let hydratedLevel = normalizeHydrationLevel(analysisResponse.hydrationLevel)
+        let skinType = normalizeSkinType(analysisResponse.skinType)
+        let sensitivity = normalizeSensitivity(analysisResponse.sensitivity)
+        let poreCondition = normalizePoreCondition(analysisResponse.poreCondition)
+        let healthScore = normalizeHealthScore(analysisResponse.skinHealthScore, concerns: analysisResponse.concerns)
+
         return AnalysisData(
-            skinType: analysisResponse.skinType,
-            hydrationLevel: analysisResponse.hydrationLevel,
-            sensitivity: analysisResponse.sensitivity,
+            skinType: skinType,
+            hydrationLevel: hydratedLevel,
+            sensitivity: sensitivity,
             concerns: analysisResponse.concerns,
-            poreCondition: analysisResponse.poreCondition,
-            skinHealthScore: analysisResponse.skinHealthScore,
+            poreCondition: poreCondition,
+            skinHealthScore: healthScore,
             recommendations: analysisResponse.recommendations,
             productRecommendations: analysisResponse.productRecommendations,
             medicalConsiderations: analysisResponse.medicalConsiderations,
             progressNotes: analysisResponse.progressNotes
         )
+    }
+
+    private func normalizeHydrationLevel(_ hydrationLevel: Int?) -> Int? {
+        guard let hydrationLevel else { return nil }
+        if hydrationLevel <= 10 {
+            return max(0, min(100, hydrationLevel * 10))
+        }
+        return max(0, min(100, hydrationLevel))
+    }
+
+    private func normalizeSkinType(_ skinType: String?) -> String? {
+        guard let skinType, !skinType.isEmpty else { return nil }
+        let value = skinType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if value.contains("comb") {
+            return "Combination"
+        }
+        if value.contains("oily") {
+            return "Oily"
+        }
+        if value.contains("dry") {
+            return "Dry"
+        }
+        if value.contains("sens") {
+            return "Sensitive"
+        }
+        return "Normal"
+    }
+
+    private func normalizeSensitivity(_ sensitivity: String?) -> String? {
+        guard let sensitivity, !sensitivity.isEmpty else { return nil }
+        let value = sensitivity.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if value.contains("high") {
+            return "High"
+        }
+        if value.contains("low") {
+            return "Low"
+        }
+        return "Normal"
+    }
+
+    private func normalizePoreCondition(_ poreCondition: String?) -> String? {
+        guard let poreCondition, !poreCondition.isEmpty else { return nil }
+        let value = poreCondition.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        if value.contains("enlarg") {
+            return "Enlarged"
+        }
+        if value.contains("fine") {
+            return "Fine"
+        }
+        return "Normal"
+    }
+
+    private func normalizeHealthScore(_ skinHealthScore: Int?, concerns: [String]?) -> Int? {
+        if let skinHealthScore {
+            return max(0, min(100, skinHealthScore))
+        }
+
+        let concernCount = concerns?.count ?? 0
+        return calculateHealthScore(concerns: Array(repeating: "", count: concernCount))
     }
 }
 

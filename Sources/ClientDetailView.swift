@@ -4,19 +4,27 @@ struct ClientDetailView: View {
     @ObservedObject var theme = ThemeManager.shared
     let client: AppClient
     @Binding var selectedClient: AppClient?
+    let onClientUpdated: ((AppClient) -> Void)?
     @StateObject private var viewModel = ClientDetailViewModel()
     @State private var showAnalysisInput = false
     @State private var showCompareAnalyses = false
     @State private var showConsentForm = false
     @State private var showConsentAlert = false
     @State private var showEditClient = false
+    @State private var showDeleteAnalysisConfirm = false
+    @State private var analysisToDelete: SkinAnalysisResult?
     @State private var currentClient: AppClient
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.dismiss) var dismiss
 
-    init(client: AppClient, selectedClient: Binding<AppClient?>) {
+    init(
+        client: AppClient,
+        selectedClient: Binding<AppClient?>,
+        onClientUpdated: ((AppClient) -> Void)? = nil
+    ) {
         self.client = client
         self._selectedClient = selectedClient
+        self.onClientUpdated = onClientUpdated
         self._currentClient = State(initialValue: client)
     }
     
@@ -103,6 +111,7 @@ struct ClientDetailView: View {
                     }
                     currentClient = updatedClient
                     selectedClient = updatedClient
+                    onClientUpdated?(updatedClient)
                     showEditClient = false
                 },
                 onDelete: { _ in
@@ -135,6 +144,15 @@ struct ClientDetailView: View {
                 Text("This client has not signed a HIPAA consent form. A consent signature is required before performing skin analysis.")
             }
         }
+        .alert("Delete Analysis", isPresented: $showDeleteAnalysisConfirm) {
+            Button("Delete", role: .destructive) {
+                guard let analysis = analysisToDelete else { return }
+                Task { await viewModel.deleteAnalysis(analysis) }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete this analysis? This action cannot be undone.")
+        }
         .task {
             await viewModel.loadAnalyses(clientId: currentClient.id ?? "")
             await viewModel.loadFlaggedProducts(for: currentClient)
@@ -155,15 +173,7 @@ struct ClientDetailView: View {
     private var clientInfoCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(theme.accent.opacity(0.15))
-                        .frame(width: 72, height: 72)
-
-                    Text(initials)
-                        .font(.system(size: 28, weight: .semibold))
-                        .foregroundColor(theme.accent)
-                }
+                profileImageView
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text(currentClient.name ?? "Unknown")
@@ -639,7 +649,14 @@ struct ClientDetailView: View {
                 .foregroundColor(theme.primaryText)
             
             ForEach(viewModel.analyses) { analysis in
-                NavigationLink(destination: AnalysisDetailView(analysis: analysis)) {
+                NavigationLink(
+                    destination: AnalysisDetailView(
+                        analysis: analysis,
+                        onDelete: { analysis in
+                            await viewModel.deleteAnalysis(analysis)
+                        }
+                    )
+                ) {
                     AnalysisRowView(analysis: analysis)
                 }
                 .buttonStyle(.plain)
@@ -677,6 +694,70 @@ struct ClientDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 60)
+    }
+
+    private var profileImageView: some View {
+        Group {
+            if let imageUrl = latestAnalysisImageUrl, let url = URL(string: imageUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 72, height: 72)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        fallbackInitialsView
+                    @unknown default:
+                        fallbackInitialsView
+                    }
+                }
+                .frame(width: 72, height: 72)
+                .background(theme.tertiaryBackground)
+                .clipShape(Circle())
+            } else if let profileImageUrl = currentClient.profileImageUrl,
+                      let url = URL(string: profileImageUrl),
+                      !profileImageUrl.isEmpty {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .empty:
+                        ProgressView()
+                            .frame(width: 72, height: 72)
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        fallbackInitialsView
+                    @unknown default:
+                        fallbackInitialsView
+                    }
+                }
+                .frame(width: 72, height: 72)
+                .background(theme.tertiaryBackground)
+                .clipShape(Circle())
+            } else {
+                fallbackInitialsView
+            }
+        }
+    }
+
+    private var fallbackInitialsView: some View {
+        ZStack {
+            Circle()
+                .fill(theme.accent.opacity(0.15))
+                .frame(width: 72, height: 72)
+
+            Text(initials)
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundColor(theme.accent)
+        }
+    }
+
+    private var latestAnalysisImageUrl: String? {
+        viewModel.analyses.first(where: { !($0.imageUrl?.isEmpty ?? true) })?.imageUrl
     }
     
     private var initials: String {
@@ -907,6 +988,18 @@ class ClientDetailViewModel: ObservableObject {
 
     func addAnalysis(_ analysis: SkinAnalysisResult) {
         analyses.insert(analysis, at: 0)
+    }
+
+    func deleteAnalysis(_ analysis: SkinAnalysisResult) async {
+        guard let analysisId = analysis.id else { return }
+
+        do {
+            try await NetworkService.shared.deleteAnalysis(analysisId: analysisId)
+            analyses.removeAll { $0.id == analysisId }
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
     }
 
     func updateClientConsent(client: AppClient, signature: String, completion: @escaping (AppClient) -> Void) {

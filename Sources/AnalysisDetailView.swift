@@ -3,8 +3,14 @@ import SwiftUI
 struct AnalysisDetailView: View {
     @ObservedObject var theme = ThemeManager.shared
     let analysis: SkinAnalysisResult
+    let onDelete: ((SkinAnalysisResult) async throws -> Void)?
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.dismiss) var dismiss
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var showError = false
+    @State private var errorMessage = ""
+    @State private var activeMetricInfo: MetricInfo?
     
     private let medicalConditionKeywords = [
         "rosacea", "eczema", "psoriasis", "dermatitis", "acne", "melasma",
@@ -72,6 +78,8 @@ struct AnalysisDetailView: View {
                     if let notes = analysis.notes, !notes.isEmpty {
                         notesCard(notes: notes)
                     }
+
+                    deleteButton
                 }
                 .padding(.horizontal, horizontalSizeClass == .regular ? 32 : 16)
                 .padding(.top, 20)
@@ -90,6 +98,26 @@ struct AnalysisDetailView: View {
                     }
                 }
             }
+        }
+        .alert("Delete Analysis", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                Task { await deleteAnalysis() }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Are you sure you want to delete this analysis? This action cannot be undone.")
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
+        .alert(item: $activeMetricInfo) { info in
+            Alert(
+                title: Text(info.title),
+                message: Text(info.description),
+                dismissButton: .default(Text("OK"))
+            )
         }
     }
     
@@ -124,13 +152,22 @@ struct AnalysisDetailView: View {
                             .font(.system(size: 20))
                             .foregroundColor(theme.accent)
                         
-                        Text("Skin Health Score")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(theme.primaryText)
+                        Button {
+                            showMetricInfo(title: "Skin Health Score")
+                        } label: {
+                            HStack(spacing: 6) {
+                                Text("Skin Health Score")
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 12))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
                         
                         Spacer()
                         
-                        Text("\(score)/10")
+                        Text("\(score)/100")
                             .font(.system(size: 24, weight: .bold))
                             .foregroundColor(theme.accent)
                     }
@@ -334,9 +371,18 @@ struct AnalysisDetailView: View {
                 .foregroundColor(theme.accent)
                 .frame(width: 24)
             
-            Text(label)
-                .font(.system(size: 15))
-                .foregroundColor(theme.secondaryText)
+            Button {
+                showMetricInfo(title: label)
+            } label: {
+                HStack(spacing: 6) {
+                    Text(label)
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 12))
+                }
+            }
+            .buttonStyle(.plain)
+            .font(.system(size: 15))
+            .foregroundColor(theme.secondaryText)
             
             Spacer()
             
@@ -367,15 +413,78 @@ struct AnalysisDetailView: View {
         }
         return false
     }
+
+    private func showMetricInfo(title: String) {
+        guard let description = metricDescriptions[title] else { return }
+        activeMetricInfo = MetricInfo(title: title, description: description)
+    }
+
+    private var deleteButton: some View {
+        Button(role: .destructive) {
+            showDeleteConfirm = true
+        } label: {
+            HStack {
+                Image(systemName: "trash")
+                Text(isDeleting ? "Deleting..." : "Delete Analysis")
+            }
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(theme.error)
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        }
+        .disabled(isDeleting)
+        .padding(.top, 8)
+    }
+
+    private func deleteAnalysis() async {
+        guard !isDeleting else { return }
+        isDeleting = true
+        defer { isDeleting = false }
+
+        do {
+            try await onDelete?(analysis)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+
+    private var metricDescriptions: [String: String] {
+        [
+            "Skin Type": "Estimated from oiliness, dryness, and texture cues in the photo.",
+            "Hydration Level": "Photo-based moisture appearance estimate (0-100). Higher means more hydrated-looking skin.",
+            "Sensitivity": "Based on visible redness or irritation patterns.",
+            "Pore Condition": "Estimated from pore visibility and texture detail.",
+            "Skin Health Score": "Overall score (0-100) combining concerns, hydration, and sensitivity."
+        ]
+    }
+
+    private struct MetricInfo: Identifiable {
+        let title: String
+        let description: String
+        var id: String { title }
+    }
     
     private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        if let date = formatter.date(from: dateString) {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = isoFormatter.date(from: dateString) {
             let displayFormatter = DateFormatter()
-            displayFormatter.dateStyle = .long
-            displayFormatter.timeStyle = .short
+            displayFormatter.dateFormat = "MM/dd/yyyy hh:mm a"
             return displayFormatter.string(from: date)
         }
+
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        if let date = isoFormatter.date(from: dateString) {
+            let displayFormatter = DateFormatter()
+            displayFormatter.dateFormat = "MM/dd/yyyy hh:mm a"
+            return displayFormatter.string(from: date)
+        }
+
         return dateString
     }
 }

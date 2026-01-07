@@ -126,6 +126,7 @@ struct JoinCompanyView: View {
         }
     }
 
+
     private var codeInputSection: some View {
         VStack(spacing: 16) {
             Text("Company Code")
