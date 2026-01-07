@@ -375,6 +375,13 @@ class AIAnalysisService {
             ])
         }
 
+        #if DEBUG
+        if !(200...299).contains(httpResponse.statusCode),
+           let responseBody = String(data: data, encoding: .utf8) {
+            print("❌ Claude edge response: \(httpResponse.statusCode) \(responseBody)")
+        }
+        #endif
+
         guard (200...299).contains(httpResponse.statusCode) else {
             if httpResponse.statusCode == 401 {
                 let errorDetails = extractClaudeErrorMessage(from: data)

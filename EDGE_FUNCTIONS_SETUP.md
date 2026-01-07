@@ -13,8 +13,10 @@ It will:
 - Check usage limits via `record_claude_usage`.
 - Call Claude if allowed.
 
-Note: `supabase/functions/claude-analyze/config.toml` sets `verify_jwt = false`
-so the platform doesn't block requests before our own JWT validation runs.
+Note: `supabase/functions/claude-analyze/config.toml` and `supabase/config.toml`
+both set `verify_jwt = false` so the platform doesn't block requests before our
+own JWT validation runs. If you still see "Invalid JWT", deploy with
+`--no-verify-jwt` to force it off.
 
 ## 2) Set Function Secrets
 
@@ -32,7 +34,7 @@ require a service role key.
 ## 3) Deploy
 
 ```sh
-supabase functions deploy claude-analyze --project-ref meqrnevrimzvvhmopxrq
+supabase functions deploy claude-analyze --project-ref meqrnevrimzvvhmopxrq --no-verify-jwt
 ```
 
 ## 4) App Call
