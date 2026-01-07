@@ -140,7 +140,7 @@ struct ClientHIPAAConsentView: View {
                 noticeSection(
                     title: "How We Use Your Information",
                     content: """
-                    ###\(authManager.currentUser?.companyId ?? "Our practice") will use your health information to:
+                    \(authManager.currentUser?.companyName ?? "Our practice") will use your health information to:
                     • Provide skin analysis and treatment recommendations
                     • Document your care in our records
                     • Track treatment progress over time
@@ -187,7 +187,7 @@ struct ClientHIPAAConsentView: View {
                     title: "Questions or Complaints",
                     content: """
                     If you have questions about this notice or wish to file a complaint:
-                    ###Contact: \(authManager.currentUser?.email ?? "your provider")
+                    Contact: \(authManager.currentUser?.companyEmail ?? "your provider")
 
                     You may also file a complaint with the U.S. Department of Health and Human Services if you believe your privacy rights have been violated.
                     """

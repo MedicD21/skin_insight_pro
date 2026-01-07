@@ -405,10 +405,22 @@ class NetworkService {
             throw NetworkError.serverError(httpResponse.statusCode)
         }
 
-        let users = try JSONDecoder().decode([AppUser].self, from: data)
+        var users = try JSONDecoder().decode([AppUser].self, from: data)
 
-        guard let user = users.first else {
+        guard var user = users.first else {
             throw NetworkError.invalidCredentials
+        }
+
+        // Fetch company name and email if user has a company
+        if let companyId = user.companyId, !companyId.isEmpty {
+            do {
+                let company = try await fetchCompany(id: companyId)
+                user.companyName = company.name
+                user.companyEmail = company.email
+            } catch {
+                print("⚠️ Failed to fetch company details: \(error)")
+                // Continue without company details
+            }
         }
 
         return user

@@ -14,6 +14,7 @@ struct AppUser: Identifiable, Hashable, Codable {
     var profileImageUrl: String?
     var role: String?
     var companyName: String?
+    var companyEmail: String?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -29,6 +30,7 @@ struct AppUser: Identifiable, Hashable, Codable {
         case profileImageUrl = "profile_image_url"
         case role
         case companyName = "company_name"
+        case companyEmail = "company_email"
     }
 }
 
