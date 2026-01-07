@@ -2,14 +2,12 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const claudeApiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
 
-if (!supabaseUrl || !serviceRoleKey || !claudeApiKey) {
-  console.error("Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or ANTHROPIC_API_KEY.");
+if (!supabaseUrl || !supabaseAnonKey || !claudeApiKey) {
+  console.error("Missing SUPABASE_URL, SUPABASE_ANON_KEY, or ANTHROPIC_API_KEY.");
 }
-
-const supabase = createClient(supabaseUrl, serviceRoleKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -38,13 +36,25 @@ serve(async (req) => {
       });
     }
 
-    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    const authClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: userError } = await authClient.auth.getUser(token);
     if (userError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Invalid user token" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      return new Response(
+        JSON.stringify({ error: "Invalid user token", details: userError?.message ?? null }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        },
+      );
     }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
 
     const userId = userData.user.id;
 

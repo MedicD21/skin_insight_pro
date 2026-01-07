@@ -297,6 +297,78 @@ class AIAnalysisService {
 
         let (data, response) = try await URLSession.shared.data(for: request)
 
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 401 {
+            let refreshedToken = try await NetworkService.shared.refreshAccessToken()
+            var retryRequest = request
+            retryRequest.setValue("Bearer \(refreshedToken)", forHTTPHeaderField: "Authorization")
+            let (retryData, retryResponse) = try await URLSession.shared.data(for: retryRequest)
+            return try await processClaudeResponse(
+                data: retryData,
+                response: retryResponse,
+                image: image,
+                medicalHistory: medicalHistory,
+                allergies: allergies,
+                knownSensitivities: knownSensitivities,
+                medications: medications,
+                productsToAvoid: productsToAvoid,
+                manualSkinType: manualSkinType,
+                manualHydrationLevel: manualHydrationLevel,
+                manualSensitivity: manualSensitivity,
+                manualPoreCondition: manualPoreCondition,
+                manualConcerns: manualConcerns,
+                productsUsed: productsUsed,
+                treatmentsPerformed: treatmentsPerformed,
+                injectablesHistory: injectablesHistory,
+                previousAnalyses: previousAnalyses,
+                aiRules: aiRules,
+                products: products
+            )
+        }
+
+        return try await processClaudeResponse(
+            data: data,
+            response: response,
+            image: image,
+            medicalHistory: medicalHistory,
+            allergies: allergies,
+            knownSensitivities: knownSensitivities,
+            medications: medications,
+            productsToAvoid: productsToAvoid,
+            manualSkinType: manualSkinType,
+            manualHydrationLevel: manualHydrationLevel,
+            manualSensitivity: manualSensitivity,
+            manualPoreCondition: manualPoreCondition,
+            manualConcerns: manualConcerns,
+            productsUsed: productsUsed,
+            treatmentsPerformed: treatmentsPerformed,
+            injectablesHistory: injectablesHistory,
+            previousAnalyses: previousAnalyses,
+            aiRules: aiRules,
+            products: products
+        )
+    }
+
+    private func processClaudeResponse(
+        data: Data,
+        response: URLResponse,
+        image: UIImage,
+        medicalHistory: String?,
+        allergies: String?,
+        knownSensitivities: String?,
+        medications: String?,
+        productsToAvoid: String?,
+        manualSkinType: String?,
+        manualHydrationLevel: String?,
+        manualSensitivity: String?,
+        manualPoreCondition: String?,
+        manualConcerns: String?,
+        productsUsed: String?,
+        treatmentsPerformed: String?,
+        injectablesHistory: String?,
+        previousAnalyses: [SkinAnalysisResult],
+        aiRules: [AIRule],
+        products: [Product]
+    ) async throws -> AnalysisData {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NSError(domain: "AIAnalysisService", code: 3, userInfo: [
                 NSLocalizedDescriptionKey: "Invalid response from Claude service"
@@ -304,8 +376,41 @@ class AIAnalysisService {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            if httpResponse.statusCode == 401 {
+                let errorDetails = extractClaudeErrorMessage(from: data)
+                if let errorDetails,
+                   errorDetails.localizedCaseInsensitiveContains("Invalid user token") {
+                    var fallbackResult = try await analyzeWithAppleVision(
+                        image: image,
+                        medicalHistory: medicalHistory,
+                        allergies: allergies,
+                        knownSensitivities: knownSensitivities,
+                        medications: medications,
+                        productsToAvoid: productsToAvoid,
+                        manualSkinType: manualSkinType,
+                        manualHydrationLevel: manualHydrationLevel,
+                        manualSensitivity: manualSensitivity,
+                        manualPoreCondition: manualPoreCondition,
+                        manualConcerns: manualConcerns,
+                        productsUsed: productsUsed,
+                        treatmentsPerformed: treatmentsPerformed,
+                        injectablesHistory: injectablesHistory,
+                        previousAnalyses: previousAnalyses,
+                        aiRules: aiRules,
+                        products: products
+                    )
+                    fallbackResult.analysisNotice = "Claude session expired. Results generated with Apple Vision. Log in again to restore Claude."
+                    return fallbackResult
+                }
+
+                let message = errorDetails ?? "Claude authentication failed."
+                throw NSError(domain: "AIAnalysisService", code: httpResponse.statusCode, userInfo: [
+                    NSLocalizedDescriptionKey: message
+                ])
+            }
+
             if httpResponse.statusCode == 402 {
-                return try await analyzeWithAppleVision(
+                var fallbackResult = try await analyzeWithAppleVision(
                     image: image,
                     medicalHistory: medicalHistory,
                     allergies: allergies,
@@ -324,6 +429,8 @@ class AIAnalysisService {
                     aiRules: aiRules,
                     products: products
                 )
+                fallbackResult.analysisNotice = "Claude usage limit reached. Results generated with Apple Vision."
+                return fallbackResult
             }
 
             let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
@@ -334,6 +441,31 @@ class AIAnalysisService {
 
         // Parse Claude response
         return try parseClaudeResponse(data: data)
+    }
+
+    private func extractClaudeErrorMessage(from data: Data) -> String? {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            return nil
+        }
+
+        if let errorString = json["error"] as? String {
+            return errorString
+        }
+
+        if let errorObject = json["error"] as? [String: Any] {
+            if let message = errorObject["message"] as? String {
+                return message
+            }
+            if let type = errorObject["type"] as? String {
+                return type
+            }
+        }
+
+        if let message = json["message"] as? String {
+            return message
+        }
+
+        return nil
     }
 
     // MARK: - Helper Methods

@@ -1439,6 +1439,36 @@ class NetworkService {
         )
     }
 
+    func refreshAccessToken() async throws -> String {
+        guard let refreshToken, !refreshToken.isEmpty else {
+            throw NetworkError.invalidCredentials
+        }
+
+        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/token?grant_type=refresh_token")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        for (key, value) in supabaseHeaders() {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let payload: [String: String] = ["refresh_token": refreshToken]
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let authResponse = try JSONDecoder().decode(SupabaseAuthResponse.self, from: data)
+        saveTokens(access: authResponse.accessToken, refresh: authResponse.refreshToken, userId: authResponse.user.id)
+        return authResponse.accessToken
+    }
+
     // MARK: - User Management
 
     func createEmployeeAccount(

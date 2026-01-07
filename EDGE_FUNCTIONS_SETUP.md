@@ -13,6 +13,9 @@ It will:
 - Check usage limits via `record_claude_usage`.
 - Call Claude if allowed.
 
+Note: `supabase/functions/claude-analyze/config.toml` sets `verify_jwt = false`
+so the platform doesn't block requests before our own JWT validation runs.
+
 ## 2) Set Function Secrets
 
 In Supabase → Project Settings → Functions → Secrets:
@@ -22,6 +25,9 @@ In Supabase → Project Settings → Functions → Secrets:
 Note: `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically by
 Supabase for Edge Functions and cannot be added in the Secrets UI (names with
 `SUPABASE_` are reserved).
+
+Also note: this function uses the auto-provided `SUPABASE_ANON_KEY` and does not
+require a service role key.
 
 ## 3) Deploy
 

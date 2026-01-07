@@ -38,6 +38,10 @@ struct SkinAnalysisResultsView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     imagePreview
+
+                    if let notice = analysisResult.analysisNotice, !notice.isEmpty {
+                        analysisNoticeBanner(notice)
+                    }
                     
                     overviewCard
 
@@ -129,6 +133,28 @@ struct SkinAnalysisResultsView: View {
                 RoundedRectangle(cornerRadius: theme.radiusLarge)
                     .stroke(theme.border, lineWidth: 1)
             )
+    }
+
+    private func analysisNoticeBanner(_ notice: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(theme.accent)
+
+            Text(notice)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(theme.primaryText)
+
+            Spacer()
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: theme.radiusLarge)
+                .fill(theme.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusLarge)
+                .stroke(theme.cardBorder, lineWidth: 1)
+        )
     }
     
     private var overviewCard: some View {

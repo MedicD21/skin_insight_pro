@@ -109,6 +109,7 @@ struct AnalysisData: Hashable, Codable {
     var productRecommendations: [String]?
     var medicalConsiderations: [String]?
     var progressNotes: [String]?
+    var analysisNotice: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case skinType = "skin_type"
