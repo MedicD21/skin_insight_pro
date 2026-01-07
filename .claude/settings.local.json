@@ -7,7 +7,11 @@
       "Bash(git commit:*)",
       "Bash(GIT_SEQUENCE_EDITOR=\"sed -i.bak ''/0c6d73d/d''\" git rebase -i 0c11696)",
       "Bash(git stash:*)",
-      "Bash(xcodebuild:*)"
+      "Bash(xcodebuild:*)",
+      "Bash(find:*)",
+      "Bash(supabase db dump:*)",
+      "Bash(ls:*)",
+      "Bash(openssl rand:*)"
     ]
   }
 }

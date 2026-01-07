@@ -185,9 +185,15 @@ struct CompanyProfileView: View {
     private var usageSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("AI Usage (Claude)")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(theme.primaryText)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("AI Usage (Claude)")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(theme.primaryText)
+
+                    Text("Units = analyses")
+                        .font(.system(size: 12, weight: .regular))
+                        .foregroundColor(theme.secondaryText)
+                }
 
                 Spacer()
 

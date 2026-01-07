@@ -31,17 +31,37 @@ class AuthenticationManager: NSObject, ObservableObject {
             currentUser = AppUser(id: guestUserId, email: "Guest User", provider: "guest", createdAt: nil)
             isGuestMode = true
             isAuthenticated = true
+            isLoading = false
         } else if let _ = UserDefaults.standard.string(forKey: AppConstants.accessTokenKey),
                   let userId = UserDefaults.standard.string(forKey: AppConstants.userIdKey),
                   let email = UserDefaults.standard.string(forKey: userEmailKey) {
-            // User has valid Supabase tokens
+            // User has valid Supabase tokens - fetch full profile from database
             currentUser = AppUser(id: userId, email: email, provider: "email", createdAt: nil)
             isAuthenticated = true
             isGuestMode = false
-        }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.isLoading = false
+            // Fetch full user profile including company_id
+            Task {
+                await self.refreshUserProfile(userId: userId)
+            }
+        } else {
+            isLoading = false
+        }
+    }
+
+    func refreshUserProfile(userId: String) async {
+        do {
+            let fullUser = try await NetworkService.shared.fetchUser(userId: userId)
+            await MainActor.run {
+                self.currentUser = fullUser
+                print("✅ Refreshed user profile - Company ID: \(fullUser.companyId ?? "nil")")
+                self.isLoading = false
+            }
+        } catch {
+            print("❌ Failed to refresh user profile: \(error)")
+            await MainActor.run {
+                self.isLoading = false
+            }
         }
     }
     

@@ -389,8 +389,12 @@ class ClientDashboardViewModel: ObservableObject {
     @Published var errorMessage = ""
     
     func loadClients() async {
-        guard let currentUser = AuthenticationManager.shared.currentUser,
-              let userId = currentUser.id else { return }
+        guard let userId = AuthenticationManager.shared.currentUser?.id else {
+            #if DEBUG
+            print("❌ loadClients: No current user")
+            #endif
+            return
+        }
 
         if AuthenticationManager.shared.isGuestMode {
             loadLocalClients(userId: userId)
@@ -403,19 +407,56 @@ class ClientDashboardViewModel: ObservableObject {
         do {
             try Task.checkCancellation()
 
+            // Refresh user profile to ensure we have latest company_id
+            await AuthenticationManager.shared.refreshUserProfile(userId: userId)
+
+            guard let currentUser = AuthenticationManager.shared.currentUser else {
+                #if DEBUG
+                print("❌ loadClients: No current user after refresh")
+                #endif
+                return
+            }
+
+            #if DEBUG
+            print("👤 Current user: \(currentUser.email ?? "unknown")")
+            print("🏢 Company ID: \(currentUser.companyId ?? "nil")")
+            print("🔍 Company ID isEmpty: \(currentUser.companyId?.isEmpty ?? true)")
+            #endif
+
             // If user belongs to a company, fetch company-wide clients
             // Otherwise, fetch only user's clients
             let fetchedClients: [AppClient]
-            if let companyId = currentUser.companyId {
+            if let companyId = currentUser.companyId, !companyId.isEmpty {
+                #if DEBUG
+                print("📋 Fetching clients for company: \(companyId)")
+                #endif
                 fetchedClients = try await NetworkService.shared.fetchClientsByCompany(companyId: companyId)
+                #if DEBUG
+                print("✅ Fetched \(fetchedClients.count) clients for company")
+                #endif
             } else {
+                #if DEBUG
+                print("📋 Fetching clients for user: \(userId)")
+                #endif
                 fetchedClients = try await NetworkService.shared.fetchClients(userId: userId)
+                #if DEBUG
+                print("✅ Fetched \(fetchedClients.count) clients for user")
+                #endif
             }
 
             clients = fetchedClients.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            #if DEBUG
+            print("✅ Set \(clients.count) clients in view model")
+            #endif
         } catch is CancellationError {
+            #if DEBUG
+            print("⚠️ loadClients cancelled")
+            #endif
             return
         } catch {
+            #if DEBUG
+            print("❌ loadClients error: \(error)")
+            #endif
             errorMessage = error.localizedDescription
             showError = true
         }

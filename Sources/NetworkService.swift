@@ -368,6 +368,51 @@ class NetworkService {
         return user
     }
 
+    func fetchUser(userId: String) async throws -> AppUser {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        components.queryItems = [
+            URLQueryItem(name: "id", value: "eq.\(userId)")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        #if DEBUG
+        print("-> Request: Fetch User Profile")
+        print("-> GET: \(url.absoluteString)")
+        #endif
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        #if DEBUG
+        print("<- Response: Fetch User Profile")
+        print("<- Status Code: \(httpResponse.statusCode)")
+        #endif
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let users = try JSONDecoder().decode([AppUser].self, from: data)
+
+        guard let user = users.first else {
+            throw NetworkError.invalidCredentials
+        }
+
+        return user
+    }
+
     // MARK: - Clients
 
     func fetchClients(userId: String) async throws -> [AppClient] {
@@ -1711,17 +1756,6 @@ class NetworkService {
 
         if let companyId = resolvedCompanyId {
             do {
-                let companyProducts = try await fetchProductsByCompanyId(companyId)
-                if !companyProducts.isEmpty {
-                    return companyProducts
-                }
-            } catch let NetworkError.serverError(code) where code == 400 {
-                // Fall through if company_id is not a valid column.
-            } catch {
-                // Fall through to other strategies.
-            }
-
-            do {
                 let companyUserProducts = try await fetchProductsByCompanyUsers(companyId: companyId)
                 if !companyUserProducts.isEmpty {
                     return companyUserProducts
@@ -1749,36 +1783,6 @@ class NetworkService {
         }
 
         return nil
-    }
-
-    private func fetchProductsByCompanyId(_ companyId: String) async throws -> [Product] {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/products")!
-        components.queryItems = [
-            URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
-            URLQueryItem(name: "order", value: "created_at.desc")
-        ]
-
-        guard let url = components.url else {
-            throw NetworkError.invalidURL
-        }
-
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        for (key, value) in supabaseHeaders(authenticated: true) {
-            request.setValue(value, forHTTPHeaderField: key)
-        }
-
-        let (data, response) = try await session.data(for: request)
-
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw NetworkError.invalidResponse
-        }
-
-        guard (200...299).contains(httpResponse.statusCode) else {
-            throw NetworkError.serverError(httpResponse.statusCode)
-        }
-
-        return try JSONDecoder().decode([Product].self, from: data)
     }
 
     private func fetchProductsByCompanyUsers(companyId: String) async throws -> [Product] {

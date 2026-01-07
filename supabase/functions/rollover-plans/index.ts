@@ -1,0 +1,77 @@
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } })
+  }
+
+  try {
+    const authHeader = req.headers.get('Authorization')
+    const cronSecret = Deno.env.get('CRON_SECRET')
+
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+    }
+
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
+    let rolledOver = 0
+    let expired = 0
+
+    // Rollover active plans
+    const { data: activePlans } = await supabase
+      .from('company_plans')
+      .select('*')
+      .eq('status', 'active')
+      .lt('ends_at', new Date().toISOString())
+
+    if (activePlans) {
+      for (const plan of activePlans) {
+        const newEnd = new Date(plan.ends_at)
+        newEnd.setMonth(newEnd.getMonth() + 1)
+
+        await supabase
+          .from('company_plans')
+          .update({
+            started_at: plan.ends_at,
+            ends_at: newEnd.toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', plan.id)
+
+        rolledOver++
+      }
+    }
+
+    // Expire inactive/cancelled plans
+    const { data: inactivePlans } = await supabase
+      .from('company_plans')
+      .update({ status: 'expired', updated_at: new Date().toISOString() })
+      .in('status', ['inactive', 'cancelled'])
+      .lt('ends_at', new Date().toISOString())
+      .select()
+
+    if (inactivePlans) {
+      expired = inactivePlans.length
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        rolledOverCount: rolledOver,
+        expiredCount: expired,
+        timestamp: new Date().toISOString()
+      }),
+      { headers: { 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({ success: false, error: error.message }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    )
+  }
+})

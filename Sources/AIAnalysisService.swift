@@ -765,7 +765,7 @@ class AIAnalysisService {
         products: [Product]
     ) -> String {
         var prompt = """
-        You are an expert skin analysis AI for estheticians and spa professionals. Analyze this skin image and provide a detailed assessment.
+        You are an expert skin analysis AI for estheticians and medspa professionals. Analyze this skin image and provide a detailed assessment. Consider the following context carefully while performing your analysis:
 
         """
 
