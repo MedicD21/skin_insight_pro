@@ -5,6 +5,7 @@ struct AppUser: Identifiable, Hashable, Codable {
     var email: String?
     var provider: String?
     var isAdmin: Bool?
+    var isCompanyAdmin: Bool?
     var createdAt: String?
     var companyId: String?
     var firstName: String?
@@ -19,6 +20,7 @@ struct AppUser: Identifiable, Hashable, Codable {
         case email
         case provider
         case isAdmin = "is_admin"
+        case isCompanyAdmin = "is_company_admin"
         case createdAt = "created_at"
         case companyId = "company_id"
         case firstName = "first_name"

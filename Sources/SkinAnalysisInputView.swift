@@ -30,6 +30,8 @@ struct SkinAnalysisInputView: View {
     @State private var fillersTimeUnit = "months"
     @State private var biostimulatorsTimeAmount = ""
     @State private var biostimulatorsTimeUnit = "months"
+    @State private var showSubscriptionRequired = false
+    @StateObject private var storeManager = StoreKitManager.shared
     @FocusState private var focusedField: Field?
 
     enum Field {
@@ -128,6 +130,11 @@ struct SkinAnalysisInputView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(errorMessage)
+            }
+            .alert("Subscription Required", isPresented: $showSubscriptionRequired) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("An active subscription is required to use AI skin analysis. Please contact your company admin to purchase a subscription.")
             }
             .navigationDestination(isPresented: $showResults) {
                 if let result = analysisResult, let image = selectedImage {
@@ -708,6 +715,12 @@ struct SkinAnalysisInputView: View {
     
     private func performAnalysis() {
         guard let image = selectedImage else { return }
+
+        // Check if user has active subscription
+        guard storeManager.hasActiveSubscription() else {
+            showSubscriptionRequired = true
+            return
+        }
 
         focusedField = nil
         isAnalyzing = true

@@ -11,6 +11,7 @@ class AuthenticationManager: NSObject, ObservableObject {
     @Published var currentUser: AppUser?
     @Published var isGuestMode = false
     @Published var needsProfileCompletion = false
+    @Published var needsCompanySetup = false
     
     private let userIdKey = "user_id"
     private let userEmailKey = "user_email"
@@ -54,7 +55,17 @@ class AuthenticationManager: NSObject, ObservableObject {
             let fullUser = try await NetworkService.shared.fetchUser(userId: userId)
             await MainActor.run {
                 self.currentUser = fullUser
-                print("✅ Refreshed user profile - Company ID: \(fullUser.companyId ?? "nil")")
+                print("✅ Refreshed user profile")
+                print("   Company ID: \(fullUser.companyId ?? "nil")")
+                print("   Is Company Admin: \(fullUser.isCompanyAdmin ?? false)")
+
+                // Check if user needs to set up company
+                if fullUser.companyId == nil || fullUser.companyId?.isEmpty == true {
+                    self.needsCompanySetup = true
+                } else {
+                    self.needsCompanySetup = false
+                }
+
                 self.isLoading = false
             }
         } catch {
@@ -115,6 +126,9 @@ class AuthenticationManager: NSObject, ObservableObject {
             if user.firstName == nil || user.firstName?.isEmpty == true ||
                user.lastName == nil || user.lastName?.isEmpty == true {
                 needsProfileCompletion = true
+            } else if user.companyId == nil || user.companyId?.isEmpty == true {
+                // Profile complete but no company - needs company setup
+                needsCompanySetup = true
             }
         }
     }

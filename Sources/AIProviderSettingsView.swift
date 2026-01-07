@@ -2,8 +2,11 @@ import SwiftUI
 
 struct AIProviderSettingsView: View {
     @ObservedObject var theme = ThemeManager.shared
+    @ObservedObject var authManager = AuthenticationManager.shared
+    @StateObject private var storeManager = StoreKitManager.shared
     @Environment(\.dismiss) var dismiss
     @AppStorage("ai_provider") private var selectedProvider: String = "appleVision"
+    @State private var showSubscriptionRequired = false
 
     var body: some View {
         ZStack {
@@ -32,9 +35,12 @@ struct AIProviderSettingsView: View {
                         providerOption(
                             icon: "sparkles",
                             title: "Claude Vision",
-                            subtitle: "Premium • Cloud-based • Advanced AI",
+                            subtitle: storeManager.hasActiveSubscription()
+                                ? "Premium • Cloud-based • Advanced AI"
+                                : "Requires active subscription",
                             provider: "claude",
-                            badge: "PREMIUM"
+                            badge: "PREMIUM",
+                            isDisabled: !storeManager.hasActiveSubscription()
                         )
                     }
                     .padding(20)
@@ -43,10 +49,6 @@ struct AIProviderSettingsView: View {
                             .fill(theme.cardBackground)
                             .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
                     )
-
-                    if selectedProvider == "claude" {
-                        claudeInfoCard
-                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 20)
@@ -56,6 +58,11 @@ struct AIProviderSettingsView: View {
         .navigationTitle("AI Vision Provider")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .alert("Subscription Required", isPresented: $showSubscriptionRequired) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("An active subscription is required to use Claude Vision. Please contact your company admin to purchase a subscription.")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
                 Button(action: { dismiss() }) {
@@ -99,11 +106,16 @@ struct AIProviderSettingsView: View {
         title: String,
         subtitle: String,
         provider: String,
-        badge: String
+        badge: String,
+        isDisabled: Bool = false
     ) -> some View {
         Button(action: {
-            selectedProvider = provider
-            updateAppConstantsProvider(provider)
+            if isDisabled {
+                showSubscriptionRequired = true
+            } else {
+                selectedProvider = provider
+                updateAppConstantsProvider(provider)
+            }
         }) {
             HStack(spacing: 16) {
                 ZStack {
@@ -146,49 +158,7 @@ struct AIProviderSettingsView: View {
             }
         }
         .buttonStyle(.plain)
-    }
-
-    private var claudeInfoCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "dollarsign.circle.fill")
-                    .foregroundColor(.orange)
-                Text("Claude Pricing")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(theme.primaryText)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text("•")
-                    Text("Cost per analysis: ~$0.003")
-                }
-                HStack {
-                    Text("•")
-                    Text("100 analyses: ~$0.30")
-                }
-                HStack {
-                    Text("•")
-                    Text("1,000 analyses: ~$3.00")
-                }
-            }
-            .font(.system(size: 14))
-            .foregroundColor(theme.secondaryText)
-
-            Text("Claude provides superior skin analysis with better understanding of medical context and more accurate recommendations.")
-                .font(.system(size: 13))
-                .foregroundColor(theme.tertiaryText)
-                .italic()
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: theme.radiusLarge)
-                .fill(Color.orange.opacity(0.1))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: theme.radiusLarge)
-                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
-        )
+        .opacity(isDisabled ? 0.5 : 1.0)
     }
 
     private func updateAppConstantsProvider(_ provider: String) {

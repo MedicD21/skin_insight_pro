@@ -20,6 +20,11 @@ struct SkinInsightProApp: App {
                         } else if authManager.needsProfileCompletion {
                             CompleteProfileView()
                                 .trackHIPAAActivity()
+                        } else if authManager.needsCompanySetup {
+                            CompanyOnboardingView {
+                                authManager.needsCompanySetup = false
+                            }
+                            .trackHIPAAActivity()
                         } else {
                             MainTabView()
                                 .trackHIPAAActivity()

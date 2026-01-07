@@ -18,6 +18,8 @@ struct ProfileView: View {
     @State private var companyUsageCount: Int?
     @State private var userUsageCount: Int?
     @State private var usageErrorMessage: String?
+    @State private var showSubscriptionView = false
+    @StateObject private var storeManager = StoreKitManager.shared
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
@@ -49,6 +51,9 @@ struct ProfileView: View {
         }
         .sheet(isPresented: $showPrivacySettings) {
             HIPAADataManagementView()
+        }
+        .sheet(isPresented: $showSubscriptionView) {
+            SubscriptionView()
         }
         .alert("Logout", isPresented: $showLogoutConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -281,6 +286,7 @@ struct ProfileView: View {
 
             if !authManager.isGuestMode {
                 accountActionsCard
+                subscriptionSection
                 usageSection
                 metricsInfoSection
             }
@@ -324,6 +330,145 @@ struct ProfileView: View {
             RoundedRectangle(cornerRadius: theme.radiusLarge)
                 .stroke(theme.cardBorder, lineWidth: 1)
         )
+    }
+
+    private var subscriptionSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Subscription")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                if storeManager.hasActiveSubscription() {
+                    Text("ACTIVE")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.green)
+                        .clipShape(Capsule())
+                }
+            }
+            .onAppear {
+                #if DEBUG
+                print("📱 Subscription Section Loaded")
+                print("   User ID: \(authManager.currentUser?.id ?? "nil")")
+                print("   Company ID: \(authManager.currentUser?.companyId ?? "nil")")
+                print("   Is Company Admin: \(authManager.currentUser?.isCompanyAdmin ?? false)")
+                #endif
+            }
+
+            VStack(spacing: 12) {
+                if authManager.currentUser?.companyId?.isEmpty == false {
+                    if storeManager.hasActiveSubscription() {
+                        // Show active subscription info
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Your Plan")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(theme.secondaryText)
+
+                                if let productID = storeManager.purchasedProductIDs.first,
+                                   let product = storeManager.product(for: productID) {
+                                    Text(planName(for: productID))
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundColor(theme.primaryText)
+
+                                    Text(product.displayPrice + (productID.contains("annual") ? "/year" : "/month"))
+                                        .font(.system(size: 14))
+                                        .foregroundColor(theme.accent)
+                                }
+                            }
+
+                            Spacer()
+                        }
+                        .padding(.bottom, 8)
+
+                        Divider()
+                            .background(theme.cardBorder)
+
+                        Button(action: { showSubscriptionView = true }) {
+                            HStack {
+                                Text("Manage Subscription")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(theme.accent)
+
+                                Spacer()
+
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14))
+                                    .foregroundColor(theme.tertiaryText)
+                            }
+                        }
+
+                    } else {
+                        // No active subscription
+                        HStack(spacing: 12) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.orange)
+
+                            Text("No active subscription")
+                                .font(.system(size: 15))
+                                .foregroundColor(theme.primaryText)
+
+                            Spacer()
+                        }
+                        .padding(.bottom, 8)
+
+                        if authManager.currentUser?.isCompanyAdmin == true {
+                            Button(action: { showSubscriptionView = true }) {
+                                Text("Choose a Plan")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .background(theme.accent)
+                                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                            }
+                        } else {
+                            Text("Contact your company admin to purchase a subscription")
+                                .font(.system(size: 13))
+                                .foregroundColor(theme.secondaryText)
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                } else {
+                    Text("Join a company to purchase a subscription.")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .fill(theme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .stroke(theme.cardBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    private func planName(for productID: String) -> String {
+        switch productID {
+        case "com.skininsightpro.solo.monthly", "com.skininsightpro.solo.annual":
+            return "Solo"
+        case "com.skininsightpro.starter.monthly", "com.skininsightpro.starter.annual":
+            return "Starter"
+        case "com.skininsightpro.professional.monthly":
+            return "Professional"
+        case "com.skininsightpro.business.monthly":
+            return "Business"
+        case "com.skininsightpro.enterprise.monthly":
+            return "Enterprise"
+        default:
+            return "Unknown"
+        }
     }
 
     private var usageSection: some View {

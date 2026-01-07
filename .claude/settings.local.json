@@ -11,7 +11,10 @@
       "Bash(find:*)",
       "Bash(supabase db dump:*)",
       "Bash(ls:*)",
-      "Bash(openssl rand:*)"
+      "Bash(openssl rand:*)",
+      "Bash(psql:*)",
+      "Bash(supabase db execute:*)",
+      "Bash(supabase db push:*)"
     ]
   }
 }

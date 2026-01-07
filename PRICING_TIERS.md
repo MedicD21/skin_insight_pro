@@ -1,32 +1,42 @@
-# SkinInsightPro AI Usage Tiers (Claude)
+# SkinInsightPro Pricing Tiers
 
-Effective date: 2026-01-01
+Effective date: 2026-01-07
 
-This document defines the default Claude usage tiers, pricing, and how to change caps later.
+This document defines the subscription tiers, pricing, and usage limits.
 
-## Tier Structure (Claude + Apple Vision)
+## Tier Structure
 
-Apple Vision is free and on-device. Claude usage is metered and limited by plan.
+All plans include Apple Vision (on-device, free) + Claude AI analysis (cloud-based, metered).
 
-### Free (Apple Vision Only)
-- Price: $0
-- Claude analyses: 0 per month
-- Notes: Apple Vision only, limited use.
+### Solo
+- **Price**: $29/month
+- **Monthly analyses**: 100
+- **Best for**: Individual practitioners, solo estheticians
+- **Cost per analysis**: ~$0.29
 
-### Low Use
-- Price: $49 per company/month + $10 per user/month
-- Company cap: 100 Claude analyses/month
-- Per-user cap: 20 Claude analyses/month
+### Starter
+- **Price**: $79/month
+- **Monthly analyses**: 400
+- **Best for**: Small practices (1-2 providers)
+- **Cost per analysis**: ~$0.20
 
-### Medium Use
-- Price: $149 per company/month + $15 per user/month
-- Company cap: 500 Claude analyses/month
-- Per-user cap: 75 Claude analyses/month
+### Professional
+- **Price**: $199/month
+- **Monthly analyses**: 1,500
+- **Best for**: Growing practices (2-4 providers)
+- **Cost per analysis**: ~$0.13
 
-### High Use
-- Price: $399 per company/month + $20 per user/month
-- Company cap: 2000 Claude analyses/month
-- Per-user cap: 250 Claude analyses/month
+### Business
+- **Price**: $499/month
+- **Monthly analyses**: 5,000
+- **Best for**: Multi-location practices (4-6 locations)
+- **Cost per analysis**: ~$0.10
+
+### Enterprise
+- **Price**: $999/month
+- **Monthly analyses**: 15,000
+- **Best for**: Large operations (7+ locations)
+- **Cost per analysis**: ~$0.07
 
 ## How Caps Are Enforced
 

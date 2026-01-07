@@ -199,6 +199,11 @@ struct CompleteProfileView: View {
 
                 // Mark profile as completed
                 authManager.needsProfileCompletion = false
+
+                // Check if user needs to set up company
+                if updatedUser.companyId == nil || updatedUser.companyId?.isEmpty == true {
+                    authManager.needsCompanySetup = true
+                }
             } catch {
                 errorMessage = error.localizedDescription
                 showError = true

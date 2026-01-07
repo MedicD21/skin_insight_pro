@@ -50,6 +50,9 @@
 		CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB092F0D587500D65A4A /* Secrets.swift */; };
 		CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */; };
 		CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */; };
+		CB8937782F0EF21C00E0301E /* CompanyOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB8937772F0EF21C00E0301E /* CompanyOnboardingView.swift */; };
+		CB89377A2F0EF22A00E0301E /* StoreKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB8937792F0EF22A00E0301E /* StoreKitManager.swift */; };
+		CB89377C2F0EF23800E0301E /* SubscriptionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB89377B2F0EF23800E0301E /* SubscriptionView.swift */; };
 		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
 		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
 /* End PBXBuildFile section */
@@ -96,6 +99,9 @@
 		CB82FB092F0D587500D65A4A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDataExportView.swift; sourceTree = "<group>"; };
 		CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTeamMemberView.swift; sourceTree = "<group>"; };
+		CB8937772F0EF21C00E0301E /* CompanyOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompanyOnboardingView.swift; sourceTree = "<group>"; };
+		CB8937792F0EF22A00E0301E /* StoreKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitManager.swift; sourceTree = "<group>"; };
+		CB89377B2F0EF23800E0301E /* SubscriptionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionView.swift; sourceTree = "<group>"; };
 		D25E0109231B05F82260E206 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInsightProApp.swift; sourceTree = "<group>"; };
 		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -139,6 +145,9 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				CB89377B2F0EF23800E0301E /* SubscriptionView.swift */,
+				CB8937792F0EF22A00E0301E /* StoreKitManager.swift */,
+				CB8937772F0EF21C00E0301E /* CompanyOnboardingView.swift */,
 				CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */,
 				CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */,
 				CB82FB092F0D587500D65A4A /* Secrets.swift */,
@@ -275,6 +284,7 @@
 				2BE23140B0F1AE0A04F781FA /* EditClientView.swift in Sources */,
 				CB00CCFB2F05AF70009ED8F1 /* CompanyProfileView.swift in Sources */,
 				CB00CD032F05D820009ED8F1 /* JoinCompanyView.swift in Sources */,
+				CB89377C2F0EF23800E0301E /* SubscriptionView.swift in Sources */,
 				CB00CD052F05E930009ED8F1 /* CompleteProfileView.swift in Sources */,
 				E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */,
 				CB00CD052F05F5F5009ED8F1 /* AIAnalysisService.swift in Sources */,
@@ -293,6 +303,8 @@
 				0A3D3F04A13CCAA0DA325484 /* SkinInsightProApp.swift in Sources */,
 				CB00CD032F05F5A4009ED8F1 /* AIProviderSettingsView.swift in Sources */,
 				3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */,
+				CB89377A2F0EF22A00E0301E /* StoreKitManager.swift in Sources */,
+				CB8937782F0EF21C00E0301E /* CompanyOnboardingView.swift in Sources */,
 				CB00CD0F2F06329B009ED8F1 /* SessionTimeoutView.swift in Sources */,
 				F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */,
 				CB00CD0B2F063279009ED8F1 /* HIPAAComplianceManager.swift in Sources */,

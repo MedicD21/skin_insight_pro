@@ -371,7 +371,8 @@ class NetworkService {
     func fetchUser(userId: String) async throws -> AppUser {
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
         components.queryItems = [
-            URLQueryItem(name: "id", value: "eq.\(userId)")
+            URLQueryItem(name: "id", value: "eq.\(userId)"),
+            URLQueryItem(name: "select", value: "*,company_name:companies(name),company_email:companies(email)")
         ]
 
         guard let url = components.url else {
@@ -411,6 +412,174 @@ class NetworkService {
         }
 
         return user
+    }
+
+    // MARK: - Company Management
+
+    func createCompany(name: String) async throws -> (companyId: String, companyCode: String) {
+        guard let userId = await AuthenticationManager.shared.currentUser?.id else {
+            throw NetworkError.invalidCredentials
+        }
+
+        // Generate unique company code
+        let companyCode = generateCompanyCode()
+
+        // Create company
+        let companyPayload: [String: Any] = [
+            "name": name,
+            "company_code": companyCode
+        ]
+
+        let companyData = try JSONSerialization.data(withJSONObject: companyPayload)
+
+        var companyRequest = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!)
+        companyRequest.httpMethod = "POST"
+        companyRequest.httpBody = companyData
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            companyRequest.setValue(value, forHTTPHeaderField: key)
+        }
+        companyRequest.setValue("return=representation", forHTTPHeaderField: "Prefer")
+
+        let (companyResponseData, companyResponse) = try await session.data(for: companyRequest)
+
+        guard let httpResponse = companyResponse as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError((companyResponse as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+
+        let companies = try JSONDecoder().decode([Company].self, from: companyResponseData)
+        guard let newCompany = companies.first, let companyId = newCompany.id else {
+            throw NetworkError.invalidResponse
+        }
+
+        // Update user with company_id and set as both company admin and platform admin
+        let userPayload: [String: Any] = [
+            "company_id": companyId,
+            "is_company_admin": true,
+            "is_admin": true
+        ]
+
+        let userData = try JSONSerialization.data(withJSONObject: userPayload)
+
+        var userRequest = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!)
+        userRequest.httpMethod = "PATCH"
+        userRequest.httpBody = userData
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            userRequest.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (_, userResponse) = try await session.data(for: userRequest)
+
+        guard let userHttpResponse = userResponse as? HTTPURLResponse,
+              (200...299).contains(userHttpResponse.statusCode) else {
+            throw NetworkError.serverError((userResponse as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+
+        #if DEBUG
+        print("✅ Company created successfully")
+        print("   Company ID: \(companyId)")
+        print("   Company Code: \(companyCode)")
+        print("   User \(userId) set as company admin and platform admin")
+        #endif
+
+        return (companyId, companyCode)
+    }
+
+    func joinCompany(code: String) async throws {
+        guard let userId = await AuthenticationManager.shared.currentUser?.id else {
+            throw NetworkError.invalidCredentials
+        }
+
+        // Find company by code
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+        components.queryItems = [
+            URLQueryItem(name: "company_code", value: "eq.\(code)")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError((response as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+
+        let companies = try JSONDecoder().decode([Company].self, from: data)
+        guard let company = companies.first, let companyId = company.id else {
+            throw NetworkError.custom("Company not found with code: \(code)")
+        }
+
+        // Update user with company_id
+        let payload: [String: Any] = [
+            "company_id": companyId
+        ]
+
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var updateRequest = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!)
+        updateRequest.httpMethod = "PATCH"
+        updateRequest.httpBody = jsonData
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            updateRequest.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (_, updateResponse) = try await session.data(for: updateRequest)
+
+        guard let updateHttpResponse = updateResponse as? HTTPURLResponse,
+              (200...299).contains(updateHttpResponse.statusCode) else {
+            throw NetworkError.serverError((updateResponse as? HTTPURLResponse)?.statusCode ?? 500)
+        }
+    }
+
+    private func generateCompanyCode() -> String {
+        let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+        return String((0..<8).map { _ in letters.randomElement()! })
+    }
+
+    // MARK: - Receipt Validation
+
+    func validateReceipt(receipt: String, companyId: String, productId: String, transactionId: String) async throws {
+        // Call Supabase Edge Function to validate receipt
+        let payload: [String: Any] = [
+            "receipt": receipt,
+            "company_id": companyId,
+            "product_id": productId,
+            "transaction_id": transactionId
+        ]
+
+        let jsonData = try JSONSerialization.data(withJSONObject: payload)
+
+        var request = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/functions/v1/validate-receipt")!)
+        request.httpMethod = "POST"
+        request.httpBody = jsonData
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        if !(200...299).contains(httpResponse.statusCode) {
+            if let errorResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let message = errorResponse["error"] as? String {
+                throw NetworkError.custom("Receipt validation failed: \(message)")
+            }
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        print("✅ Receipt validated successfully")
     }
 
     // MARK: - Clients
@@ -2303,6 +2472,7 @@ enum NetworkError: LocalizedError {
     case invalidCredentials
     case networkUnavailable
     case timeout
+    case custom(String)
 
     var errorDescription: String? {
         switch self {
@@ -2331,6 +2501,8 @@ enum NetworkError: LocalizedError {
             return "No internet connection. Please check your network and try again."
         case .timeout:
             return "Request timed out. Please check your connection and try again."
+        case .custom(let message):
+            return message
         }
     }
 }
