@@ -49,6 +49,7 @@
 		CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */; };
 		CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB092F0D587500D65A4A /* Secrets.swift */; };
 		CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */; };
+		CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */; };
 		E8A4DF6524292CBD849A4955 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */; };
 		F37F9E1955764D80E2912EF5 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E22DC34D7496C67D134CED73 /* ThemeManager.swift */; };
 /* End PBXBuildFile section */
@@ -94,6 +95,7 @@
 		CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberFormatter.swift; sourceTree = "<group>"; };
 		CB82FB092F0D587500D65A4A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDataExportView.swift; sourceTree = "<group>"; };
+		CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTeamMemberView.swift; sourceTree = "<group>"; };
 		D25E0109231B05F82260E206 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkinInsightProApp.swift; sourceTree = "<group>"; };
 		DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
@@ -137,6 +139,7 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */,
 				CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */,
 				CB82FB092F0D587500D65A4A /* Secrets.swift */,
 				CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */,
@@ -262,6 +265,7 @@
 				CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */,
 				97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */,
 				04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */,
+				CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */,
 				CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */,
 				2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */,
 				CB00CCFD2F05AF7E009ED8F1 /* EditProfileView.swift in Sources */,

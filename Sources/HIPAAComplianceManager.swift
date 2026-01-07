@@ -350,7 +350,7 @@ class HIPAAComplianceManager: ObservableObject {
                 let clients = try await NetworkService.shared.fetchClientsByCompany(companyId: companyId)
                 for client in clients {
                     if let clientId = client.id {
-                        let analyses = try await NetworkService.shared.fetchAnalyses(clientId: clientId, userId: userId)
+                        let analyses = try await NetworkService.shared.fetchAnalyses(clientId: clientId)
                         for analysis in analyses {
                             exportData += "Analysis ID: \(analysis.id ?? "")\n"
                             exportData += "Client: \(client.name ?? "")\n"

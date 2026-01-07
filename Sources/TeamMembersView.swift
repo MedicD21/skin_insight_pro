@@ -15,6 +15,7 @@ struct TeamMembersView: View {
     @State private var updatingUserId: String?
     @State private var showEditCompanyCode = false
     @State private var showEmployeeImport = false
+    @State private var showAddMember = false
     @State private var pendingAdminChanges: [String: Bool] = [:] // userId -> isAdmin
     @State private var isSavingChanges = false
 
@@ -65,9 +66,16 @@ struct TeamMembersView: View {
                         }
                     } else {
                         ToolbarItem(placement: .primaryAction) {
+                            Button(action: { showAddMember = true }) {
+                                Image(systemName: "person.badge.plus")
+                            }
+                            .accessibilityLabel("Add Team Member")
+                        }
+                        ToolbarItem(placement: .primaryAction) {
                             Button(action: { showEmployeeImport = true }) {
                                 Image(systemName: "square.and.arrow.down")
                             }
+                            .accessibilityLabel("Import Employees")
                         }
                     }
                 }
@@ -87,12 +95,19 @@ struct TeamMembersView: View {
                 EditCompanyCodeView(companyId: companyId, companyCode: $companyCode)
             }
             .sheet(isPresented: $showEmployeeImport, onDismiss: {
-                Task {
-                    await loadTeamMembers()
-                }
+                Task { await loadTeamMembers() }
             }) {
-                EmployeeImportView()
+                EmployeeImportView(onComplete: {
+                    Task { await loadTeamMembers() }
+                })
             }
+            .sheet(isPresented: $showAddMember, onDismiss: {
+                Task { await loadTeamMembers() }
+            }, content: {
+                AddTeamMemberView(onComplete: {
+                    Task { await loadTeamMembers() }
+                })
+            })
             .overlay(alignment: .bottom) {
                 if showCopiedConfirmation {
                     copiedConfirmationToast
@@ -109,15 +124,21 @@ struct TeamMembersView: View {
                 if !teamMembers.isEmpty {
                     teamMembersListSection
                 } else {
-                    Text("No team members found")
-                        .font(.system(size: 15))
-                        .foregroundColor(theme.secondaryText)
-                        .padding(40)
-                        .onAppear {
-                            #if DEBUG
-                            print("📋 TeamMembersView: Showing 'No team members' - array count is \(teamMembers.count)")
-                            #endif
+                    VStack(spacing: 12) {
+                        Text("No team members found")
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.secondaryText)
+                            .padding(40)
+                        if authManager.currentUser?.isAdmin == true {
+                            Button {
+                                showAddMember = true
+                            } label: {
+                                Label("Add Team Member", systemImage: "person.badge.plus")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(theme.accent)
                         }
+                    }
                 }
             }
             .padding(.horizontal, 20)
@@ -455,16 +476,10 @@ struct TeamMembersView: View {
     @MainActor
     private func loadTeamMembers() async {
         guard let companyId = authManager.currentUser?.companyId else {
-            #if DEBUG
-            print("❌ TeamMembersView: No company ID for current user")
-            #endif
             errorMessage = "No company associated with your account"
             return
         }
 
-        #if DEBUG
-        print("📋 TeamMembersView: Loading team members for company: \(companyId)")
-        #endif
         self.companyId = companyId
         isLoading = true
         defer { isLoading = false }
@@ -474,24 +489,9 @@ struct TeamMembersView: View {
             let company = try await NetworkService.shared.fetchCompany(id: companyId)
             companyCode = company.companyCode ?? companyId // Fallback to ID if no code set
 
-            #if DEBUG
-            print("📋 TeamMembersView: Company code: \(companyCode)")
-            #endif
-
             let members = try await NetworkService.shared.fetchTeamMembers(companyId: companyId)
-            #if DEBUG
-            print("📋 TeamMembersView: Received \(members.count) members")
-            print("📋 TeamMembersView: Members: \(members.map { "\($0.firstName ?? "") \($0.lastName ?? "") (\($0.email ?? ""))" })")
-            #endif
-
             teamMembers = members
-            #if DEBUG
-            print("📋 TeamMembersView: teamMembers array updated with \(teamMembers.count) members")
-            #endif
         } catch {
-            #if DEBUG
-            print("❌ TeamMembersView: Error loading team members: \(error)")
-            #endif
             errorMessage = error.localizedDescription
             showError = true
         }

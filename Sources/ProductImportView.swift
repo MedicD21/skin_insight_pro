@@ -279,7 +279,7 @@ struct ProductImportView: View {
                 .foregroundColor(theme.primaryText)
 
             VStack(spacing: 8) {
-                ForEach(importedProducts.prefix(5)) { product in
+                ForEach(Array(importedProducts.prefix(5).enumerated()), id: \.offset) { _, product in
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(product.name ?? "")
@@ -573,4 +573,3 @@ Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,
         }
     }
 }
-

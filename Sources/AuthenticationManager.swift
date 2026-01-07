@@ -135,7 +135,7 @@ class AuthenticationManager: NSObject, ObservableObject {
     }
 
     private func handleAppleSignIn(userId: String, email: String?, fullName: PersonNameComponents?) async throws {
-        let displayEmail = email ?? "Apple User"
+        let displayEmail = email ?? ""
 
         let user = try await NetworkService.shared.createOrLoginAppleUser(
             appleUserId: userId,

@@ -171,16 +171,15 @@ struct JoinCompanyView: View {
     }
 
     private func joinCompany() {
-        guard !companyCode.isEmpty else { return }
+        let trimmedCode = companyCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCode.isEmpty else { return }
 
         isJoining = true
 
         Task {
             do {
-                // First verify the company exists
-                let companyExists = try await NetworkService.shared.verifyCompanyExists(id: companyCode)
-
-                guard companyExists else {
+                let company = try await NetworkService.shared.fetchCompanyByCode(trimmedCode)
+                guard let company else {
                     errorMessage = "Company code not found. Please check the code and try again."
                     showError = true
                     isJoining = false
@@ -195,7 +194,17 @@ struct JoinCompanyView: View {
                     return
                 }
 
-                user.companyId = companyCode
+                guard let companyId = company.id else {
+                    errorMessage = "Company details are unavailable. Please try again later."
+                    showError = true
+                    isJoining = false
+                    return
+                }
+
+                user.companyId = companyId
+                if let companyName = company.name, !companyName.isEmpty {
+                    user.companyName = companyName
+                }
                 let updatedUser = try await NetworkService.shared.updateUserProfile(user)
 
                 // Update local user state

@@ -4,6 +4,7 @@ struct AnalysisDetailView: View {
     @ObservedObject var theme = ThemeManager.shared
     let analysis: SkinAnalysisResult
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    @Environment(\.dismiss) var dismiss
     
     private let medicalConditionKeywords = [
         "rosacea", "eczema", "psoriasis", "dermatitis", "acne", "melasma",
@@ -79,7 +80,17 @@ struct AnalysisDetailView: View {
         }
         .navigationTitle("Analysis Details")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: { dismiss() }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                }
+            }
+        }
     }
     
     private func overviewCard(results: AnalysisData) -> some View {

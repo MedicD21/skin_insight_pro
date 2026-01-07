@@ -733,9 +733,13 @@ struct SkinAnalysisInputView: View {
                 // Fetch AI rules and products for the current user
                 let aiRules: [AIRule]
                 let products: [Product]
-                if let userId = AuthenticationManager.shared.currentUser?.id {
+                if let user = AuthenticationManager.shared.currentUser,
+                   let userId = user.id {
                     aiRules = try await NetworkService.shared.fetchAIRules(userId: userId)
-                    products = try await NetworkService.shared.fetchProducts(userId: userId)
+                    products = try await NetworkService.shared.fetchProductsForUser(
+                        userId: userId,
+                        companyId: user.companyId
+                    )
                 } else {
                     aiRules = []
                     products = []

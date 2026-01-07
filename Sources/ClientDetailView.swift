@@ -59,7 +59,7 @@ struct ClientDetailView: View {
                     .padding(.bottom, horizontalSizeClass == .regular ? 40 : 100)
                 }
                 .refreshable {
-                    await viewModel.loadAnalyses(clientId: currentClient.id ?? "", userId: AuthenticationManager.shared.currentUser?.id ?? "")
+                    await viewModel.loadAnalyses(clientId: currentClient.id ?? "")
                     await viewModel.loadFlaggedProducts(for: currentClient)
                 }
             }
@@ -136,7 +136,7 @@ struct ClientDetailView: View {
             }
         }
         .task {
-            await viewModel.loadAnalyses(clientId: currentClient.id ?? "", userId: AuthenticationManager.shared.currentUser?.id ?? "")
+            await viewModel.loadAnalyses(clientId: currentClient.id ?? "")
             await viewModel.loadFlaggedProducts(for: currentClient)
         }
     }
@@ -841,13 +841,13 @@ class ClientDetailViewModel: ObservableObject {
     @Published var clients: [AppClient] = []
     @Published var flaggedProducts: [Product] = []
 
-    func loadAnalyses(clientId: String, userId: String) async {
+    func loadAnalyses(clientId: String) async {
         isLoading = true
         defer { isLoading = false }
 
         do {
             try Task.checkCancellation()
-            let fetchedAnalyses = try await NetworkService.shared.fetchAnalyses(clientId: clientId, userId: userId)
+            let fetchedAnalyses = try await NetworkService.shared.fetchAnalyses(clientId: clientId)
             analyses = fetchedAnalyses.sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
         } catch is CancellationError {
             return
@@ -858,10 +858,14 @@ class ClientDetailViewModel: ObservableObject {
     }
 
     func loadFlaggedProducts(for client: AppClient) async {
-        guard let userId = AuthenticationManager.shared.currentUser?.id else { return }
+        guard let user = AuthenticationManager.shared.currentUser,
+              let userId = user.id else { return }
 
         do {
-            let products = try await NetworkService.shared.fetchProducts(userId: userId)
+            let products = try await NetworkService.shared.fetchProductsForUser(
+                userId: userId,
+                companyId: user.companyId
+            )
 
             // Build avoidance terms from allergies, sensitivities, and explicit products_to_avoid
             var terms: [String] = []

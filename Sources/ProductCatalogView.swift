@@ -241,13 +241,17 @@ class ProductCatalogViewModel: ObservableObject {
     @Published var errorMessage = ""
 
     func loadProducts() async {
-        guard let userId = AuthenticationManager.shared.currentUser?.id else { return }
+        guard let user = AuthenticationManager.shared.currentUser,
+              let userId = user.id else { return }
 
         isLoading = true
         defer { isLoading = false }
 
         do {
-            let fetchedProducts = try await NetworkService.shared.fetchProducts(userId: userId)
+            let fetchedProducts = try await NetworkService.shared.fetchProductsForUser(
+                userId: userId,
+                companyId: user.companyId
+            )
             products = fetchedProducts.sorted { ($0.name ?? "") < ($1.name ?? "") }
         } catch {
             errorMessage = error.localizedDescription

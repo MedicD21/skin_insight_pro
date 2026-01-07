@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 struct EmployeeImportView: View {
     @ObservedObject var theme = ThemeManager.shared
     @StateObject private var authManager = AuthenticationManager.shared
+    var onComplete: (() -> Void)? = nil
     @Environment(\.dismiss) var dismiss
     @State private var isImporting = false
     @State private var importedEmployees: [EmployeeImportData] = []
@@ -538,7 +539,7 @@ alex.williams@example.com,Alex,Williams,Esthetician,FALSE
     }
 
     private func performImport() {
-        guard let companyId = authManager.currentUser?.companyId else {
+        guard let companyRef = authManager.currentUser?.companyId else {
             errorMessage = "No company associated with your account"
             showError = true
             return
@@ -551,30 +552,46 @@ alex.williams@example.com,Alex,Williams,Esthetician,FALSE
             var successCount = 0
             var failCount = 0
 
-            for employee in importedEmployees {
-                do {
-                    _ = try await NetworkService.shared.createEmployeeAccount(
-                        email: employee.email,
-                        password: defaultPassword,
-                        firstName: employee.firstName,
-                        lastName: employee.lastName,
-                        role: employee.role,
-                        isAdmin: employee.isAdmin,
-                        companyId: companyId
-                    )
-                    successCount += 1
-                } catch {
-                    failCount += 1
-                    await MainActor.run {
-                        importErrors.append("Failed to import \(employee.email): \(error.localizedDescription)")
+            do {
+                let resolvedCompany = try await NetworkService.shared.resolveCompanyAssociation(from: companyRef)
+                let companyName = resolvedCompany.name ?? authManager.currentUser?.companyName
+
+                for employee in importedEmployees {
+                    do {
+                        _ = try await NetworkService.shared.createEmployeeAccount(
+                            email: employee.email,
+                            password: defaultPassword,
+                            firstName: employee.firstName,
+                            lastName: employee.lastName,
+                            role: employee.role,
+                            isAdmin: employee.isAdmin,
+                            companyId: resolvedCompany.id,
+                            companyName: companyName
+                        )
+                        successCount += 1
+                    } catch {
+                        failCount += 1
+                        await MainActor.run {
+                            importErrors.append("Failed to import \(employee.email): \(error.localizedDescription)")
+                        }
                     }
                 }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+                await MainActor.run {
+                    isImporting = false
+                }
+                return
             }
 
             await MainActor.run {
                 isImporting = false
 
                 if failCount == 0 {
+                    onComplete?()
                     dismiss()
                 } else {
                     errorMessage = "Imported \(successCount) employees successfully. \(failCount) failed."

@@ -490,6 +490,7 @@ class NetworkService {
                 "allergies": client.allergies,
                 "known_sensitivities": client.knownSensitivities,
                 "medications": client.medications,
+                "products_to_avoid": (client.productsToAvoid?.isEmpty == false ? client.productsToAvoid : NSNull()),
                 "profile_image_url": client.profileImageUrl,
                 "company_id": client.companyId,
                 "fillers_date": client.fillersDate,
@@ -559,6 +560,7 @@ class NetworkService {
                 "allergies": client.allergies,
                 "known_sensitivities": client.knownSensitivities,
                 "medications": client.medications,
+                "products_to_avoid": (client.productsToAvoid?.isEmpty == false ? client.productsToAvoid : NSNull()),
                 "profile_image_url": client.profileImageUrl,
                 "company_id": client.companyId,
                 "fillers_date": client.fillersDate,
@@ -1009,23 +1011,7 @@ class NetworkService {
             throw NetworkError.serverError(httpResponse.statusCode)
         }
 
-        // Debug logging
-        if let contentRange = httpResponse.value(forHTTPHeaderField: "Content-Range") {
-            #if DEBUG
-            print("Team members Content-Range: \(contentRange)")
-            #endif
-        }
-
-        if let responseString = String(data: data, encoding: .utf8) {
-            #if DEBUG
-            print("Team members response: \(responseString)")
-            #endif
-        }
-
         let teamMembers = try JSONDecoder().decode([AppUser].self, from: data)
-        #if DEBUG
-        print("Fetched \(teamMembers.count) team members for company: \(companyId)")
-        #endif
         return teamMembers
     }
 
@@ -1061,13 +1047,57 @@ class NetworkService {
         return !companies.isEmpty
     }
 
+    func fetchCompanyByCode(_ code: String) async throws -> Company? {
+        let trimmedCode = code.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCode.isEmpty else {
+            return nil
+        }
+
+        if let exactMatch = try await fetchCompanyByCode(trimmedCode, matchType: "eq") {
+            return exactMatch
+        }
+
+        return try await fetchCompanyByCode(trimmedCode, matchType: "ilike")
+    }
+
+    private func fetchCompanyByCode(_ code: String, matchType: String) async throws -> Company? {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+        components.queryItems = [
+            URLQueryItem(name: "company_code", value: "\(matchType).\(code)"),
+            URLQueryItem(name: "select", value: "id,company_code,name"),
+            URLQueryItem(name: "limit", value: "1")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        let companies = try JSONDecoder().decode([Company].self, from: data)
+        return companies.first
+    }
+
     // MARK: - Skin Analyses
 
-    func fetchAnalyses(clientId: String, userId: String) async throws -> [SkinAnalysisResult] {
+    func fetchAnalyses(clientId: String) async throws -> [SkinAnalysisResult] {
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: "eq.\(clientId)"),
-            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
             URLQueryItem(name: "order", value: "created_at.desc")
         ]
 
@@ -1366,25 +1396,21 @@ class NetworkService {
         lastName: String,
         role: String,
         isAdmin: Bool,
-        companyId: String
+        companyId: String,
+        companyName: String? = nil
     ) async throws -> AppUser {
         // Create account via Supabase Auth
         let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/signup")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Use anon key for auth signup
         request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(AppConstants.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
 
         let signupData: [String: Any] = [
             "email": email,
-            "password": password,
-            "data": [
-                "first_name": firstName,
-                "last_name": lastName,
-                "role": role,
-                "is_admin": isAdmin,
-                "company_id": companyId
-            ]
+            "password": password
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: signupData)
@@ -1406,40 +1432,25 @@ class NetworkService {
             throw NetworkError.serverError(httpResponse.statusCode)
         }
 
-        // Parse the response to get the user ID
-        var newUserId: String?
-        var newAccessToken: String?
-        // Try full auth response to get access token for the new user (needed for RLS inserts)
-        if let authResponse = try? JSONDecoder().decode(SupabaseAuthResponse.self, from: data) {
-            newUserId = authResponse.user.id
-            newAccessToken = authResponse.accessToken
-        } else {
-            struct SignupResponse: Codable { let user: SignupUser? }
-            struct SignupUser: Codable { let id: String }
-            let signupResponse = try JSONDecoder().decode(SignupResponse.self, from: data)
-            newUserId = signupResponse.user?.id
-        }
-
-        guard let userId = newUserId else {
+        // Parse the response to get the user ID + access token
+        guard let authResponse = try? JSONDecoder().decode(SupabaseAuthResponse.self, from: data) else {
             throw NetworkError.invalidResponse
         }
+
+        let userId = authResponse.user.id
+        let userAccessToken = authResponse.accessToken
 
         // Create user profile in users table
         let profileUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
         var profileRequest = URLRequest(url: profileUrl)
         profileRequest.httpMethod = "POST"
-        var headers = supabaseHeaders(authenticated: false)
-        if let newAccessToken = newAccessToken {
-            headers["Authorization"] = "Bearer \(newAccessToken)"
-        } else if let token = accessToken {
-            headers["Authorization"] = "Bearer \(token)"
-        }
-        for (key, value) in headers {
-            profileRequest.setValue(value, forHTTPHeaderField: key)
-        }
+        profileRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        // Use the new user's access token to satisfy the self-insert policy
+        profileRequest.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
+        profileRequest.setValue("Bearer \(userAccessToken)", forHTTPHeaderField: "Authorization")
         profileRequest.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
-        let profileData: [String: Any] = [
+        var profileData: [String: Any] = [
             "id": userId,
             "email": email,
             "provider": "email",
@@ -1450,17 +1461,16 @@ class NetworkService {
             "company_id": companyId
         ]
 
+        if let companyName, !companyName.isEmpty {
+            profileData["company_name"] = companyName
+        }
+
         profileRequest.httpBody = try JSONSerialization.data(withJSONObject: profileData)
 
         let (profileResponseData, profileResponse) = try await session.data(for: profileRequest)
 
         guard let profileHttpResponse = profileResponse as? HTTPURLResponse,
               (200...299).contains(profileHttpResponse.statusCode) else {
-            if let errorString = String(data: profileResponseData, encoding: .utf8) {
-                #if DEBUG
-                print("Profile create error: \(errorString)")
-                #endif
-            }
             throw NetworkError.serverError((profileResponse as? HTTPURLResponse)?.statusCode ?? -1)
         }
 
@@ -1485,6 +1495,24 @@ class NetworkService {
         )
     }
 
+    func resolveCompanyAssociation(from value: String) async throws -> (id: String, name: String?) {
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let uuid = UUID(uuidString: trimmedValue) {
+            return (uuid.uuidString, nil)
+        }
+
+        if let company = try await fetchCompanyByCode(trimmedValue),
+           let companyId = company.id {
+            return (companyId, company.name)
+        }
+
+        throw NSError(
+            domain: "NetworkService",
+            code: 404,
+            userInfo: [NSLocalizedDescriptionKey: "Company code not found. Please check the code and try again."]
+        )
+    }
+
     func fetchCompanyUsers(companyId: String) async throws -> [AppUser] {
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
         components.queryItems = [
@@ -1499,8 +1527,9 @@ class NetworkService {
 
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(AppConstants.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
 
         let (data, response) = try await session.data(for: request)
 
@@ -1593,6 +1622,118 @@ class NetworkService {
 
         let products = try JSONDecoder().decode([Product].self, from: data)
         return products
+    }
+
+    func fetchProductsForUser(userId: String, companyId: String?) async throws -> [Product] {
+        let resolvedCompanyId = await resolveCompanyId(from: companyId)
+
+        if let companyId = resolvedCompanyId {
+            do {
+                let companyProducts = try await fetchProductsByCompanyId(companyId)
+                if !companyProducts.isEmpty {
+                    return companyProducts
+                }
+            } catch let NetworkError.serverError(code) where code == 400 {
+                // Fall through if company_id is not a valid column.
+            } catch {
+                // Fall through to other strategies.
+            }
+
+            do {
+                let companyUserProducts = try await fetchProductsByCompanyUsers(companyId: companyId)
+                if !companyUserProducts.isEmpty {
+                    return companyUserProducts
+                }
+            } catch {
+                // Fall through to user-specific products.
+            }
+        }
+
+        return try await fetchProducts(userId: userId)
+    }
+
+    private func resolveCompanyId(from companyId: String?) async -> String? {
+        guard let companyId = companyId?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !companyId.isEmpty else {
+            return nil
+        }
+
+        if UUID(uuidString: companyId) != nil {
+            return companyId
+        }
+
+        if let resolved = try? await resolveCompanyAssociation(from: companyId) {
+            return resolved.id
+        }
+
+        return nil
+    }
+
+    private func fetchProductsByCompanyId(_ companyId: String) async throws -> [Product] {
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/products")!
+        components.queryItems = [
+            URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
+            URLQueryItem(name: "order", value: "created_at.desc")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        return try JSONDecoder().decode([Product].self, from: data)
+    }
+
+    private func fetchProductsByCompanyUsers(companyId: String) async throws -> [Product] {
+        let users = try await fetchCompanyUsers(companyId: companyId)
+        let userIds = users.compactMap { $0.id }
+        guard !userIds.isEmpty else {
+            return []
+        }
+
+        let inList = userIds.joined(separator: ",")
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/products")!
+        components.queryItems = [
+            URLQueryItem(name: "user_id", value: "in.(\(inList))"),
+            URLQueryItem(name: "order", value: "created_at.desc")
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        return try JSONDecoder().decode([Product].self, from: data)
     }
 
     func createOrUpdateProduct(product: Product, userId: String) async throws -> Product {
