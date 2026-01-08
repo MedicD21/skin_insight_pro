@@ -836,6 +836,12 @@ struct ClientDetailView: View {
     }
 
     private func checkFreeTierLimit() {
+        // GOD mode users bypass all checks
+        if AuthenticationManager.shared.currentUser?.godMode == true {
+            showAnalysisInput = true
+            return
+        }
+
         guard let userId = AuthenticationManager.shared.currentUser?.id else {
             showAnalysisInput = true
             return

@@ -372,7 +372,7 @@ class NetworkService {
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
         components.queryItems = [
             URLQueryItem(name: "id", value: "eq.\(userId)"),
-            URLQueryItem(name: "select", value: "*,company_name:companies(name),company_email:companies(email)")
+            URLQueryItem(name: "select", value: "*")
         ]
 
         guard let url = components.url else {
@@ -399,6 +399,10 @@ class NetworkService {
         #if DEBUG
         print("<- Response: Fetch User Profile")
         print("<- Status Code: \(httpResponse.statusCode)")
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("<- Raw JSON Response:")
+            print(jsonString)
+        }
         #endif
 
         guard (200...299).contains(httpResponse.statusCode) else {
@@ -411,12 +415,29 @@ class NetworkService {
             throw NetworkError.invalidCredentials
         }
 
+        #if DEBUG
+        print("<- Decoded User Data:")
+        print("   User ID: \(user.id ?? "nil")")
+        print("   Email: \(user.email ?? "nil")")
+        print("   First Name: \(user.firstName ?? "nil")")
+        print("   Last Name: \(user.lastName ?? "nil")")
+        print("   Company ID: \(user.companyId ?? "nil")")
+        print("   Is Admin: \(user.isAdmin ?? false)")
+        print("   Is Company Admin: \(user.isCompanyAdmin ?? false)")
+        print("   GOD Mode: \(user.godMode ?? false)")
+        #endif
+
         // Fetch company name and email if user has a company
         if let companyId = user.companyId, !companyId.isEmpty {
             do {
                 let company = try await fetchCompany(id: companyId)
                 user.companyName = company.name
                 user.companyEmail = company.email
+
+                #if DEBUG
+                print("   Company Name: \(company.name ?? "nil")")
+                print("   Company Email: \(company.email ?? "nil")")
+                #endif
             } catch {
                 print("⚠️ Failed to fetch company details: \(error)")
                 // Continue without company details

@@ -47,6 +47,8 @@
 		CB00CD112F0632B6009ED8F1 /* HIPAAConsentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD102F0632B6009ED8F1 /* HIPAAConsentView.swift */; };
 		CB00CD132F063847009ED8F1 /* ConsentHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD122F063847009ED8F1 /* ConsentHelpers.swift */; };
 		CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */; };
+		CB45DF612F1054D500881A92 /* BiometricAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF602F1054D400881A92 /* BiometricAuthManager.swift */; };
+		CB45DF632F1054F000881A92 /* BiometricAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF622F1054F000881A92 /* BiometricAuthView.swift */; };
 		CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB092F0D587500D65A4A /* Secrets.swift */; };
 		CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */; };
 		CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */; };
@@ -96,6 +98,8 @@
 		CB00CD102F0632B6009ED8F1 /* HIPAAConsentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HIPAAConsentView.swift; sourceTree = "<group>"; };
 		CB00CD122F063847009ED8F1 /* ConsentHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentHelpers.swift; sourceTree = "<group>"; };
 		CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberFormatter.swift; sourceTree = "<group>"; };
+		CB45DF602F1054D400881A92 /* BiometricAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthManager.swift; sourceTree = "<group>"; };
+		CB45DF622F1054F000881A92 /* BiometricAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthView.swift; sourceTree = "<group>"; };
 		CB82FB092F0D587500D65A4A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDataExportView.swift; sourceTree = "<group>"; };
 		CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTeamMemberView.swift; sourceTree = "<group>"; };
@@ -145,6 +149,8 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				CB45DF622F1054F000881A92 /* BiometricAuthView.swift */,
+				CB45DF602F1054D400881A92 /* BiometricAuthManager.swift */,
 				CB89377B2F0EF23800E0301E /* SubscriptionView.swift */,
 				CB8937792F0EF22A00E0301E /* StoreKitManager.swift */,
 				CB8937772F0EF21C00E0301E /* CompanyOnboardingView.swift */,
@@ -271,10 +277,12 @@
 				A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */,
 				C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */,
 				CB00CD112F0632B6009ED8F1 /* HIPAAConsentView.swift in Sources */,
+				CB45DF612F1054D500881A92 /* BiometricAuthManager.swift in Sources */,
 				CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */,
 				97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */,
 				04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */,
 				CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */,
+				CB45DF632F1054F000881A92 /* BiometricAuthView.swift in Sources */,
 				CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */,
 				2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */,
 				CB00CCFD2F05AF7E009ED8F1 /* EditProfileView.swift in Sources */,
@@ -459,7 +467,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dushin.skininsightpro;
 				PRODUCT_NAME = SkinInsightPro;
 				SDKROOT = iphoneos;
@@ -486,7 +494,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.dushin.skininsightpro;
 				PRODUCT_NAME = SkinInsightPro;
 				SDKROOT = iphoneos;

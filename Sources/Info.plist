@@ -43,6 +43,8 @@
 	<string>We need access to your camera to capture skin images for analysis</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library to select skin images for analysis</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>We use Face ID to securely authenticate you and protect your patient data</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

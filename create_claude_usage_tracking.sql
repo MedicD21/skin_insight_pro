@@ -20,7 +20,25 @@ DECLARE
     v_monthly_cap INT;
     v_current_count INT;
     v_result JSON;
+    v_is_god_mode BOOLEAN;
 BEGIN
+    -- 0. Check if user has GOD mode enabled
+    SELECT god_mode INTO v_is_god_mode
+    FROM users
+    WHERE id::text = p_user_id;
+
+    -- GOD mode users bypass all checks
+    IF v_is_god_mode = true THEN
+        v_result := json_build_object(
+            'allowed', true,
+            'current_usage', 0,
+            'monthly_cap', 999999,
+            'tier', 'GOD MODE',
+            'remaining', 999999
+        );
+        RETURN v_result;
+    END IF;
+
     -- 1. Check if company has an active subscription and get plan details
     SELECT
         p.name,

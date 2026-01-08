@@ -197,7 +197,11 @@ class StoreKitManager: ObservableObject {
     }
 
     func hasActiveSubscription() -> Bool {
-        !purchasedProductIDs.isEmpty
+        // GOD mode users always have access
+        if AuthenticationManager.shared.currentUser?.godMode == true {
+            return true
+        }
+        return !purchasedProductIDs.isEmpty
     }
 }
 

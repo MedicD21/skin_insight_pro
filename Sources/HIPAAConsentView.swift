@@ -6,6 +6,7 @@ struct HIPAAConsentView: View {
 
     @State private var hasReadNotice = false
     @State private var agreedToTerms = false
+    @State private var agreedToPrivacy = false
     @State private var showingFullNotice = false
 
     var onConsent: () -> Void
@@ -30,7 +31,7 @@ struct HIPAAConsentView: View {
                     .padding(.vertical, 20)
                 }
             }
-            .navigationTitle("Privacy Notice")
+            .navigationTitle("Terms & Privacy")
             .navigationBarTitleDisplayMode(.inline)
             .interactiveDismissDisabled()
             .sheet(isPresented: $showingFullNotice) {
@@ -45,11 +46,11 @@ struct HIPAAConsentView: View {
                 .font(.system(size: 60))
                 .foregroundColor(theme.accent)
 
-            Text("HIPAA Privacy Notice")
+            Text("Terms & Privacy")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundColor(theme.primaryText)
 
-            Text("Your privacy and data security are our top priorities")
+            Text("Please review and accept our terms to continue")
                 .font(.system(size: 15))
                 .foregroundColor(theme.secondaryText)
                 .multilineTextAlignment(.center)
@@ -59,45 +60,45 @@ struct HIPAAConsentView: View {
 
     private var noticeSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("What You Should Know")
+            Text("What We Collect & How We Protect It")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(theme.primaryText)
 
             VStack(alignment: .leading, spacing: 12) {
                 PrivacyPointView(
+                    icon: "person.circle.fill",
+                    title: "Your Account Data",
+                    description: "We collect your name, email, role, company information, and profile photo to provide you with access to the app."
+                )
+
+                PrivacyPointView(
                     icon: "doc.text.fill",
-                    title: "Protected Health Information",
-                    description: "We collect and store client skin analysis data and personal information to provide professional skincare services."
+                    title: "Client Records You Create",
+                    description: "You create and store client records including skin analysis data, photos, and personal information. This data belongs to you and your company."
                 )
 
                 PrivacyPointView(
                     icon: "lock.fill",
-                    title: "Data Security",
-                    description: "All data is encrypted in transit and at rest. We use industry-standard security measures to protect your information."
-                )
-
-                PrivacyPointView(
-                    icon: "eye.slash.fill",
-                    title: "Access Controls",
-                    description: "Only authorized team members in your organization can access client data. Sessions automatically expire after 15 minutes of inactivity."
+                    title: "Enterprise-Grade Security",
+                    description: "All data is encrypted in transit and at rest. Optional Face ID/Touch ID authentication adds an extra layer of protection."
                 )
 
                 PrivacyPointView(
                     icon: "clock.fill",
-                    title: "Audit Logging",
-                    description: "All access to protected health information is logged and monitored for security purposes."
+                    title: "HIPAA Compliance Features",
+                    description: "Automatic 15-minute session timeout, comprehensive audit logging, and role-based access controls help you meet compliance requirements."
                 )
 
                 PrivacyPointView(
-                    icon: "person.badge.shield.checkmark.fill",
-                    title: "Your Rights",
-                    description: "You have the right to access, export, and request deletion of your data at any time."
+                    icon: "dollarsign.circle.fill",
+                    title: "Subscription Management",
+                    description: "Subscriptions are managed through Apple's App Store. We never see or store your payment information."
                 )
             }
 
             Button(action: { showingFullNotice = true }) {
                 HStack {
-                    Text("Read Full Privacy Notice")
+                    Text("Read Full Privacy Policy")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundColor(theme.accent)
                     Image(systemName: "arrow.up.right")
@@ -120,13 +121,13 @@ struct HIPAAConsentView: View {
 
     private var consentCheckboxes: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Button(action: { hasReadNotice.toggle() }) {
+            Button(action: { agreedToTerms.toggle() }) {
                 HStack(spacing: 12) {
-                    Image(systemName: hasReadNotice ? "checkmark.square.fill" : "square")
+                    Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
                         .font(.system(size: 24))
-                        .foregroundColor(hasReadNotice ? theme.accent : theme.secondaryText)
+                        .foregroundColor(agreedToTerms ? theme.accent : theme.secondaryText)
 
-                    Text("I have read and understand the Privacy Notice")
+                    Text("I agree to the Terms of Service")
                         .font(.system(size: 15))
                         .foregroundColor(theme.primaryText)
                         .multilineTextAlignment(.leading)
@@ -135,13 +136,28 @@ struct HIPAAConsentView: View {
                 }
             }
 
-            Button(action: { agreedToTerms.toggle() }) {
+            Button(action: { agreedToPrivacy.toggle() }) {
                 HStack(spacing: 12) {
-                    Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
+                    Image(systemName: agreedToPrivacy ? "checkmark.square.fill" : "square")
                         .font(.system(size: 24))
-                        .foregroundColor(agreedToTerms ? theme.accent : theme.secondaryText)
+                        .foregroundColor(agreedToPrivacy ? theme.accent : theme.secondaryText)
 
-                    Text("I consent to the collection and use of my data as described")
+                    Text("I acknowledge the Privacy Policy and consent to data collection as described")
+                        .font(.system(size: 15))
+                        .foregroundColor(theme.primaryText)
+                        .multilineTextAlignment(.leading)
+
+                    Spacer()
+                }
+            }
+
+            Button(action: { hasReadNotice.toggle() }) {
+                HStack(spacing: 12) {
+                    Image(systemName: hasReadNotice ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 24))
+                        .foregroundColor(hasReadNotice ? theme.accent : theme.secondaryText)
+
+                    Text("I understand this app includes HIPAA compliance features and I am responsible for ensuring my use complies with regulations")
                         .font(.system(size: 15))
                         .foregroundColor(theme.primaryText)
                         .multilineTextAlignment(.leading)
@@ -175,7 +191,7 @@ struct HIPAAConsentView: View {
     }
 
     private var canContinue: Bool {
-        hasReadNotice && agreedToTerms
+        agreedToTerms && agreedToPrivacy && hasReadNotice
     }
 
     private func handleConsent() {

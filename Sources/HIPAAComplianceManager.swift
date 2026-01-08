@@ -52,6 +52,7 @@ class HIPAAComplianceManager: ObservableObject {
 
     // Keys for UserDefaults
     private let lastActivityKey = "HIPAA_LastActivityTime"
+    private let backgroundTimeKey = "HIPAA_BackgroundTime"
     private let auditLogsKey = "HIPAA_AuditLogs"
     private let consentGivenKey = "HIPAA_ConsentGiven"
     private let consentDateKey = "HIPAA_ConsentDate"
@@ -91,8 +92,27 @@ class HIPAAComplianceManager: ObservableObject {
     }
 
     @objc private func userActivityDetected() {
+        // Check if session expired while in background
+        if let backgroundTime = userDefaults.object(forKey: backgroundTimeKey) as? Date {
+            let timeInBackground = Date().timeIntervalSince(backgroundTime)
+
+            #if DEBUG
+            print("🔒 [HIPAA] App returned to foreground. Time in background: \(Int(timeInBackground)) seconds")
+            #endif
+
+            // If user was backgrounded for more than 15 minutes, expire session
+            if timeInBackground >= sessionTimeout {
+                #if DEBUG
+                print("🔒 [HIPAA] Session expired during background (\(Int(timeInBackground/60)) minutes)")
+                #endif
+                handleSessionExpiry()
+                return
+            }
+        }
+
+        // Session is still valid, update activity and resume timer
         updateLastActivity()
-        checkSessionExpiry()
+        userDefaults.removeObject(forKey: backgroundTimeKey)
 
         // Sync audit logs when app returns to foreground
         Task {
@@ -101,7 +121,17 @@ class HIPAAComplianceManager: ObservableObject {
     }
 
     @objc private func appDidEnterBackground() {
-        updateLastActivity()
+        // Save the time when app went to background
+        let now = Date()
+        userDefaults.set(now, forKey: backgroundTimeKey)
+
+        #if DEBUG
+        print("🔒 [HIPAA] App entering background. Will check session on return.")
+        #endif
+
+        // Stop the timer while in background to save battery
+        inactivityTimer?.invalidate()
+        inactivityTimer = nil
 
         // Sync audit logs when app goes to background
         Task {

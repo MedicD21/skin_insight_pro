@@ -183,13 +183,17 @@
           <li>Photos and analysis results you upload or generate.</li>
           <li>Consent records (signature and consent date).</li>
           <li>App diagnostics (error logs, performance data).</li>
+          <li>HIPAA audit logs (user activity, PHI access, timestamps, device info).</li>
+          <li>Session activity data (for automatic 15-minute timeout).</li>
+          <li>Subscription and purchase data (managed through Apple App Store).</li>
         </ul>
 
         <h3>Data we do not collect</h3>
         <ul>
           <li>Precise location data.</li>
           <li>Contacts from your device address book.</li>
-          <li>Payment card data (payments are not processed in-app).</li>
+          <li>Biometric data (Face ID/Touch ID is handled entirely by iOS and never leaves your device).</li>
+          <li>Payment card data (payments are processed securely through Apple's App Store).</li>
           <li>Advertising identifiers for tracking.</li>
         </ul>
 
@@ -197,10 +201,12 @@
         <ul>
           <li>Provide skin analysis results and history.</li>
           <li>Manage client profiles and team access within a company.</li>
+          <li>Process and manage subscriptions for premium features.</li>
+          <li>Enforce automatic session timeout after 15 minutes of inactivity (HIPAA compliance).</li>
+          <li>Track all access to protected health information in audit logs (HIPAA compliance).</li>
           <li>Improve app reliability and troubleshoot issues.</li>
           <li>
-            Comply with legal requirements (HIPAA-related workflows and consent
-            tracking).
+            Comply with legal requirements (HIPAA audit logging, consent tracking, breach notification).
           </li>
         </ul>
 
@@ -211,6 +217,15 @@
           provider is selected, images and related context are sent to the
           provider to generate analysis results. We do not use your data to
           train our models.
+        </p>
+
+        <h3>In-app purchases and subscriptions</h3>
+        <p>
+          SkinInsightPro operates on a freemium model with monthly or annual subscriptions
+          managed through Apple's App Store. Free tier users receive 5 Apple Vision analyses
+          per month. Subscribers gain unlimited access to advanced Claude AI analysis and
+          additional premium features. All payments are processed securely by Apple—we never
+          see or store your payment information.
         </p>
 
         <h3>Sharing and disclosure</h3>
@@ -229,24 +244,47 @@
 
         <h3>Security</h3>
         <p>
-          We use industry-standard security measures to protect your data. No
-          system is 100% secure, but we continuously improve our safeguards.
+          We use industry-standard security measures to protect your data, including:
+        </p>
+        <ul>
+          <li>End-to-end encryption for data transmission.</li>
+          <li>Optional Face ID/Touch ID authentication for app access.</li>
+          <li>Automatic session timeout after 15 minutes of inactivity.</li>
+          <li>HIPAA audit logging of all PHI access events.</li>
+          <li>Secure cloud storage with access controls and encryption at rest.</li>
+        </ul>
+        <p>
+          No system is 100% secure, but we continuously improve our safeguards.
         </p>
 
         <h3>HIPAA notice</h3>
         <p>
-          SkinInsightPro supports HIPAA-related workflows (such as consent
-          capture and access controls), but SkinInsightPro is not a covered
-          entity or business associate by default. Customers are responsible for
-          ensuring their own HIPAA compliance and for using the app in a
-          compliant manner.
+          SkinInsightPro includes HIPAA-compliant features designed for healthcare professionals:
+        </p>
+        <ul>
+          <li><strong>Audit Logging:</strong> All access to client records (PHI) is logged with timestamps, user identity, and device information.</li>
+          <li><strong>Session Controls:</strong> Automatic timeout after 15 minutes of inactivity to prevent unauthorized access.</li>
+          <li><strong>Consent Management:</strong> Digital signature capture and consent tracking for each client.</li>
+          <li><strong>Access Controls:</strong> Role-based permissions and company-level data separation.</li>
+          <li><strong>Data Export:</strong> Ability to export audit logs and client data for compliance documentation.</li>
+        </ul>
+        <p>
+          <strong>Important:</strong> While SkinInsightPro provides HIPAA-compliant tools and security features,
+          you (the healthcare provider or covered entity) are ultimately responsible for ensuring your use of the app
+          complies with HIPAA regulations. This includes signing a Business Associate Agreement (BAA) with your
+          cloud service providers (Supabase, Anthropic) if you handle PHI. We recommend consulting with a HIPAA
+          compliance expert to ensure your specific use case meets all requirements.
         </p>
 
         <h3>Your choices and rights</h3>
         <ul>
           <li>Update or correct your information in the app.</li>
-          <li>Request account deletion and data removal.</li>
-          <li>Contact support for access or deletion requests.</li>
+          <li>Enable or disable Face ID/Touch ID authentication.</li>
+          <li>Choose between on-device (Apple Vision) or cloud-based (Claude AI) skin analysis.</li>
+          <li>Export your data including client records and audit logs.</li>
+          <li>Request account deletion and complete data removal.</li>
+          <li>Manage subscription status through the Apple App Store.</li>
+          <li>Contact support for access, correction, or deletion requests.</li>
         </ul>
 
         <h3>Children</h3>

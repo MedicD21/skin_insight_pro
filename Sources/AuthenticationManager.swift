@@ -37,6 +37,9 @@ class AuthenticationManager: NSObject, ObservableObject {
                   let userId = UserDefaults.standard.string(forKey: AppConstants.userIdKey),
                   let email = UserDefaults.standard.string(forKey: userEmailKey) {
             // User has valid Supabase tokens - fetch full profile from database
+            print("📱 checkAuthStatus: Found cached tokens, creating minimal user object")
+            print("   User ID: \(userId)")
+            print("   Email: \(email)")
             currentUser = AppUser(id: userId, email: email, provider: "email", createdAt: nil)
             isAuthenticated = true
             isGuestMode = false
@@ -46,18 +49,23 @@ class AuthenticationManager: NSObject, ObservableObject {
                 await self.refreshUserProfile(userId: userId)
             }
         } else {
+            print("📱 checkAuthStatus: No cached tokens found")
             isLoading = false
         }
     }
 
     func refreshUserProfile(userId: String) async {
         do {
+            print("🔄 Starting user profile refresh for userId: \(userId)")
             let fullUser = try await NetworkService.shared.fetchUser(userId: userId)
             await MainActor.run {
                 self.currentUser = fullUser
                 print("✅ Refreshed user profile")
+                print("   User ID: \(fullUser.id ?? "nil")")
+                print("   Email: \(fullUser.email ?? "nil")")
                 print("   Company ID: \(fullUser.companyId ?? "nil")")
                 print("   Is Company Admin: \(fullUser.isCompanyAdmin ?? false)")
+                print("   GOD Mode: \(fullUser.godMode ?? false)")
 
                 // Check if user needs to set up company
                 if fullUser.companyId == nil || fullUser.companyId?.isEmpty == true {

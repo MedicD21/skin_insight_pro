@@ -3,6 +3,7 @@ import SwiftUI
 struct ProfileView: View {
     @ObservedObject var theme = ThemeManager.shared
     @StateObject private var authManager = AuthenticationManager.shared
+    @StateObject private var biometricManager = BiometricAuthManager.shared
     @State private var showLogoutConfirmation = false
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
@@ -485,87 +486,123 @@ struct ProfileView: View {
 
     private var appleVisionUsageSection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Free Tier Usage")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(theme.primaryText)
-
-                Spacer()
-
-                Text("This month")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(theme.secondaryText)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(theme.cardBackground.opacity(0.6))
-                    .clipShape(Capsule())
-            }
-
-            VStack(spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Apple Vision analyses")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(theme.secondaryText)
-
-                        if isLoadingAppleVisionUsage {
-                            ProgressView()
-                                .scaleEffect(0.8)
-                        } else {
-                            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                                Text("\(appleVisionUsageCount ?? 0)")
-                                    .font(.system(size: 28, weight: .bold))
-                                    .foregroundColor(theme.primaryText)
-
-                                Text("/ 5")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(theme.secondaryText)
-                            }
-                        }
+            // GOD mode users see special badge instead of usage counter
+            if authManager.currentUser?.godMode == true {
+                VStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "crown.fill")
+                            .foregroundColor(.yellow)
+                            .font(.system(size: 20))
+                        Text("GOD MODE")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(theme.primaryText)
+                        Spacer()
+                        Text("UNLIMITED")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(Color.purple)
+                            .clipShape(Capsule())
                     }
+
+                    Text("Developer account with unlimited access to all features")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.radiusXL)
+                        .fill(Color.purple.opacity(0.1))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.radiusXL)
+                        .stroke(Color.purple.opacity(0.3), lineWidth: 2)
+                )
+            } else {
+                // Regular users see usage counter
+                HStack {
+                    Text("Free Tier Usage")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(theme.primaryText)
 
                     Spacer()
+
+                    Text("This month")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(theme.secondaryText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(theme.cardBackground.opacity(0.6))
+                        .clipShape(Capsule())
                 }
 
-                if let count = appleVisionUsageCount, count >= 5 {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Divider()
-                            .background(theme.cardBorder)
-
-                        HStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundColor(.orange)
-                            Text("You've reached your free limit. Upgrade for unlimited Claude Vision analyses.")
-                                .font(.system(size: 13))
+                VStack(spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Apple Vision analyses")
+                                .font(.system(size: 14, weight: .medium))
                                 .foregroundColor(theme.secondaryText)
+
+                            if isLoadingAppleVisionUsage {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                    Text("\(appleVisionUsageCount ?? 0)")
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundColor(theme.primaryText)
+
+                                    Text("/ 5")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(theme.secondaryText)
+                                }
+                            }
                         }
 
-                        // Only show "View Plans" button for admins (platform admin or company admin)
-                        if authManager.currentUser?.isAdmin == true || authManager.currentUser?.isCompanyAdmin == true {
-                            Button(action: { showSubscriptionView = true }) {
-                                Text("View Plans")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 10)
-                                    .background(theme.accent)
-                                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                        Spacer()
+                    }
+
+                    if let count = appleVisionUsageCount, count >= 5 {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Divider()
+                                .background(theme.cardBorder)
+
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(.orange)
+                                Text("You've reached your free limit. Upgrade for unlimited Claude Vision analyses.")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(theme.secondaryText)
+                            }
+
+                            // Only show "View Plans" button for admins (platform admin or company admin)
+                            if authManager.currentUser?.isAdmin == true || authManager.currentUser?.isCompanyAdmin == true {
+                                Button(action: { showSubscriptionView = true }) {
+                                    Text("View Plans")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundColor(.white)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 10)
+                                        .background(theme.accent)
+                                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                }
                             }
                         }
                     }
                 }
-            }
-            .padding(20)
-            .background(
-                RoundedRectangle(cornerRadius: theme.radiusXL)
-                    .fill(theme.cardBackground)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: theme.radiusXL)
-                    .stroke(theme.cardBorder, lineWidth: 1)
-            )
-            .onAppear {
-                loadAppleVisionUsage()
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.radiusXL)
+                        .fill(theme.cardBackground)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.radiusXL)
+                        .stroke(theme.cardBorder, lineWidth: 1)
+                )
+                .onAppear {
+                    loadAppleVisionUsage()
+                }
             }
         }
     }
@@ -639,6 +676,14 @@ struct ProfileView: View {
                 title: "Provider",
                 value: authManager.isGuestMode ? "Guest" : "Email"
             )
+
+            // Only show biometric toggle if device supports it and user is not in guest mode
+            if biometricManager.isBiometricAvailable && !authManager.isGuestMode {
+                Divider()
+                    .padding(.leading, 56)
+
+                biometricToggleRow
+            }
         }
         .background(
             RoundedRectangle(cornerRadius: theme.radiusLarge)
@@ -648,6 +693,32 @@ struct ProfileView: View {
             RoundedRectangle(cornerRadius: theme.radiusLarge)
                 .stroke(theme.cardBorder, lineWidth: 1)
         )
+    }
+
+    private var biometricToggleRow: some View {
+        HStack(spacing: 16) {
+            Image(systemName: biometricManager.biometricIcon)
+                .font(.system(size: 24))
+                .foregroundColor(theme.accent)
+                .frame(width: 40)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(biometricManager.biometricTypeName)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(theme.primaryText)
+
+                Text("Unlock app with biometrics")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.secondaryText)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $biometricManager.isBiometricEnabled)
+                .labelsHidden()
+                .tint(theme.accent)
+        }
+        .padding(16)
     }
 
     private var metricsInfoSection: some View {
