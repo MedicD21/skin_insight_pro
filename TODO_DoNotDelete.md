@@ -15,8 +15,8 @@
   - Create sandbox test account in App Store Connect
   - Test all 7 products (Solo Monthly/Annual, Starter Monthly/Annual, Professional, Business, Enterprise)
   - Verify transactions complete successfully
-- [ ] **Deploy `validate-receipt` Edge Function to Supabase**
-  - See instructions below
+- [x] ~~**Deploy `validate-receipt` Edge Function to Supabase**~~ ✅
+  - Deployed and visible in Supabase dashboard
 - [ ] Test receipt validation flow end-to-end
   - Purchase in sandbox → Verify `company_plans` record created
   - Check subscription status appears in Profile
