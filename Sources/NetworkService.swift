@@ -1390,6 +1390,73 @@ class NetworkService {
         return 0
     }
 
+    // MARK: - HIPAA Audit Log Sync
+
+    func syncAuditLogs(_ logs: [HIPAAAuditLog]) async throws {
+        guard !logs.isEmpty else { return }
+
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/hipaa_audit_logs")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        // Prefer: return=minimal to avoid returning the inserted data (faster)
+        request.setValue("return=minimal", forHTTPHeaderField: "Prefer")
+
+        // Convert logs to the format expected by Supabase
+        let logsData: [[String: Any]] = logs.map { log in
+            var logDict: [String: Any] = [
+                "user_id": log.userId,
+                "user_email": log.userEmail,
+                "event_type": log.eventType.rawValue,
+                "device_info": log.deviceInfo
+            ]
+
+            if let resourceType = log.resourceType {
+                logDict["resource_type"] = resourceType
+            }
+
+            if let resourceId = log.resourceId {
+                logDict["resource_id"] = resourceId
+            }
+
+            if let ipAddress = log.ipAddress {
+                logDict["ip_address"] = ipAddress
+            }
+
+            // Convert timestamp to ISO8601 string
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            logDict["created_at"] = formatter.string(from: log.timestamp)
+
+            return logDict
+        }
+
+        let jsonData = try JSONSerialization.data(withJSONObject: logsData)
+        request.httpBody = jsonData
+
+        #if DEBUG
+        print("🔒 [NetworkService] Syncing \(logs.count) audit logs to Supabase")
+        #endif
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        #if DEBUG
+        print("🔒 [NetworkService] Audit log sync status: \(httpResponse.statusCode)")
+        #endif
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+    }
+
     func fetchAnalyses(clientId: String) async throws -> [SkinAnalysisResult] {
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
         components.queryItems = [

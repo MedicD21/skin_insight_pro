@@ -55,6 +55,7 @@ class HIPAAComplianceManager: ObservableObject {
     private let auditLogsKey = "HIPAA_AuditLogs"
     private let consentGivenKey = "HIPAA_ConsentGiven"
     private let consentDateKey = "HIPAA_ConsentDate"
+    private let lastSyncedLogIdKey = "HIPAA_LastSyncedLogId"
 
     private init() {
         self.hasUserConsented = userDefaults.bool(forKey: consentGivenKey)
@@ -92,10 +93,20 @@ class HIPAAComplianceManager: ObservableObject {
     @objc private func userActivityDetected() {
         updateLastActivity()
         checkSessionExpiry()
+
+        // Sync audit logs when app returns to foreground
+        Task {
+            await syncAuditLogsToSupabase()
+        }
     }
 
     @objc private func appDidEnterBackground() {
         updateLastActivity()
+
+        // Sync audit logs when app goes to background
+        Task {
+            await syncAuditLogsToSupabase()
+        }
     }
 
     private func updateLastActivity() {
@@ -197,6 +208,67 @@ class HIPAAComplianceManager: ObservableObject {
         if let encoded = try? JSONEncoder().encode(logs) {
             userDefaults.set(encoded, forKey: auditLogsKey)
         }
+
+        // Trigger background sync after saving new log
+        Task {
+            await syncAuditLogsToSupabase()
+        }
+    }
+
+    // MARK: - Audit Log Sync to Supabase
+
+    func syncAuditLogsToSupabase() async {
+        let logs = getAuditLogs()
+        guard !logs.isEmpty else { return }
+
+        // Get the last synced log ID
+        let lastSyncedId = userDefaults.string(forKey: lastSyncedLogIdKey)
+
+        // Find logs that haven't been synced yet
+        var unsyncedLogs: [HIPAAAuditLog] = []
+        var foundLastSynced = lastSyncedId == nil // If no last sync, sync all logs
+
+        for log in logs {
+            if foundLastSynced {
+                unsyncedLogs.append(log)
+            } else if log.id == lastSyncedId {
+                foundLastSynced = true
+            }
+        }
+
+        guard !unsyncedLogs.isEmpty else {
+            #if DEBUG
+            print("🔒 [HIPAAComplianceManager] No unsynced logs to upload")
+            #endif
+            return
+        }
+
+        #if DEBUG
+        print("🔒 [HIPAAComplianceManager] Syncing \(unsyncedLogs.count) unsynced logs")
+        #endif
+
+        do {
+            try await NetworkService.shared.syncAuditLogs(unsyncedLogs)
+
+            // Update the last synced log ID to the most recent one
+            if let lastLog = unsyncedLogs.last {
+                userDefaults.set(lastLog.id, forKey: lastSyncedLogIdKey)
+                #if DEBUG
+                print("🔒 [HIPAAComplianceManager] Successfully synced logs. Last synced ID: \(lastLog.id)")
+                #endif
+            }
+        } catch {
+            #if DEBUG
+            print("🔒 [HIPAAComplianceManager] Failed to sync audit logs: \(error)")
+            #endif
+            // Don't throw - we'll retry on next sync opportunity
+        }
+    }
+
+    func forceSyncAuditLogs() async {
+        // Force sync all logs by clearing the last synced ID
+        userDefaults.removeObject(forKey: lastSyncedLogIdKey)
+        await syncAuditLogsToSupabase()
     }
 
     func getAuditLogs() -> [HIPAAAuditLog] {
