@@ -189,10 +189,10 @@
 ## 📋 PRIORITY ORDER (What to Do Next)
 
 ### Week 1: Edge Functions & Testing
-1. ✅ Deploy `validate-receipt` Edge Function (see below)
-2. ✅ Test sandbox IAP purchases end-to-end
-3. ✅ Test audit log sync to Supabase
-4. ✅ Submit IAPs for App Store review
+1. ✅ Deploy `validate-receipt` Edge Function
+2. ⏳ Test sandbox IAP purchases end-to-end
+3. ⏳ Test audit log sync to Supabase
+4. ⏳ Submit IAPs for App Store review
 
 ### Week 2: Legal & Compliance
 5. Create Privacy Policy and Terms of Service
