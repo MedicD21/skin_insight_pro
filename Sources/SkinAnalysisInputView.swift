@@ -134,7 +134,7 @@ struct SkinAnalysisInputView: View {
             .alert("Subscription Required", isPresented: $showSubscriptionRequired) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("An active subscription is required to use AI skin analysis. Please contact your company admin to purchase a subscription.")
+                Text("An active subscription is required to use Claude Vision AI. You can switch to Apple Vision (free) in Admin → AI Vision Provider, or contact your company admin to purchase a subscription.")
             }
             .navigationDestination(isPresented: $showResults) {
                 if let result = analysisResult, let image = selectedImage {
@@ -716,15 +716,24 @@ struct SkinAnalysisInputView: View {
     private func performAnalysis() {
         guard let image = selectedImage else { return }
 
-        // Check if user has active subscription
-        guard storeManager.hasActiveSubscription() else {
+        // Check if user is trying to use Claude Vision without active subscription
+        if AppConstants.aiProvider == .claude && !storeManager.hasActiveSubscription() {
             showSubscriptionRequired = true
             return
         }
 
+        // Note: Apple Vision free tier limit (5/month) is checked earlier in ClientDetailView
+        // before the user even reaches this screen, providing better UX
+
         focusedField = nil
         isAnalyzing = true
 
+        Task {
+            await continueAnalysis(image: image)
+        }
+    }
+
+    private func continueAnalysis(image: UIImage) async {
         // Build injectables history string
         var injectablesHistory: String? = nil
         var historyParts: [String] = []
@@ -741,9 +750,8 @@ struct SkinAnalysisInputView: View {
             injectablesHistory = historyParts.joined(separator: "; ")
         }
 
-        Task {
-            do {
-                // Fetch AI rules and products for the current user
+        do {
+            // Fetch AI rules and products for the current user
                 let aiRules: [AIRule]
                 let products: [Product]
                 if let user = AuthenticationManager.shared.currentUser,
@@ -777,18 +785,23 @@ struct SkinAnalysisInputView: View {
                     aiRules: aiRules,
                     products: products
                 )
-                analysisResult = result
-                isAnalyzing = false
-                showResults = true
+                await MainActor.run {
+                    analysisResult = result
+                    isAnalyzing = false
+                    showResults = true
+                }
             } catch is CancellationError {
-                isAnalyzing = false
+                await MainActor.run {
+                    isAnalyzing = false
+                }
                 return
             } catch {
-                isAnalyzing = false
-                errorMessage = error.localizedDescription
-                showError = true
+                await MainActor.run {
+                    isAnalyzing = false
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
             }
-        }
     }
 }
 

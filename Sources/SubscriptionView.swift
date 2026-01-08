@@ -102,45 +102,7 @@ struct SubscriptionView: View {
 
     private var plansSection: some View {
         VStack(spacing: 16) {
-            // Separate products into categories
-            let soloProducts = storeManager.products.filter { $0.id.contains("solo") }
-            let starterProducts = storeManager.products.filter { $0.id.contains("starter") }
-            let premiumProducts = storeManager.products.filter {
-                $0.id.contains("professional") || $0.id.contains("business") || $0.id.contains("enterprise")
-            }
-
-            // Two-column grid for Solo tiers
-            if !soloProducts.isEmpty {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    ForEach(soloProducts, id: \.id) { product in
-                        PlanCard(
-                            product: product,
-                            isSelected: selectedProduct?.id == product.id,
-                            isActive: storeManager.isSubscribed(to: product.id),
-                            onSelect: { selectedProduct = product },
-                            onPurchase: { purchasePlan(product) }
-                        )
-                    }
-                }
-            }
-
-            // Two-column grid for Starter tiers
-            if !starterProducts.isEmpty {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                    ForEach(starterProducts, id: \.id) { product in
-                        PlanCard(
-                            product: product,
-                            isSelected: selectedProduct?.id == product.id,
-                            isActive: storeManager.isSubscribed(to: product.id),
-                            onSelect: { selectedProduct = product },
-                            onPurchase: { purchasePlan(product) }
-                        )
-                    }
-                }
-            }
-
-            // Single column for Professional, Business, Enterprise
-            ForEach(premiumProducts, id: \.id) { product in
+            ForEach(storeManager.products, id: \.id) { product in
                 PlanCard(
                     product: product,
                     isSelected: selectedProduct?.id == product.id,

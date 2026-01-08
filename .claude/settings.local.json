@@ -14,7 +14,8 @@
       "Bash(openssl rand:*)",
       "Bash(psql:*)",
       "Bash(supabase db execute:*)",
-      "Bash(supabase db push:*)"
+      "Bash(supabase db push:*)",
+      "Bash(cat:*)"
     ]
   }
 }

@@ -6,6 +6,7 @@ struct ClientDetailView: View {
     @Binding var selectedClient: AppClient?
     let onClientUpdated: ((AppClient) -> Void)?
     @StateObject private var viewModel = ClientDetailViewModel()
+    @StateObject private var storeManager = StoreKitManager.shared
     @State private var showAnalysisInput = false
     @State private var showCompareAnalyses = false
     @State private var showConsentForm = false
@@ -14,6 +15,8 @@ struct ClientDetailView: View {
     @State private var showDeleteAnalysisConfirm = false
     @State private var analysisToDelete: SkinAnalysisResult?
     @State private var currentClient: AppClient
+    @State private var showFreeTierLimitAlert = false
+    @State private var isCheckingUsage = false
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.dismiss) var dismiss
 
@@ -152,6 +155,11 @@ struct ClientDetailView: View {
             Button("Cancel", role: .cancel) { }
         } message: {
             Text("Are you sure you want to delete this analysis? This action cannot be undone.")
+        }
+        .alert("Free Limit Reached", isPresented: $showFreeTierLimitAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("You've reached your free limit of 5 Apple Vision analyses this month. Upgrade to a subscription for unlimited analyses with Claude Vision AI.")
         }
         .task {
             await viewModel.loadAnalyses(clientId: currentClient.id ?? "")
@@ -420,15 +428,27 @@ struct ClientDetailView: View {
     private var newAnalysisButton: some View {
         Button(action: {
             // Check if consent is valid before allowing analysis
-            if currentClient.hasValidConsent {
-                showAnalysisInput = true
-            } else {
+            guard currentClient.hasValidConsent else {
                 showConsentAlert = true
+                return
+            }
+
+            // Check Apple Vision free tier limit (5/month) for non-subscribers
+            if AppConstants.aiProvider == .appleVision && !storeManager.hasActiveSubscription() {
+                checkFreeTierLimit()
+            } else {
+                // Has subscription or using Claude (which requires subscription anyway)
+                showAnalysisInput = true
             }
         }) {
             HStack {
                 Spacer()
-                Image(systemName: "camera.fill")
+                if isCheckingUsage {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: "camera.fill")
+                }
                 Text("New Skin Analysis")
                 Spacer()
             }
@@ -438,6 +458,7 @@ struct ClientDetailView: View {
             .background(theme.accent)
             .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
         }
+        .disabled(isCheckingUsage)
     }
 
     private var compareAnalysesButton: some View {
@@ -810,6 +831,38 @@ struct ClientDetailView: View {
             // Allow tapping to renew consent
             if status == .expired || status == .missing {
                 showConsentForm = true
+            }
+        }
+    }
+
+    private func checkFreeTierLimit() {
+        guard let userId = AuthenticationManager.shared.currentUser?.id else {
+            showAnalysisInput = true
+            return
+        }
+
+        isCheckingUsage = true
+
+        Task {
+            do {
+                let count = try await NetworkService.shared.fetchMonthlyAppleVisionCount(userId: userId)
+
+                await MainActor.run {
+                    isCheckingUsage = false
+
+                    if count >= 5 {
+                        showFreeTierLimitAlert = true
+                    } else {
+                        showAnalysisInput = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isCheckingUsage = false
+                    // On error, allow analysis to proceed (fail open)
+                    print("⚠️ Failed to check Apple Vision usage: \(error)")
+                    showAnalysisInput = true
+                }
             }
         }
     }

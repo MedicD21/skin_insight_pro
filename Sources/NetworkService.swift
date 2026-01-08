@@ -405,7 +405,7 @@ class NetworkService {
             throw NetworkError.serverError(httpResponse.statusCode)
         }
 
-        var users = try JSONDecoder().decode([AppUser].self, from: data)
+        let users = try JSONDecoder().decode([AppUser].self, from: data)
 
         guard var user = users.first else {
             throw NetworkError.invalidCredentials
@@ -1320,6 +1320,76 @@ class NetworkService {
 
     // MARK: - Skin Analyses
 
+    func fetchMonthlyAppleVisionCount(userId: String) async throws -> Int {
+        // Get first day of current month
+        let calendar = Calendar.current
+        let now = Date()
+        guard let startOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) else {
+            throw NetworkError.invalidResponse
+        }
+
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        let startDateString = formatter.string(from: startOfMonth)
+
+        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
+        components.queryItems = [
+            URLQueryItem(name: "user_id", value: "eq.\(userId)"),
+            URLQueryItem(name: "ai_provider", value: "eq.appleVision"),
+            URLQueryItem(name: "created_at", value: "gte.\(startDateString)"),
+            URLQueryItem(name: "select", value: "id")  // Select a single column to minimize data
+        ]
+
+        guard let url = components.url else {
+            throw NetworkError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue("count=exact", forHTTPHeaderField: "Prefer")  // Fixed: was "exact", should be "count=exact"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+
+        #if DEBUG
+        print("🔍 [NetworkService] Fetching Apple Vision count")
+        print("🔍 [NetworkService] userId: \(userId)")
+        print("🔍 [NetworkService] Start of month: \(startDateString)")
+        print("🔍 [NetworkService] GET: \(url.absoluteString)")
+        #endif
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        #if DEBUG
+        print("🔍 [NetworkService] Fetch response received")
+        print("🔍 [NetworkService] Status Code: \(httpResponse.statusCode)")
+        print("🔍 [NetworkService] Content-Range: \(httpResponse.value(forHTTPHeaderField: "Content-Range") ?? "none")")
+        #endif
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
+        }
+
+        // Parse count from Content-Range header (e.g., "0-4/5" means 5 total)
+        if let contentRange = httpResponse.value(forHTTPHeaderField: "Content-Range"),
+           let countString = contentRange.split(separator: "/").last,
+           let count = Int(countString) {
+            #if DEBUG
+            print("🔍 [NetworkService] Parsed count: \(count)")
+            #endif
+            return count
+        }
+
+        #if DEBUG
+        print("🔍 [NetworkService] No Content-Range header found, returning 0")
+        #endif
+        return 0
+    }
+
     func fetchAnalyses(clientId: String) async throws -> [SkinAnalysisResult] {
         var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
         components.queryItems = [
@@ -1428,12 +1498,22 @@ class NetworkService {
         let analysisResultsData = try encoder.encode(analysisResults)
         let analysisResultsJSON = try JSONSerialization.jsonObject(with: analysisResultsData)
 
+        // Determine which AI provider was used
+        let aiProviderString = AppConstants.aiProvider == .claude ? "claude" : "appleVision"
+
+        #if DEBUG
+        print("🔍 [NetworkService] Saving analysis with ai_provider: \(aiProviderString)")
+        print("🔍 [NetworkService] AppConstants.aiProvider: \(AppConstants.aiProvider)")
+        print("🔍 [NetworkService] userId: \(userId)")
+        #endif
+
         var analysisData: [String: Any] = [
             "client_id": clientId,
             "user_id": userId,
             "image_url": imageUrl,
             "analysis_results": analysisResultsJSON,
-            "notes": notes
+            "notes": notes,
+            "ai_provider": aiProviderString
         ]
 
         if let clientMedicalHistory = clientMedicalHistory {
@@ -1514,7 +1594,36 @@ class NetworkService {
 
     // MARK: - Image Upload & AI Analysis
 
+    private func resizeImage(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+        let size = image.size
+
+        // Check if resize is needed
+        if size.width <= maxDimension && size.height <= maxDimension {
+            return image
+        }
+
+        // Calculate new size maintaining aspect ratio
+        let ratio = size.width / size.height
+        let newSize: CGSize
+        if size.width > size.height {
+            newSize = CGSize(width: maxDimension, height: maxDimension / ratio)
+        } else {
+            newSize = CGSize(width: maxDimension * ratio, height: maxDimension)
+        }
+
+        // Resize the image
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        image.draw(in: CGRect(origin: .zero, size: newSize))
+        let resizedImage = UIGraphicsGetImageFromCurrentImageContext() ?? image
+        UIGraphicsEndImageContext()
+
+        return resizedImage
+    }
+
     func uploadImage(image: UIImage, userId: String) async throws -> String {
+        // Resize image to reduce upload size and improve reliability
+        let resizedImage = resizeImage(image, maxDimension: 2048)
+
         // Use Supabase Storage API
         let fileName = "\(userId)/\(UUID().uuidString).jpg"
         let url = URL(string: "\(AppConstants.supabaseUrl)/storage/v1/object/skin-images/\(fileName)")!
@@ -1527,8 +1636,10 @@ class NetworkService {
             request.setValue("Bearer \(AppConstants.supabaseAnonKey)", forHTTPHeaderField: "Authorization")
         }
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 60 // Increase timeout to 60 seconds
 
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+        // Use lower compression for better upload reliability
+        guard let imageData = resizedImage.jpegData(compressionQuality: 0.6) else {
             throw NetworkError.invalidResponse
         }
 
@@ -1537,6 +1648,9 @@ class NetworkService {
         #if DEBUG
         print("-> Request: Upload Image")
         print("-> POST: \(url.absoluteString)")
+        print("-> Image size: \(image.size.width)x\(image.size.height)")
+        print("-> Resized to: \(resizedImage.size.width)x\(resizedImage.size.height)")
+        print("-> Data size: \(imageData.count / 1024) KB")
 
         #endif
         do {

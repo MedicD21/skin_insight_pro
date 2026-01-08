@@ -18,6 +18,8 @@ struct ProfileView: View {
     @State private var companyUsageCount: Int?
     @State private var userUsageCount: Int?
     @State private var usageErrorMessage: String?
+    @State private var appleVisionUsageCount: Int?
+    @State private var isLoadingAppleVisionUsage = false
     @State private var showSubscriptionView = false
     @StateObject private var storeManager = StoreKitManager.shared
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
@@ -287,7 +289,17 @@ struct ProfileView: View {
             if !authManager.isGuestMode {
                 accountActionsCard
                 subscriptionSection
-                usageSection
+
+                // Show Apple Vision usage for free tier users
+                if !storeManager.hasActiveSubscription() {
+                    appleVisionUsageSection
+                }
+
+                // Show Claude usage for subscribers
+                if storeManager.hasActiveSubscription() {
+                    usageSection
+                }
+
                 metricsInfoSection
             }
 
@@ -468,6 +480,93 @@ struct ProfileView: View {
             return "Enterprise"
         default:
             return "Unknown"
+        }
+    }
+
+    private var appleVisionUsageSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Free Tier Usage")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                Text("This month")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(theme.secondaryText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(theme.cardBackground.opacity(0.6))
+                    .clipShape(Capsule())
+            }
+
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Apple Vision analyses")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(theme.secondaryText)
+
+                        if isLoadingAppleVisionUsage {
+                            ProgressView()
+                                .scaleEffect(0.8)
+                        } else {
+                            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                                Text("\(appleVisionUsageCount ?? 0)")
+                                    .font(.system(size: 28, weight: .bold))
+                                    .foregroundColor(theme.primaryText)
+
+                                Text("/ 5")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(theme.secondaryText)
+                            }
+                        }
+                    }
+
+                    Spacer()
+                }
+
+                if let count = appleVisionUsageCount, count >= 5 {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Divider()
+                            .background(theme.cardBorder)
+
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text("You've reached your free limit. Upgrade for unlimited Claude Vision analyses.")
+                                .font(.system(size: 13))
+                                .foregroundColor(theme.secondaryText)
+                        }
+
+                        // Only show "View Plans" button for admins (platform admin or company admin)
+                        if authManager.currentUser?.isAdmin == true || authManager.currentUser?.isCompanyAdmin == true {
+                            Button(action: { showSubscriptionView = true }) {
+                                Text("View Plans")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(theme.accent)
+                                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .fill(theme.cardBackground)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .stroke(theme.cardBorder, lineWidth: 1)
+            )
+            .onAppear {
+                loadAppleVisionUsage()
+            }
         }
     }
 
@@ -743,6 +842,44 @@ struct ProfileView: View {
                 isDeleting = false
                 errorMessage = error.localizedDescription
                 showError = true
+            }
+        }
+    }
+
+    private func loadAppleVisionUsage() {
+        guard !authManager.isGuestMode else { return }
+        guard let userId = authManager.currentUser?.id, !userId.isEmpty else {
+            return
+        }
+
+        if isLoadingAppleVisionUsage {
+            return
+        }
+
+        isLoadingAppleVisionUsage = true
+
+        #if DEBUG
+        print("🔍 [ProfileView] Loading Apple Vision usage for userId: \(userId)")
+        #endif
+
+        Task {
+            do {
+                let count = try await NetworkService.shared.fetchMonthlyAppleVisionCount(userId: userId)
+                await MainActor.run {
+                    #if DEBUG
+                    print("🔍 [ProfileView] Received count: \(count)")
+                    #endif
+                    appleVisionUsageCount = count
+                    isLoadingAppleVisionUsage = false
+                }
+            } catch {
+                await MainActor.run {
+                    #if DEBUG
+                    print("🔍 [ProfileView] Error loading usage: \(error)")
+                    #endif
+                    appleVisionUsageCount = 0
+                    isLoadingAppleVisionUsage = false
+                }
             }
         }
     }

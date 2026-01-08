@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionTimeoutView: View {
     @ObservedObject var theme = ThemeManager.shared
+    @ObservedObject var complianceManager = HIPAAComplianceManager.shared
     @Binding var isPresented: Bool
 
     var body: some View {
@@ -27,7 +28,10 @@ struct SessionTimeoutView: View {
                 }
 
                 Button(action: {
+                    // Reset session expired flag first
+                    complianceManager.isSessionExpired = false
                     isPresented = false
+                    // Then logout to return to login screen
                     AuthenticationManager.shared.logout()
                 }) {
                     Text("Return to Login")

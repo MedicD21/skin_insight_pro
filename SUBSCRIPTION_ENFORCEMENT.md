@@ -5,7 +5,7 @@
 
 ## Overview
 
-Added subscription checks to prevent AI skin analysis usage without an active subscription. Users must have a valid company subscription to perform analyses.
+Added subscription checks to enforce Claude Vision AI as a premium feature. Users without a subscription can still use Apple Vision AI (free), but must have an active subscription to use Claude Vision AI (premium).
 
 ---
 
@@ -18,14 +18,14 @@ Added subscription checks to prevent AI skin analysis usage without an active su
 **Changes:**
 - Added `@StateObject private var storeManager = StoreKitManager.shared` to access subscription status
 - Added `@State private var showSubscriptionRequired = false` for alert display
-- Added subscription check at the beginning of `performAnalysis()`:
+- Added subscription check for Claude Vision at the beginning of `performAnalysis()`:
 
 ```swift
 private func performAnalysis() {
     guard let image = selectedImage else { return }
 
-    // Check if user has active subscription
-    guard storeManager.hasActiveSubscription() else {
+    // Check if user is trying to use Claude Vision without active subscription
+    if AppConstants.aiProvider == .claude && !storeManager.hasActiveSubscription() {
         showSubscriptionRequired = true
         return
     }
@@ -41,7 +41,7 @@ private func performAnalysis() {
 .alert("Subscription Required", isPresented: $showSubscriptionRequired) {
     Button("OK", role: .cancel) {}
 } message: {
-    Text("An active subscription is required to use AI skin analysis. Please contact your company admin to purchase a subscription.")
+    Text("An active subscription is required to use Claude Vision AI. You can switch to Apple Vision (free) in Admin → AI Vision Provider, or contact your company admin to purchase a subscription.")
 }
 ```
 
@@ -49,20 +49,27 @@ private func performAnalysis() {
 
 ## User Experience Flow
 
-### With Active Subscription
+### With Active Subscription (Claude Vision AI)
 1. User selects client
 2. User captures/selects skin photo
 3. User enters manual inputs (optional)
 4. User taps "Analyze Image"
-5. ✅ Analysis proceeds normally
+5. ✅ Analysis proceeds with Claude Vision AI (premium)
 
-### Without Active Subscription
-1. User selects client
-2. User captures/selects skin photo
-3. User enters manual inputs (optional)
-4. User taps "Analyze Image"
-5. ❌ Alert shown: "Subscription Required"
-6. User must contact company admin to purchase subscription
+### Without Active Subscription (Apple Vision AI - Free)
+1. Admin sets AI Provider to "Apple Vision" in Admin → AI Vision Provider
+2. User selects client
+3. User captures/selects skin photo
+4. User enters manual inputs (optional)
+5. User taps "Analyze Image"
+6. ✅ Analysis proceeds with Apple Vision AI (free, on-device)
+
+### Without Subscription but Claude Vision Selected
+1. User (or admin) tries to use Claude Vision without subscription
+2. User selects client and captures skin photo
+3. User taps "Analyze Image"
+4. ❌ Alert shown: "Subscription Required"
+5. User can switch to Apple Vision (free) or contact admin to purchase subscription
 
 ---
 
