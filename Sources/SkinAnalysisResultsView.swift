@@ -22,6 +22,10 @@ struct SkinAnalysisResultsView: View {
     @State private var exportedPDF: Data?
     @State private var pdfURL: URL?
     @State private var showShareSheet = false
+    @State private var companyProducts: [Product] = []
+    @State private var isLoadingProducts = false
+    @State private var manualProductRecommendations: [String] = []
+    @State private var showProductPicker = false
     @FocusState private var notesFieldFocused: Bool
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     private var flaggedProducts: [Product] { viewModel.flaggedProducts }
@@ -127,6 +131,14 @@ struct SkinAnalysisResultsView: View {
                 message: Text(info.description),
                 dismissButton: .default(Text("OK"))
             )
+        }
+        .sheet(isPresented: $showProductPicker) {
+            productPickerSheet
+        }
+        .onAppear {
+            Task {
+                await loadCompanyProducts()
+            }
         }
         .task {
             await viewModel.loadFlaggedProducts(for: client)
@@ -636,6 +648,21 @@ struct SkinAnalysisResultsView: View {
                 Text("Product Recommendations")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                Button(action: { showProductPicker = true }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                        Text("Add")
+                    }
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(theme.accent)
+                    .clipShape(Capsule())
+                }
             }
 
             // Safety reminder if client has allergies, sensitivities, or products to avoid
@@ -666,6 +693,7 @@ struct SkinAnalysisResultsView: View {
             }
 
             VStack(alignment: .leading, spacing: 12) {
+                // AI-generated recommendations
                 ForEach(Array((analysisResult.productRecommendations ?? []).enumerated()), id: \.offset) { index, product in
                     HStack(alignment: .top, spacing: 12) {
                         Text("\(index + 1).")
@@ -677,6 +705,30 @@ struct SkinAnalysisResultsView: View {
                             .font(.system(size: 15))
                             .foregroundColor(theme.primaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+
+                // Manual recommendations
+                ForEach(Array(manualProductRecommendations.enumerated()), id: \.offset) { index, product in
+                    let totalIndex = (analysisResult.productRecommendations?.count ?? 0) + index + 1
+                    HStack(alignment: .top, spacing: 12) {
+                        Text("\(totalIndex).")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(theme.accent)
+                            .frame(width: 24, alignment: .leading)
+
+                        Text(product)
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.primaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                        Button(action: {
+                            manualProductRecommendations.remove(at: index)
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(theme.secondaryText)
+                                .font(.system(size: 18))
+                        }
                     }
                 }
             }
@@ -822,25 +874,6 @@ struct SkinAnalysisResultsView: View {
         isExportingPDF = true
 
         Task {
-            // Convert AnalysisData to SkinAnalysis for PDF export
-            let skinAnalysis = SkinAnalysis(
-                id: UUID().uuidString,
-                clientId: client.id ?? "",
-                timestamp: Date(),
-                hydration: Double(analysisResult.hydrationLevel ?? 0),
-                oiliness: 0, // Not available in current analysis format
-                texture: 0,
-                pores: 0,
-                wrinkles: 0,
-                redness: 0,
-                darkSpots: 0,
-                acne: 0,
-                recommendations: (analysisResult.recommendations ?? []).joined(separator: "\n\n"),
-                imageUrl: nil,
-                notes: notes.isEmpty ? nil : notes,
-                analysisType: "Claude AI Analysis"
-            )
-
             // Convert AppClient to Client
             let clientModel = Client(
                 id: client.id ?? "",
@@ -851,10 +884,23 @@ struct SkinAnalysisResultsView: View {
                 createdAt: Date()
             )
 
-            guard let pdfData = PDFExportManager.shared.generateAnalysisPDF(
+            // Combine AI and manual product recommendations for PDF
+            var pdfAnalysisResult = analysisResult
+            if !manualProductRecommendations.isEmpty {
+                var allProductRecs = analysisResult.productRecommendations ?? []
+                allProductRecs.append(contentsOf: manualProductRecommendations)
+                pdfAnalysisResult.productRecommendations = allProductRecs
+            }
+
+            // Use the new detailed PDF export method
+            guard let pdfData = PDFExportManager.shared.generateDetailedAnalysisPDF(
                 client: clientModel,
-                analysis: skinAnalysis,
-                image: image
+                analysisData: pdfAnalysisResult,
+                image: image,
+                notes: notes.isEmpty ? nil : notes,
+                productsUsed: productsUsed.isEmpty ? nil : productsUsed,
+                treatmentsPerformed: treatmentsPerformed.isEmpty ? nil : treatmentsPerformed,
+                timestamp: Date()
             ) else {
                 await MainActor.run {
                     isExportingPDF = false
@@ -943,19 +989,27 @@ struct SkinAnalysisResultsView: View {
     private func saveAnalysis() {
         guard let userId = AuthenticationManager.shared.currentUser?.id,
               let clientId = client.id else { return }
-        
+
         notesFieldFocused = false
         isSaving = true
-        
+
         Task {
             do {
                 let imageUrl = try await NetworkService.shared.uploadImage(image: image, userId: userId)
-                
+
+                // Combine AI and manual product recommendations
+                var updatedAnalysisResult = analysisResult
+                if !manualProductRecommendations.isEmpty {
+                    var allProductRecs = analysisResult.productRecommendations ?? []
+                    allProductRecs.append(contentsOf: manualProductRecommendations)
+                    updatedAnalysisResult.productRecommendations = allProductRecs
+                }
+
                 let savedAnalysis = try await NetworkService.shared.saveAnalysis(
                     clientId: clientId,
                     userId: userId,
                     imageUrl: imageUrl,
-                    analysisResults: analysisResult,
+                    analysisResults: updatedAnalysisResult,
                     notes: notes,
                     clientMedicalHistory: client.medicalHistory,
                     clientAllergies: client.allergies,
@@ -1009,5 +1063,173 @@ struct SkinAnalysisResultsView: View {
         let title: String
         let description: String
         var id: String { title }
+    }
+
+    // MARK: - Product Picker Sheet
+
+    private var productPickerSheet: some View {
+        NavigationView {
+            ZStack {
+                theme.primaryBackground
+                    .ignoresSafeArea()
+
+                if isLoadingProducts {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Loading products...")
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.secondaryText)
+                    }
+                } else if companyProducts.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "shippingbox")
+                            .font(.system(size: 48))
+                            .foregroundColor(theme.tertiaryText)
+                        Text("No products available")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundColor(theme.primaryText)
+                        Text("Add products to your company inventory first")
+                            .font(.system(size: 14))
+                            .foregroundColor(theme.secondaryText)
+                    }
+                } else {
+                    List {
+                        ForEach(companyProducts) { product in
+                            ProductPickerRowView(
+                                product: product,
+                                isFlagged: isProductFlagged(product),
+                                theme: theme
+                            )
+                            .listRowBackground(theme.secondaryBackground)
+                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                            .onTapGesture {
+                                addProduct(product)
+                            }
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                }
+            }
+            .navigationTitle("Add Product")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        showProductPicker = false
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Helper Functions
+
+    private func loadCompanyProducts() async {
+        guard !isLoadingProducts else { return }
+        isLoadingProducts = true
+
+        do {
+            let userId = await MainActor.run { AuthenticationManager.shared.currentUser?.id ?? "" }
+            let companyId = client.companyId
+
+            companyProducts = try await NetworkService.shared.fetchProductsForUser(
+                userId: userId,
+                companyId: companyId
+            )
+        } catch {
+            errorMessage = "Failed to load products: \(error.localizedDescription)"
+            showError = true
+        }
+
+        isLoadingProducts = false
+    }
+
+    private func isProductFlagged(_ product: Product) -> Bool {
+        // Check if product is in the flagged products list
+        return flaggedProducts.contains { $0.id == product.id }
+    }
+
+    private func addProduct(_ product: Product) {
+        let productName = "\(product.brand ?? "") \(product.name ?? "")".trimmingCharacters(in: .whitespaces)
+
+        // Don't add if already in manual recommendations
+        guard !manualProductRecommendations.contains(productName) else {
+            showProductPicker = false
+            return
+        }
+
+        // Don't add if already in AI recommendations
+        let aiRecommendations = analysisResult.productRecommendations ?? []
+        guard !aiRecommendations.contains(where: { $0.contains(productName) }) else {
+            showProductPicker = false
+            return
+        }
+
+        manualProductRecommendations.append(productName)
+        showProductPicker = false
+    }
+}
+
+// MARK: - Product Picker Row View
+
+private struct ProductPickerRowView: View {
+    let product: Product
+    let isFlagged: Bool
+    @ObservedObject var theme = ThemeManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(product.brand ?? "") \(product.name ?? "")")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(isFlagged ? theme.error : theme.primaryText)
+
+                    if let category = product.category {
+                        Text(category)
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.secondaryText)
+                    }
+                }
+
+                Spacer()
+
+                if isFlagged {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(theme.error)
+                        .font(.system(size: 20))
+                }
+            }
+
+            if isFlagged {
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.raised.fill")
+                        .font(.system(size: 11))
+                        .foregroundColor(theme.error)
+
+                    Text("WARNING: Contains ingredients client is allergic/sensitive to")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(theme.error)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(theme.error.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(theme.error.opacity(0.3), lineWidth: 1)
+                )
+            }
+
+            if let ingredients = product.allIngredients, !ingredients.isEmpty {
+                Text(ingredients)
+                    .font(.system(size: 12))
+                    .foregroundColor(theme.tertiaryText)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }

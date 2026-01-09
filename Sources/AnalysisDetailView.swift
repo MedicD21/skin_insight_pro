@@ -518,25 +518,6 @@ struct AnalysisDetailView: View {
                 }
             }
 
-            // Convert SkinAnalysisResult to SkinAnalysis
-            let skinAnalysis = SkinAnalysis(
-                id: analysis.id ?? UUID().uuidString,
-                clientId: analysis.clientId ?? "",
-                timestamp: parseDate(analysis.createdAt ?? "") ?? Date(),
-                hydration: Double(analysis.analysisResults?.hydrationLevel ?? 0),
-                oiliness: 0, // Not available in stored analysis
-                texture: 0,
-                pores: 0,
-                wrinkles: 0,
-                redness: 0,
-                darkSpots: 0,
-                acne: 0,
-                recommendations: (analysis.analysisResults?.recommendations ?? []).joined(separator: "\n"),
-                imageUrl: analysis.imageUrl,
-                notes: analysis.notes,
-                analysisType: "Skin Analysis"
-            )
-
             // Convert AppClient to Client
             let clientModel = Client(
                 id: client.id ?? "",
@@ -547,10 +528,19 @@ struct AnalysisDetailView: View {
                 createdAt: Date()
             )
 
-            guard let pdfData = PDFExportManager.shared.generateAnalysisPDF(
+            // Get the analysis data (safely unwrap with default)
+            let analysisData = analysis.analysisResults ?? AnalysisData()
+            let timestamp = parseDate(analysis.createdAt ?? "") ?? Date()
+
+            // Use the new detailed PDF export method
+            guard let pdfData = PDFExportManager.shared.generateDetailedAnalysisPDF(
                 client: clientModel,
-                analysis: skinAnalysis,
-                image: downloadedImage
+                analysisData: analysisData,
+                image: downloadedImage,
+                notes: analysis.notes,
+                productsUsed: analysis.productsUsed,
+                treatmentsPerformed: analysis.treatmentsPerformed,
+                timestamp: timestamp
             ) else {
                 await MainActor.run {
                     isExportingPDF = false

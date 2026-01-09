@@ -7,8 +7,384 @@ class PDFExportManager {
 
     private init() {}
 
-    /// Generate PDF for a single skin analysis
+    /// Generate PDF for a single skin analysis (legacy method for trending)
     func generateAnalysisPDF(client: Client, analysis: SkinAnalysis, image: UIImage?) -> Data? {
+        // This is kept for backward compatibility with trending PDF
+        return generateBasicAnalysisPDF(client: client, analysis: analysis, image: image)
+    }
+
+    /// Generate PDF with full analysis details
+    func generateDetailedAnalysisPDF(
+        client: Client,
+        analysisData: AnalysisData,
+        image: UIImage?,
+        notes: String?,
+        productsUsed: String?,
+        treatmentsPerformed: String?,
+        timestamp: Date
+    ) -> Data? {
+        let pdfMetaData = [
+            kCGPDFContextCreator: "SkinInsight Pro",
+            kCGPDFContextAuthor: "SkinInsight Pro",
+            kCGPDFContextTitle: "Skin Analysis Report - \(client.name)"
+        ]
+        let format = UIGraphicsPDFRendererFormat()
+        format.documentInfo = pdfMetaData as [String: Any]
+
+        // Letter size: 8.5" x 11" at 72 DPI
+        let pageWidth: CGFloat = 8.5 * 72.0
+        let pageHeight: CGFloat = 11.0 * 72.0
+        let pageRect = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
+        let margin: CGFloat = 40
+
+        let renderer = UIGraphicsPDFRenderer(bounds: pageRect, format: format)
+
+        let data = renderer.pdfData { context in
+            context.beginPage()
+            let cgContext = context.cgContext
+            var yPosition: CGFloat = margin
+
+            // Draw header with background
+            cgContext.setFillColor(UIColor.systemCyan.cgColor)
+            cgContext.fill(CGRect(x: 0, y: 0, width: pageWidth, height: 80))
+
+            let headerAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 28, weight: .bold),
+                .foregroundColor: UIColor.white
+            ]
+            "SkinInsight Pro".draw(at: CGPoint(x: margin, y: 25), withAttributes: headerAttributes)
+
+            let subtitleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 14, weight: .medium),
+                .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+            ]
+            "Skin Analysis Report".draw(at: CGPoint(x: margin, y: 52), withAttributes: subtitleAttributes)
+
+            yPosition = 100
+
+            // Client name
+            let clientNameAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 20, weight: .semibold),
+                .foregroundColor: UIColor.black
+            ]
+            "Client: \(client.name)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
+            yPosition += 35
+
+            // Analysis date
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateStyle = .long
+            dateFormatter.timeStyle = .short
+
+            let dateAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 12, weight: .medium),
+                .foregroundColor: UIColor.darkGray
+            ]
+            "Date: \(dateFormatter.string(from: timestamp))".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
+            yPosition += 25
+
+            // Divider line
+            cgContext.setStrokeColor(UIColor.lightGray.cgColor)
+            cgContext.setLineWidth(1)
+            cgContext.move(to: CGPoint(x: margin, y: yPosition))
+            cgContext.addLine(to: CGPoint(x: pageWidth - margin, y: yPosition))
+            cgContext.strokePath()
+            yPosition += 25
+
+            // Draw image if available
+            if let image = image {
+                let maxImageWidth: CGFloat = pageWidth - (margin * 2)
+                let maxImageHeight: CGFloat = 180
+
+                let imageSize = image.size
+                let aspectRatio = imageSize.width / imageSize.height
+
+                var drawWidth = maxImageWidth
+                var drawHeight = drawWidth / aspectRatio
+
+                if drawHeight > maxImageHeight {
+                    drawHeight = maxImageHeight
+                    drawWidth = drawHeight * aspectRatio
+                }
+
+                let imageX = (pageWidth - drawWidth) / 2
+                let imageRect = CGRect(x: imageX, y: yPosition, width: drawWidth, height: drawHeight)
+
+                cgContext.setStrokeColor(UIColor.lightGray.cgColor)
+                cgContext.setLineWidth(1)
+                cgContext.stroke(imageRect)
+
+                image.draw(in: imageRect)
+                yPosition += drawHeight + 25
+            }
+
+            let sectionTitleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 16, weight: .bold),
+                .foregroundColor: UIColor.black
+            ]
+            let metricLabelAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
+                .foregroundColor: UIColor.black
+            ]
+            let metricValueAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 12, weight: .regular),
+                .foregroundColor: UIColor.darkGray
+            ]
+
+            // Check if we need a new page
+            func checkNewPage() {
+                if yPosition > pageHeight - 100 {
+                    context.beginPage()
+                    yPosition = margin
+                }
+            }
+
+            // Analysis Overview
+            checkNewPage()
+            "Analysis Overview".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+            yPosition += 25
+
+            if let skinType = analysisData.skinType {
+                "Skin Type:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                skinType.capitalized.draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                yPosition += 20
+            }
+
+            if let hydration = analysisData.hydrationLevel {
+                "Hydration Level:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                "\(hydration)%".draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                yPosition += 20
+            }
+
+            if let sensitivity = analysisData.sensitivity {
+                "Sensitivity:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                sensitivity.capitalized.draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                yPosition += 20
+            }
+
+            if let poreCondition = analysisData.poreCondition {
+                "Pore Condition:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                poreCondition.capitalized.draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                yPosition += 20
+            }
+
+            if let score = analysisData.skinHealthScore {
+                "Skin Health Score:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                "\(score)/100".draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                yPosition += 20
+            }
+
+            yPosition += 15
+
+            // Concerns Section
+            if let concerns = analysisData.concerns, !concerns.isEmpty {
+                checkNewPage()
+                "Skin Concerns".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                yPosition += 25
+
+                let bulletAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 12, weight: .regular),
+                    .foregroundColor: UIColor.black
+                ]
+
+                for concern in concerns {
+                    "• \(concern.capitalized)".draw(at: CGPoint(x: margin + 10, y: yPosition), withAttributes: bulletAttributes)
+                    yPosition += 18
+                }
+
+                yPosition += 15
+            }
+
+            // Medical Considerations
+            if let medicalConsiderations = analysisData.medicalConsiderations, !medicalConsiderations.isEmpty {
+                checkNewPage()
+                "Medical Considerations".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                yPosition += 25
+
+                let medicalAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+                    .foregroundColor: UIColor.black
+                ]
+
+                for consideration in medicalConsiderations {
+                    let textWidth = pageWidth - (margin * 2) - 20
+                    let text = "• \(consideration)"
+                    let textRect = CGRect(x: margin + 10, y: yPosition, width: textWidth, height: 1000)
+                    let boundingRect = (text as NSString).boundingRect(
+                        with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                        options: [.usesLineFragmentOrigin],
+                        attributes: medicalAttributes,
+                        context: nil
+                    )
+
+                    text.draw(in: textRect, withAttributes: medicalAttributes)
+                    yPosition += boundingRect.height + 8
+                }
+
+                yPosition += 15
+            }
+
+            // Recommendations Section
+            if let recommendations = analysisData.recommendations, !recommendations.isEmpty {
+                checkNewPage()
+                "Recommendations".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                yPosition += 25
+
+                let recAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+                    .foregroundColor: UIColor.black
+                ]
+
+                for (index, recommendation) in recommendations.enumerated() {
+                    checkNewPage()
+                    let textWidth = pageWidth - (margin * 2) - 30
+                    let text = "\(index + 1). \(recommendation)"
+                    let textRect = CGRect(x: margin + 10, y: yPosition, width: textWidth, height: 1000)
+                    let boundingRect = (text as NSString).boundingRect(
+                        with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                        options: [.usesLineFragmentOrigin],
+                        attributes: recAttributes,
+                        context: nil
+                    )
+
+                    text.draw(in: textRect, withAttributes: recAttributes)
+                    yPosition += boundingRect.height + 8
+                }
+
+                yPosition += 15
+            }
+
+            // Product Recommendations
+            if let productRecs = analysisData.productRecommendations, !productRecs.isEmpty {
+                checkNewPage()
+                "Product Recommendations".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                yPosition += 25
+
+                let productAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+                    .foregroundColor: UIColor.black
+                ]
+
+                for (index, product) in productRecs.enumerated() {
+                    checkNewPage()
+                    let textWidth = pageWidth - (margin * 2) - 30
+                    let text = "\(index + 1). \(product)"
+                    let textRect = CGRect(x: margin + 10, y: yPosition, width: textWidth, height: 1000)
+                    let boundingRect = (text as NSString).boundingRect(
+                        with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                        options: [.usesLineFragmentOrigin],
+                        attributes: productAttributes,
+                        context: nil
+                    )
+
+                    text.draw(in: textRect, withAttributes: productAttributes)
+                    yPosition += boundingRect.height + 8
+                }
+
+                yPosition += 15
+            }
+
+            // Products Used
+            if let products = productsUsed, !products.isEmpty {
+                checkNewPage()
+                "Products Used".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                yPosition += 25
+
+                let textAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+                    .foregroundColor: UIColor.black
+                ]
+
+                let textWidth = pageWidth - (margin * 2)
+                let textRect = CGRect(x: margin, y: yPosition, width: textWidth, height: 1000)
+                let boundingRect = (products as NSString).boundingRect(
+                    with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin],
+                    attributes: textAttributes,
+                    context: nil
+                )
+
+                products.draw(in: textRect, withAttributes: textAttributes)
+                yPosition += boundingRect.height + 15
+            }
+
+            // Treatments Performed
+            if let treatments = treatmentsPerformed, !treatments.isEmpty {
+                checkNewPage()
+                "Treatments Performed".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                yPosition += 25
+
+                let textAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+                    .foregroundColor: UIColor.black
+                ]
+
+                let textWidth = pageWidth - (margin * 2)
+                let textRect = CGRect(x: margin, y: yPosition, width: textWidth, height: 1000)
+                let boundingRect = (treatments as NSString).boundingRect(
+                    with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin],
+                    attributes: textAttributes,
+                    context: nil
+                )
+
+                treatments.draw(in: textRect, withAttributes: textAttributes)
+                yPosition += boundingRect.height + 15
+            }
+
+            // Notes Section
+            if let notes = notes, !notes.isEmpty {
+                checkNewPage()
+                "Notes".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                yPosition += 25
+
+                let notesAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 11, weight: .regular),
+                    .foregroundColor: UIColor.black
+                ]
+
+                let textWidth = pageWidth - (margin * 2)
+                let textRect = CGRect(x: margin, y: yPosition, width: textWidth, height: 1000)
+                let boundingRect = (notes as NSString).boundingRect(
+                    with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin],
+                    attributes: notesAttributes,
+                    context: nil
+                )
+
+                notes.draw(in: textRect, withAttributes: notesAttributes)
+                yPosition += boundingRect.height
+            }
+
+            // Footer on last page
+            let footerY = pageHeight - 50
+
+            cgContext.setStrokeColor(UIColor.lightGray.cgColor)
+            cgContext.setLineWidth(1)
+            cgContext.move(to: CGPoint(x: margin, y: footerY))
+            cgContext.addLine(to: CGPoint(x: pageWidth - margin, y: footerY))
+            cgContext.strokePath()
+
+            let footerAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 9, weight: .regular),
+                .foregroundColor: UIColor.darkGray
+            ]
+
+            let footerFormatter = DateFormatter()
+            footerFormatter.dateStyle = .long
+            let footerText = "Generated by SkinInsight Pro on \(footerFormatter.string(from: Date()))"
+            footerText.draw(at: CGPoint(x: margin, y: footerY + 10), withAttributes: footerAttributes)
+
+            "This report is confidential and intended for professional use only.".draw(
+                at: CGPoint(x: margin, y: footerY + 25),
+                withAttributes: footerAttributes
+            )
+        }
+
+        return data
+    }
+
+    /// Generate basic PDF (used for trending and backward compatibility)
+    private func generateBasicAnalysisPDF(client: Client, analysis: SkinAnalysis, image: UIImage?) -> Data? {
         let pdfMetaData = [
             kCGPDFContextCreator: "SkinInsight Pro",
             kCGPDFContextAuthor: "SkinInsight Pro",
