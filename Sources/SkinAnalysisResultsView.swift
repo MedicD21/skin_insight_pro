@@ -18,6 +18,10 @@ struct SkinAnalysisResultsView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var activeMetricInfo: MetricInfo?
+    @State private var isExportingPDF = false
+    @State private var exportedPDF: Data?
+    @State private var pdfURL: URL?
+    @State private var showShareSheet = false
     @FocusState private var notesFieldFocused: Bool
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     private var flaggedProducts: [Product] { viewModel.flaggedProducts }
@@ -78,14 +82,21 @@ struct SkinAnalysisResultsView: View {
                     }
                     
                     notesSection
-                    
+
                     saveButton
+
+                    exportButton
                 }
                 .padding(.horizontal, horizontalSizeClass == .regular ? 32 : 16)
                 .padding(.top, 20)
                 .padding(.bottom, horizontalSizeClass == .regular ? 40 : 100)
             }
             .scrollDismissesKeyboard(.interactively)
+            .sheet(isPresented: $showShareSheet) {
+                if let url = pdfURL {
+                    ShareSheet(items: [url])
+                }
+            }
             
             if isSaving {
                 Color.black.opacity(0.5)
@@ -785,7 +796,98 @@ struct SkinAnalysisResultsView: View {
             .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
         }
     }
-    
+
+    private var exportButton: some View {
+        Button(action: exportCurrentAnalysisPDF) {
+            HStack {
+                Spacer()
+                Image(systemName: "square.and.arrow.up")
+                Text("Export PDF")
+                Spacer()
+            }
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundColor(theme.accent)
+            .frame(height: 52)
+            .background(theme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radiusMedium)
+                    .stroke(theme.border, lineWidth: 1)
+            )
+        }
+        .disabled(isExportingPDF)
+    }
+
+    private func exportCurrentAnalysisPDF() {
+        isExportingPDF = true
+
+        Task {
+            // Convert AnalysisData to SkinAnalysis for PDF export
+            let skinAnalysis = SkinAnalysis(
+                id: UUID().uuidString,
+                clientId: client.id ?? "",
+                timestamp: Date(),
+                hydration: Double(analysisResult.hydrationLevel ?? 0),
+                oiliness: 0, // Not available in current analysis format
+                texture: 0,
+                pores: 0,
+                wrinkles: 0,
+                redness: 0,
+                darkSpots: 0,
+                acne: 0,
+                recommendations: (analysisResult.recommendations ?? []).joined(separator: "\n\n"),
+                imageUrl: nil,
+                notes: notes.isEmpty ? nil : notes,
+                analysisType: "Claude AI Analysis"
+            )
+
+            // Convert AppClient to Client
+            let clientModel = Client(
+                id: client.id ?? "",
+                name: client.name ?? "",
+                companyId: client.companyId ?? "",
+                email: client.email,
+                phone: client.phone,
+                createdAt: Date()
+            )
+
+            guard let pdfData = PDFExportManager.shared.generateAnalysisPDF(
+                client: clientModel,
+                analysis: skinAnalysis,
+                image: image
+            ) else {
+                await MainActor.run {
+                    isExportingPDF = false
+                    errorMessage = "Failed to generate PDF"
+                    showError = true
+                }
+                return
+            }
+
+            // Save PDF to temporary file
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileName = "Analysis_\(client.name?.replacingOccurrences(of: " ", with: "_") ?? "Client")_\(Date().timeIntervalSince1970).pdf"
+            let fileURL = tempDir.appendingPathComponent(fileName)
+
+            do {
+                try pdfData.write(to: fileURL)
+
+                await MainActor.run {
+                    exportedPDF = pdfData
+                    pdfURL = fileURL
+                    isExportingPDF = false
+                    showShareSheet = true
+                }
+            } catch {
+                await MainActor.run {
+                    isExportingPDF = false
+                    errorMessage = "Failed to save PDF: \(error.localizedDescription)"
+                    showError = true
+                }
+            }
+        }
+    }
+
     private func infoRow(label: String, value: String, icon: String) -> some View {
         HStack {
             Image(systemName: icon)

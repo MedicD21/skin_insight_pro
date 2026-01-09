@@ -16,7 +16,6 @@
 		2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */; };
 		2BE23140B0F1AE0A04F781FA /* EditClientView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 198EB072500C9A2B066666D9 /* EditClientView.swift */; };
 		3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8DED193BE032FB2C4674890 /* SplashScreen.swift */; };
-		343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */; };
 		348334A8C531C67F87DDF1F8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 153D7D12B94012EC783295FE /* Models.swift */; };
 		43E5BAB24A71A66973900985 /* AIRulesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA15425CAA55F301D0392AF /* AIRulesView.swift */; };
 		47D98A743BC65F40FEA03B78 /* ProductImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41A453B1C86EEA2500EFCBA1 /* ProductImportView.swift */; };
@@ -49,6 +48,10 @@
 		CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */; };
 		CB45DF612F1054D500881A92 /* BiometricAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF602F1054D400881A92 /* BiometricAuthManager.swift */; };
 		CB45DF632F1054F000881A92 /* BiometricAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF622F1054F000881A92 /* BiometricAuthView.swift */; };
+		CB45DF652F10719600881A92 /* AnalysisDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF642F10719600881A92 /* AnalysisDetailView.swift */; };
+		CB45DF672F1071AF00881A92 /* PDFExportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF662F1071AF00881A92 /* PDFExportManager.swift */; };
+		CB45DF692F1071D500881A92 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF682F1071D500881A92 /* ShareSheet.swift */; };
+		CB45DF6B2F1071DF00881A92 /* TrendingGraphsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF6A2F1071DF00881A92 /* TrendingGraphsView.swift */; };
 		CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB092F0D587500D65A4A /* Secrets.swift */; };
 		CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */; };
 		CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */; };
@@ -63,7 +66,6 @@
 		153D7D12B94012EC783295FE /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		18A98890270A640B86DA35DB /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		198EB072500C9A2B066666D9 /* EditClientView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditClientView.swift; sourceTree = "<group>"; };
-		30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisDetailView.swift; sourceTree = "<group>"; };
 		3174563EA1C7E08545EE5046 /* ThemedTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTextField.swift; sourceTree = "<group>"; };
 		39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDashboardView.swift; sourceTree = "<group>"; };
 		3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConstants.swift; sourceTree = "<group>"; };
@@ -100,6 +102,10 @@
 		CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneNumberFormatter.swift; sourceTree = "<group>"; };
 		CB45DF602F1054D400881A92 /* BiometricAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthManager.swift; sourceTree = "<group>"; };
 		CB45DF622F1054F000881A92 /* BiometricAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricAuthView.swift; sourceTree = "<group>"; };
+		CB45DF642F10719600881A92 /* AnalysisDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalysisDetailView.swift; sourceTree = "<group>"; };
+		CB45DF662F1071AF00881A92 /* PDFExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExportManager.swift; sourceTree = "<group>"; };
+		CB45DF682F1071D500881A92 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		CB45DF6A2F1071DF00881A92 /* TrendingGraphsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendingGraphsView.swift; sourceTree = "<group>"; };
 		CB82FB092F0D587500D65A4A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDataExportView.swift; sourceTree = "<group>"; };
 		CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTeamMemberView.swift; sourceTree = "<group>"; };
@@ -149,57 +155,60 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				CB45DF622F1054F000881A92 /* BiometricAuthView.swift */,
-				CB45DF602F1054D400881A92 /* BiometricAuthManager.swift */,
-				CB89377B2F0EF23800E0301E /* SubscriptionView.swift */,
-				CB8937792F0EF22A00E0301E /* StoreKitManager.swift */,
-				CB8937772F0EF21C00E0301E /* CompanyOnboardingView.swift */,
-				CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */,
-				CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */,
-				CB82FB092F0D587500D65A4A /* Secrets.swift */,
-				CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */,
-				CB00CD122F063847009ED8F1 /* ConsentHelpers.swift */,
-				CB00CD102F0632B6009ED8F1 /* HIPAAConsentView.swift */,
-				CB00CD0E2F06329B009ED8F1 /* SessionTimeoutView.swift */,
-				CB00CD0C2F063288009ED8F1 /* HIPAADataManagementView.swift */,
-				CB00CD0A2F063279009ED8F1 /* HIPAAComplianceManager.swift */,
-				CB00CD082F063225009ED8F1 /* ClientHIPAAConsentView.swift */,
-				CB00CD062F061BB4009ED8F1 /* EmployeeImportView.swift */,
-				CB00CD042F05F5F5009ED8F1 /* AIAnalysisService.swift */,
-				CB00CD022F05F5A4009ED8F1 /* AIProviderSettingsView.swift */,
-				CB00CD042F05E930009ED8F1 /* CompleteProfileView.swift */,
-				CB00CD022F05D820009ED8F1 /* JoinCompanyView.swift */,
-				CB00CD002F05C710009ED8F1 /* TeamMembersView.swift */,
-				CB00CCFC2F05AF7E009ED8F1 /* EditProfileView.swift */,
-				CB00CCFA2F05AF70009ED8F1 /* CompanyProfileView.swift */,
 				B2ECC2CEC1D4331ACCDEB24E /* AddClientView.swift */,
 				82E315965DF68F10E98272F2 /* AddProductView.swift */,
+				CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */,
+				CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */,
+				CB00CD042F05F5F5009ED8F1 /* AIAnalysisService.swift */,
+				CB00CD022F05F5A4009ED8F1 /* AIProviderSettingsView.swift */,
 				6DA15425CAA55F301D0392AF /* AIRulesView.swift */,
-				30CFC94B4A5C8CE27B7BED71 /* AnalysisDetailView.swift */,
+				CB45DF642F10719600881A92 /* AnalysisDetailView.swift */,
 				3BF84B6A422086AEAC0FF5A2 /* AppConstants.swift */,
 				56FAF21605DA98E7CFB6065B /* AppLogger.swift */,
 				18A98890270A640B86DA35DB /* Assets.xcassets */,
 				BDF953F27608F1AE5DB2E4AA /* AuthenticationManager.swift */,
 				F6C2FAAF9E373A35849AC79D /* AuthenticationView.swift */,
+				CB45DF602F1054D400881A92 /* BiometricAuthManager.swift */,
+				CB45DF622F1054F000881A92 /* BiometricAuthView.swift */,
 				39C2F1AFC8D7341985BC93DC /* ClientDashboardView.swift */,
 				BCACC036FECD051B397F0353 /* ClientDetailView.swift */,
+				CB00CD082F063225009ED8F1 /* ClientHIPAAConsentView.swift */,
+				CB8937772F0EF21C00E0301E /* CompanyOnboardingView.swift */,
+				CB00CCFA2F05AF70009ED8F1 /* CompanyProfileView.swift */,
 				A963AFF4EDAD6BA828FC7C09 /* CompareAnalysesView.swift */,
+				CB00CD042F05E930009ED8F1 /* CompleteProfileView.swift */,
+				CB00CD122F063847009ED8F1 /* ConsentHelpers.swift */,
 				198EB072500C9A2B066666D9 /* EditClientView.swift */,
+				CB00CCFC2F05AF7E009ED8F1 /* EditProfileView.swift */,
+				CB00CD062F061BB4009ED8F1 /* EmployeeImportView.swift */,
+				CB00CD0A2F063279009ED8F1 /* HIPAAComplianceManager.swift */,
+				CB00CD102F0632B6009ED8F1 /* HIPAAConsentView.swift */,
+				CB00CD0C2F063288009ED8F1 /* HIPAADataManagementView.swift */,
 				E0A7871AD52950DF0B759860 /* Info.plist */,
+				CB00CD022F05D820009ED8F1 /* JoinCompanyView.swift */,
 				8AF8EEAB28E19F51D8CF5804 /* MainTabView.swift */,
 				153D7D12B94012EC783295FE /* Models.swift */,
 				7821CF1427D5751FFFD2A142 /* NetworkService.swift */,
+				CB45DF662F1071AF00881A92 /* PDFExportManager.swift */,
+				CB00CD142F063854009ED8F1 /* PhoneNumberFormatter.swift */,
 				E9FEA58CEC2E5C739E72C07D /* ProductCatalogView.swift */,
 				41A453B1C86EEA2500EFCBA1 /* ProductImportView.swift */,
 				DC5B3BD9019EE8EB9401CF1A /* ProfileView.swift */,
+				CB82FB092F0D587500D65A4A /* Secrets.swift */,
+				CB00CD0E2F06329B009ED8F1 /* SessionTimeoutView.swift */,
+				CB45DF682F1071D500881A92 /* ShareSheet.swift */,
 				73E2486C6F53FA4E888F8DCE /* SignInWithAppleButton.swift */,
 				615E9FBFB0C60FBD2403383F /* SkinAnalysisInputView.swift */,
 				85F0F34D76D5F6C5866F40EC /* SkinAnalysisResultsView.swift */,
 				EBF33D873CEAFD072AA32694 /* SkinInsightPro.entitlements */,
 				D5821F74532CE931CA183F08 /* SkinInsightProApp.swift */,
 				B8DED193BE032FB2C4674890 /* SplashScreen.swift */,
+				CB8937792F0EF22A00E0301E /* StoreKitManager.swift */,
+				CB89377B2F0EF23800E0301E /* SubscriptionView.swift */,
+				CB00CD002F05C710009ED8F1 /* TeamMembersView.swift */,
 				3174563EA1C7E08545EE5046 /* ThemedTextField.swift */,
 				E22DC34D7496C67D134CED73 /* ThemeManager.swift */,
+				CB45DF6A2F1071DF00881A92 /* TrendingGraphsView.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -272,7 +281,7 @@
 				43E5BAB24A71A66973900985 /* AIRulesView.swift in Sources */,
 				01C73F7497D77BEDBEE4D32C /* AddClientView.swift in Sources */,
 				80F8C9DA339CC87E395D9727 /* AddProductView.swift in Sources */,
-				343DFCF6A537462C05769E12 /* AnalysisDetailView.swift in Sources */,
+				CB45DF692F1071D500881A92 /* ShareSheet.swift in Sources */,
 				CB00CD092F063225009ED8F1 /* ClientHIPAAConsentView.swift in Sources */,
 				A7A5531943F6DC7B8C6B0286 /* AppConstants.swift in Sources */,
 				C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */,
@@ -282,6 +291,7 @@
 				97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */,
 				04C09B3AAFACA6B0BE7A6DF8 /* AuthenticationView.swift in Sources */,
 				CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */,
+				CB45DF6B2F1071DF00881A92 /* TrendingGraphsView.swift in Sources */,
 				CB45DF632F1054F000881A92 /* BiometricAuthView.swift in Sources */,
 				CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */,
 				2B0C112428F3CA863A402409 /* ClientDashboardView.swift in Sources */,
@@ -303,11 +313,13 @@
 				47D98A743BC65F40FEA03B78 /* ProductImportView.swift in Sources */,
 				CB00CD132F063847009ED8F1 /* ConsentHelpers.swift in Sources */,
 				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,
+				CB45DF652F10719600881A92 /* AnalysisDetailView.swift in Sources */,
 				CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */,
 				9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */,
 				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,
 				C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */,
 				CB00CD072F061BB4009ED8F1 /* EmployeeImportView.swift in Sources */,
+				CB45DF672F1071AF00881A92 /* PDFExportManager.swift in Sources */,
 				0A3D3F04A13CCAA0DA325484 /* SkinInsightProApp.swift in Sources */,
 				CB00CD032F05F5A4009ED8F1 /* AIProviderSettingsView.swift in Sources */,
 				3127CD53BE99B18F0E74C65F /* SplashScreen.swift in Sources */,

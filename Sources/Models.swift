@@ -390,6 +390,7 @@ struct AIRule: Identifiable, Hashable, Codable {
     var userId: String?
     var companyId: String?
     var name: String?
+    var ruleType: String? // "condition" or "setting"
     var condition: String?
     var action: String?
     var productId: String?
@@ -397,17 +398,24 @@ struct AIRule: Identifiable, Hashable, Codable {
     var isActive: Bool?
     var createdAt: String?
 
+    // General AI Settings (when ruleType = "setting")
+    var settingKey: String? // e.g., "tone", "depth", "format"
+    var settingValue: String? // e.g., "professional", "detailed", "bullets"
+
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
         case companyId = "company_id"
         case name
+        case ruleType = "rule_type"
         case condition
         case action
         case productId = "product_id"
         case priority
         case isActive = "is_active"
         case createdAt = "created_at"
+        case settingKey = "setting_key"
+        case settingValue = "setting_value"
     }
 }
 
@@ -485,4 +493,35 @@ struct CreateAIRuleRequest: Codable {
             case isActive = "is_active"
         }
     }
+}
+
+// MARK: - PDF Export Models
+
+/// Simplified client model for PDF export
+struct Client {
+    let id: String
+    let name: String
+    let companyId: String
+    let email: String?
+    let phone: String?
+    let createdAt: Date
+}
+
+/// Simplified analysis model for PDF export and trending graphs
+struct SkinAnalysis: Identifiable {
+    let id: String
+    let clientId: String
+    let timestamp: Date
+    let hydration: Double
+    let oiliness: Double
+    let texture: Double
+    let pores: Double
+    let wrinkles: Double
+    let redness: Double
+    let darkSpots: Double
+    let acne: Double
+    let recommendations: String?
+    let imageUrl: String?
+    let notes: String?
+    let analysisType: String
 }

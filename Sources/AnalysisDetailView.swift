@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AnalysisDetailView: View {
     @ObservedObject var theme = ThemeManager.shared
+    let client: AppClient
     let analysis: SkinAnalysisResult
     let onDelete: ((SkinAnalysisResult) async throws -> Void)?
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
@@ -11,7 +12,11 @@ struct AnalysisDetailView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var activeMetricInfo: MetricInfo?
-    
+    @State private var isExportingPDF = false
+    @State private var exportedPDF: Data?
+    @State private var pdfURL: URL?
+    @State private var showShareSheet = false
+
     private let medicalConditionKeywords = [
         "rosacea", "eczema", "psoriasis", "dermatitis", "acne", "melasma",
         "hyperpigmentation", "vitiligo", "keratosis", "lesion", "cyst",
@@ -97,6 +102,18 @@ struct AnalysisDetailView: View {
                         Text("Back")
                     }
                 }
+            }
+
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: exportPDF) {
+                    Label("Export PDF", systemImage: "square.and.arrow.up")
+                }
+                .disabled(isExportingPDF)
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = pdfURL {
+                ShareSheet(items: [url])
             }
         }
         .alert("Delete Analysis", isPresented: $showDeleteConfirm) {
@@ -486,5 +503,96 @@ struct AnalysisDetailView: View {
         }
 
         return dateString
+    }
+
+    private func exportPDF() {
+        isExportingPDF = true
+
+        Task {
+            // Download image first if needed
+            var downloadedImage: UIImage?
+            if let imageUrl = analysis.imageUrl, let url = URL(string: imageUrl) {
+                if let (data, _) = try? await URLSession.shared.data(from: url),
+                   let image = UIImage(data: data) {
+                    downloadedImage = image
+                }
+            }
+
+            // Convert SkinAnalysisResult to SkinAnalysis
+            let skinAnalysis = SkinAnalysis(
+                id: analysis.id ?? UUID().uuidString,
+                clientId: analysis.clientId ?? "",
+                timestamp: parseDate(analysis.createdAt ?? "") ?? Date(),
+                hydration: Double(analysis.analysisResults?.hydrationLevel ?? 0),
+                oiliness: 0, // Not available in stored analysis
+                texture: 0,
+                pores: 0,
+                wrinkles: 0,
+                redness: 0,
+                darkSpots: 0,
+                acne: 0,
+                recommendations: (analysis.analysisResults?.recommendations ?? []).joined(separator: "\n"),
+                imageUrl: analysis.imageUrl,
+                notes: analysis.notes,
+                analysisType: "Skin Analysis"
+            )
+
+            // Convert AppClient to Client
+            let clientModel = Client(
+                id: client.id ?? "",
+                name: client.name ?? "",
+                companyId: client.companyId ?? "",
+                email: client.email,
+                phone: client.phone,
+                createdAt: Date()
+            )
+
+            guard let pdfData = PDFExportManager.shared.generateAnalysisPDF(
+                client: clientModel,
+                analysis: skinAnalysis,
+                image: downloadedImage
+            ) else {
+                await MainActor.run {
+                    isExportingPDF = false
+                    errorMessage = "Failed to generate PDF"
+                    showError = true
+                }
+                return
+            }
+
+            // Save PDF to temporary file
+            let tempDir = FileManager.default.temporaryDirectory
+            let fileName = "Analysis_\(client.name?.replacingOccurrences(of: " ", with: "_") ?? "Client")_\(Date().timeIntervalSince1970).pdf"
+            let fileURL = tempDir.appendingPathComponent(fileName)
+
+            do {
+                try pdfData.write(to: fileURL)
+
+                await MainActor.run {
+                    exportedPDF = pdfData
+                    pdfURL = fileURL
+                    isExportingPDF = false
+                    showShareSheet = true
+                }
+            } catch {
+                await MainActor.run {
+                    isExportingPDF = false
+                    errorMessage = "Failed to save PDF: \(error.localizedDescription)"
+                    showError = true
+                }
+            }
+        }
+    }
+
+    private func parseDate(_ dateString: String) -> Date? {
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        if let date = isoFormatter.date(from: dateString) {
+            return date
+        }
+
+        isoFormatter.formatOptions = [.withInternetDateTime]
+        return isoFormatter.date(from: dateString)
     }
 }

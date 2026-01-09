@@ -764,10 +764,67 @@ class AIAnalysisService {
         aiRules: [AIRule],
         products: [Product]
     ) -> String {
+        // Separate rules into settings and conditions
+        let activeRules = aiRules.filter { $0.isActive == true }
+        let settingsRules = activeRules.filter { $0.ruleType == "setting" }
+        let conditionRules = activeRules.filter { $0.ruleType == "condition" || $0.ruleType == nil }
+
+        // Extract general AI settings
+        var tone = "professional and empathetic"
+        var depth = "detailed"
+        var format = "clear and structured"
+        var focusAreas: [String] = []
+        var alwaysInclude: [String] = []
+        var avoidMentioning: [String] = []
+
+        for setting in settingsRules {
+            guard let key = setting.settingKey?.lowercased(), let value = setting.settingValue else { continue }
+
+            switch key {
+            case "tone":
+                tone = value
+            case "depth", "detail_level":
+                depth = value
+            case "format", "output_format":
+                format = value
+            case "focus":
+                focusAreas.append(value)
+            case "always_include":
+                alwaysInclude.append(value)
+            case "avoid":
+                avoidMentioning.append(value)
+            default:
+                break
+            }
+        }
+
+        // Build base prompt with AI personality
         var prompt = """
-        You are an expert skin analysis AI for estheticians and medspa professionals. Analyze this skin image and provide a detailed assessment. Consider the following context carefully while performing your analysis:
+        You are an expert skin analysis AI for estheticians and medspa professionals. Analyze this skin image and provide a detailed assessment.
 
         """
+
+        // Add AI behavior instructions based on settings
+        if !settingsRules.isEmpty {
+            prompt += "\nAI BEHAVIOR SETTINGS:\n"
+            prompt += "- Tone: Use a \(tone) tone throughout your analysis\n"
+            prompt += "- Detail Level: Provide \(depth) analysis and explanations\n"
+            prompt += "- Format: Present information in a \(format) manner\n"
+
+            if !focusAreas.isEmpty {
+                prompt += "- Focus Areas: Pay special attention to: \(focusAreas.joined(separator: ", "))\n"
+            }
+
+            if !alwaysInclude.isEmpty {
+                prompt += "- Always Include: Make sure to mention: \(alwaysInclude.joined(separator: ", "))\n"
+            }
+
+            if !avoidMentioning.isEmpty {
+                prompt += "- Avoid: Do not mention or focus on: \(avoidMentioning.joined(separator: ", "))\n"
+            }
+        }
+
+        prompt += "\nConsider the following context carefully while performing your analysis:\n\n"
 
         // Add client context
         if let medicalHistory = medicalHistory, !medicalHistory.isEmpty {
@@ -797,10 +854,11 @@ class AIAnalysisService {
             prompt += "Esthetician's hydration assessment (percent): \(manualHydrationLevel)\n"
         }
 
-        // Add AI Rules
-        if !aiRules.isEmpty {
-            prompt += "\n\nCUSTOM AI RULES - These are professional rules you MUST follow:\n"
-            for (index, rule) in aiRules.enumerated() {
+        // Add Condition-Based AI Rules
+        if !conditionRules.isEmpty {
+            prompt += "\n\nCUSTOM CONDITIONAL RULES - These are professional rules you MUST follow:\n"
+            let sortedRules = conditionRules.sorted { ($0.priority ?? 0) > ($1.priority ?? 0) }
+            for (index, rule) in sortedRules.enumerated() {
                 if let condition = rule.condition, let action = rule.action {
                     prompt += "Rule \(index + 1): IF skin shows \"\(condition)\" THEN add to recommendations: \"\(action)\" (Priority: \(rule.priority ?? 0))\n"
                 }

@@ -2501,8 +2501,11 @@ class NetworkService {
     func createAIRule(
         userId: String,
         name: String,
-        condition: String,
-        action: String,
+        ruleType: String = "condition",
+        condition: String = "",
+        action: String = "",
+        settingKey: String? = nil,
+        settingValue: String? = nil,
         priority: Int,
         isActive: Bool
     ) async throws -> AIRule {
@@ -2517,11 +2520,26 @@ class NetworkService {
         var ruleData: [String: Any] = [
             "user_id": userId,
             "name": name,
-            "condition": condition,
-            "action": action,
+            "rule_type": ruleType,
             "priority": priority,
             "is_active": isActive
         ]
+
+        // Add conditional rule fields
+        if ruleType == "condition" {
+            ruleData["condition"] = condition
+            ruleData["action"] = action
+        }
+
+        // Add setting rule fields
+        if ruleType == "setting" {
+            if let settingKey = settingKey {
+                ruleData["setting_key"] = settingKey
+            }
+            if let settingValue = settingValue {
+                ruleData["setting_value"] = settingValue
+            }
+        }
 
         // Add company_id if user belongs to a company
         let companyId = await MainActor.run { AuthenticationManager.shared.currentUser?.companyId }
@@ -2553,8 +2571,11 @@ class NetworkService {
         ruleId: String,
         userId: String,
         name: String,
-        condition: String,
-        action: String,
+        ruleType: String = "condition",
+        condition: String = "",
+        action: String = "",
+        settingKey: String? = nil,
+        settingValue: String? = nil,
         priority: Int,
         isActive: Bool
     ) async throws -> AIRule {
@@ -2566,13 +2587,28 @@ class NetworkService {
         }
         request.setValue("return=representation", forHTTPHeaderField: "Prefer")
 
-        let ruleData: [String: Any] = [
+        var ruleData: [String: Any] = [
             "name": name,
-            "condition": condition,
-            "action": action,
+            "rule_type": ruleType,
             "priority": priority,
             "is_active": isActive
         ]
+
+        // Add conditional rule fields
+        if ruleType == "condition" {
+            ruleData["condition"] = condition
+            ruleData["action"] = action
+        }
+
+        // Add setting rule fields
+        if ruleType == "setting" {
+            if let settingKey = settingKey {
+                ruleData["setting_key"] = settingKey
+            }
+            if let settingValue = settingValue {
+                ruleData["setting_value"] = settingValue
+            }
+        }
 
         request.httpBody = try JSONSerialization.data(withJSONObject: ruleData)
 

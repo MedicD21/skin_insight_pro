@@ -118,6 +118,17 @@ struct AIRuleRowView: View {
 
                 Spacer()
 
+                // Rule type badge
+                if let ruleType = rule.ruleType {
+                    Text(ruleType == "setting" ? "Setting" : "Condition")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(ruleType == "setting" ? .purple : .blue)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(ruleType == "setting" ? Color.purple.opacity(0.2) : Color.blue.opacity(0.2))
+                        .clipShape(Capsule())
+                }
+
                 if let isActive = rule.isActive {
                     Text(isActive ? "Active" : "Inactive")
                         .font(.system(size: 12, weight: .medium))
@@ -129,10 +140,20 @@ struct AIRuleRowView: View {
                 }
             }
 
-            if let condition = rule.condition, !condition.isEmpty {
-                Text("When: \(condition)")
-                    .font(.system(size: 14))
-                    .foregroundColor(theme.secondaryText)
+            // For setting type rules, show setting key/value
+            if rule.ruleType == "setting" {
+                if let key = rule.settingKey, let value = rule.settingValue {
+                    Text("\(key.capitalized): \(value)")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                }
+            } else {
+                // For condition type rules, show the condition
+                if let condition = rule.condition, !condition.isEmpty {
+                    Text("When: \(condition)")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                }
             }
 
             HStack {
@@ -214,8 +235,11 @@ struct AddAIRuleView: View {
     @ObservedObject var viewModel: AIRulesViewModel
     @Environment(\.dismiss) var dismiss
     @State private var name = ""
+    @State private var ruleType = "condition"
     @State private var condition = ""
     @State private var action = ""
+    @State private var settingKey = "tone"
+    @State private var settingValue = ""
     @State private var priority = 5
     @State private var isActive = true
     @State private var isSaving = false
@@ -224,7 +248,7 @@ struct AddAIRuleView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case name, condition, action
+        case name, condition, action, settingValue
     }
 
     var body: some View {
@@ -240,7 +264,7 @@ struct AddAIRuleView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             ThemedTextField(
                                 title: "Rule Name",
-                                placeholder: "e.g., Acne Treatment Protocol",
+                                placeholder: ruleType == "setting" ? "e.g., Professional Tone" : "e.g., Acne Treatment Protocol",
                                 text: $name,
                                 field: .name,
                                 focusedField: $focusedField,
@@ -248,66 +272,146 @@ struct AddAIRuleView: View {
                                 autocapitalization: .words
                             )
 
+                            // Rule Type Selector
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("When (Condition)")
+                                Text("Rule Type")
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(theme.secondaryText)
 
-                                Text("Describe the skin condition or analysis result that triggers this rule")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(theme.tertiaryText)
-                                    
-
-                                TextEditor(text: $condition)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(theme.primaryText)
-                                    .frame(minHeight: 100)
-                                    .padding(12)
-                                    .background(theme.inputBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: theme.radiusMedium)
-                                            .stroke(focusedField == .condition ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .condition ? 2 : 1)
-                                    )
-                                    .focused($focusedField, equals: .condition)
-                                    .scrollContentBackground(.hidden)
-
-                                if condition.isEmpty {
-                                    Text("Example: Client has acne-prone skin with high oil production")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(theme.tertiaryText)
-                                        .italic()
+                                HStack(spacing: 12) {
+                                    ForEach(["condition", "setting"], id: \.self) { type in
+                                        Button(action: { ruleType = type }) {
+                                            HStack(spacing: 8) {
+                                                Image(systemName: type == "condition" ? "arrow.triangle.branch" : "gear")
+                                                    .font(.system(size: 14))
+                                                Text(type == "condition" ? "Conditional" : "AI Setting")
+                                                    .font(.system(size: 14, weight: .medium))
+                                            }
+                                            .foregroundColor(ruleType == type ? .white : theme.primaryText)
+                                            .padding(.horizontal, 16)
+                                            .padding(.vertical, 12)
+                                            .frame(maxWidth: .infinity)
+                                            .background(ruleType == type ? (type == "condition" ? Color.blue : Color.purple) : theme.tertiaryBackground)
+                                            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                        }
+                                    }
                                 }
                             }
 
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Then (Action/Recommendation)")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(theme.secondaryText)
+                            // Conditional UI based on rule type
+                            if ruleType == "condition" {
+                                // Condition-based rule UI
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("When (Condition)")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
 
-                                Text("Specify what the AI should recommend")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(theme.tertiaryText)
+                                    Text("Describe the skin condition or analysis result that triggers this rule")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(theme.tertiaryText)
 
-                                TextEditor(text: $action)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(theme.primaryText)
-                                    .frame(minHeight: 100)
+                                    TextEditor(text: $condition)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(minHeight: 100)
+                                        .padding(12)
+                                        .background(theme.inputBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                                .stroke(focusedField == .condition ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .condition ? 2 : 1)
+                                        )
+                                        .focused($focusedField, equals: .condition)
+                                        .scrollContentBackground(.hidden)
+
+                                    if condition.isEmpty {
+                                        Text("Example: Client has acne-prone skin with high oil production")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(theme.tertiaryText)
+                                            .italic()
+                                    }
+                                }
+
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Then (Action/Recommendation)")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
+
+                                    Text("Specify what the AI should recommend")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(theme.tertiaryText)
+
+                                    TextEditor(text: $action)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(minHeight: 100)
+                                        .padding(12)
+                                        .background(theme.inputBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                                .stroke(focusedField == .action ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .action ? 2 : 1)
+                                        )
+                                        .focused($focusedField, equals: .action)
+                                        .scrollContentBackground(.hidden)
+
+                                    if action.isEmpty {
+                                        Text("Example: Recommend salicylic acid cleanser and niacinamide serum")
+                                            .font(.system(size: 12))
+                                            .foregroundColor(theme.tertiaryText)
+                                            .italic()
+                                    }
+                                }
+                            } else {
+                                // Settings rule UI
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Setting Type")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
+
+                                    Picker("Setting Type", selection: $settingKey) {
+                                        Text("Tone").tag("tone")
+                                        Text("Detail Level").tag("depth")
+                                        Text("Output Format").tag("format")
+                                        Text("Focus Area").tag("focus")
+                                        Text("Always Include").tag("always_include")
+                                        Text("Avoid Mentioning").tag("avoid")
+                                    }
+                                    .pickerStyle(.menu)
                                     .padding(12)
                                     .background(theme.inputBackground)
                                     .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: theme.radiusMedium)
-                                            .stroke(focusedField == .action ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .action ? 2 : 1)
-                                    )
-                                    .focused($focusedField, equals: .action)
-                                    .scrollContentBackground(.hidden)
+                                }
 
-                                if action.isEmpty {
-                                    Text("Example: Recommend salicylic acid cleanser and niacinamide serum")
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Setting Value")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
+
+                                    Text(settingKeyDescription)
                                         .font(.system(size: 12))
                                         .foregroundColor(theme.tertiaryText)
-                                        .italic()
+
+                                    TextEditor(text: $settingValue)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(minHeight: 80)
+                                        .padding(12)
+                                        .background(theme.inputBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                                .stroke(focusedField == .settingValue ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .settingValue ? 2 : 1)
+                                        )
+                                        .focused($focusedField, equals: .settingValue)
+                                        .scrollContentBackground(.hidden)
+
+                                    if settingValue.isEmpty {
+                                        Text(settingKeyExample)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(theme.tertiaryText)
+                                            .italic()
+                                    }
                                 }
                             }
 
@@ -416,10 +520,17 @@ struct AddAIRuleView: View {
                     .foregroundColor(theme.primaryText)
             }
 
-            Text("Create rules to teach the AI your professional expertise. When the AI analyzes skin, it will follow your rules to make recommendations that match your spa's protocols and product preferences.")
-                .font(.system(size: 14))
-                .foregroundColor(theme.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+            if ruleType == "condition" {
+                Text("Create conditional rules to teach the AI your professional expertise. When the AI detects specific skin conditions, it will follow your rules to make recommendations that match your protocols and product preferences.")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Create AI behavior settings to control how the AI communicates. Settings affect tone, detail level, format, and focus areas of all analyses.")
+                    .font(.system(size: 14))
+                    .foregroundColor(theme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(16)
         .background(
@@ -432,8 +543,50 @@ struct AddAIRuleView: View {
         )
     }
 
+    private var settingKeyDescription: String {
+        switch settingKey {
+        case "tone":
+            return "Define the communication style for AI analysis"
+        case "depth":
+            return "Set the level of detail in AI explanations"
+        case "format":
+            return "Specify how information should be presented"
+        case "focus":
+            return "Areas the AI should pay special attention to"
+        case "always_include":
+            return "Topics the AI should always mention in analysis"
+        case "avoid":
+            return "Topics the AI should avoid mentioning"
+        default:
+            return "Configure AI behavior setting"
+        }
+    }
+
+    private var settingKeyExample: String {
+        switch settingKey {
+        case "tone":
+            return "Example: professional and empathetic, casual and friendly, technical and precise"
+        case "depth":
+            return "Example: brief overview, detailed analysis, comprehensive with scientific backing"
+        case "format":
+            return "Example: clear bullet points, flowing paragraphs, structured sections"
+        case "focus":
+            return "Example: anti-aging and wrinkle prevention, hydration and moisture barrier"
+        case "always_include":
+            return "Example: sun protection and daily SPF usage, importance of patch testing"
+        case "avoid":
+            return "Example: medical claims, prescription recommendations"
+        default:
+            return ""
+        }
+    }
+
     private var isFormValid: Bool {
-        !name.isEmpty && !condition.isEmpty && !action.isEmpty
+        if ruleType == "condition" {
+            return !name.isEmpty && !condition.isEmpty && !action.isEmpty
+        } else {
+            return !name.isEmpty && !settingValue.isEmpty
+        }
     }
 
     private func saveRule() {
@@ -444,14 +597,29 @@ struct AddAIRuleView: View {
 
         Task {
             do {
-                let savedRule = try await NetworkService.shared.createAIRule(
-                    userId: userId,
-                    name: name,
-                    condition: condition,
-                    action: action,
-                    priority: priority,
-                    isActive: isActive
-                )
+                let savedRule: AIRule
+
+                if ruleType == "condition" {
+                    savedRule = try await NetworkService.shared.createAIRule(
+                        userId: userId,
+                        name: name,
+                        ruleType: "condition",
+                        condition: condition,
+                        action: action,
+                        priority: priority,
+                        isActive: isActive
+                    )
+                } else {
+                    savedRule = try await NetworkService.shared.createAIRule(
+                        userId: userId,
+                        name: name,
+                        ruleType: "setting",
+                        settingKey: settingKey,
+                        settingValue: settingValue,
+                        priority: priority,
+                        isActive: isActive
+                    )
+                }
 
                 viewModel.addRule(savedRule)
                 isSaving = false
@@ -472,8 +640,11 @@ struct EditAIRuleView: View {
     @ObservedObject var viewModel: AIRulesViewModel
     @Environment(\.dismiss) var dismiss
     @State private var name = ""
+    @State private var ruleType = "condition"
     @State private var condition = ""
     @State private var action = ""
+    @State private var settingKey = "tone"
+    @State private var settingValue = ""
     @State private var priority = 5
     @State private var isActive = true
     @State private var isSaving = false
@@ -484,7 +655,7 @@ struct EditAIRuleView: View {
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case name, condition, action
+        case name, condition, action, settingValue
     }
 
     var body: some View {
@@ -506,50 +677,113 @@ struct EditAIRuleView: View {
                                 autocapitalization: .words
                             )
 
+                            // Show rule type badge (read-only)
                             VStack(alignment: .leading, spacing: 8) {
-                                Text("When (Condition)")
+                                Text("Rule Type")
                                     .font(.system(size: 14, weight: .medium))
                                     .foregroundColor(theme.secondaryText)
 
-                                TextEditor(text: $condition)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(theme.primaryText)
-                                    .frame(minHeight: 100)
-                                    .padding(12)
-                                    .background(theme.inputBackground)
-                                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: theme.radiusMedium)
-                                            .stroke(
-                                                focusedField == .condition
-                                                    ? theme.inputBorderFocused
-                                                    : theme.inputBorder,
-                                                lineWidth: focusedField == .condition ? 2 : 1
-                                            )
-                                    )
-
-                                    .focused($focusedField, equals: .condition)
-                                    .scrollContentBackground(.hidden)
+                                HStack(spacing: 8) {
+                                    Image(systemName: ruleType == "condition" ? "arrow.triangle.branch" : "gear")
+                                        .font(.system(size: 14))
+                                    Text(ruleType == "condition" ? "Conditional Rule" : "AI Setting")
+                                        .font(.system(size: 15, weight: .medium))
+                                }
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(ruleType == "condition" ? Color.blue : Color.purple)
+                                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
                             }
 
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Then (Action/Recommendation)")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(theme.secondaryText)
+                            // Conditional UI based on rule type
+                            if ruleType == "condition" {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("When (Condition)")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
 
-                                TextEditor(text: $action)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(theme.primaryText)
-                                    .frame(minHeight: 100)
+                                    TextEditor(text: $condition)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(minHeight: 100)
+                                        .padding(12)
+                                        .background(theme.inputBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                                .stroke(
+                                                    focusedField == .condition
+                                                        ? theme.inputBorderFocused
+                                                        : theme.inputBorder,
+                                                    lineWidth: focusedField == .condition ? 2 : 1
+                                                )
+                                        )
+
+                                        .focused($focusedField, equals: .condition)
+                                        .scrollContentBackground(.hidden)
+                                }
+
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Then (Action/Recommendation)")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
+
+                                    TextEditor(text: $action)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(minHeight: 100)
+                                        .padding(12)
+                                        .background(theme.inputBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                                .stroke(focusedField == .action ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .action ? 2 : 1)
+                                        )
+                                        .focused($focusedField, equals: .action)
+                                        .scrollContentBackground(.hidden)
+                                }
+                            } else {
+                                // Settings rule UI
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Setting Type")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
+
+                                    Picker("Setting Type", selection: $settingKey) {
+                                        Text("Tone").tag("tone")
+                                        Text("Detail Level").tag("depth")
+                                        Text("Output Format").tag("format")
+                                        Text("Focus Area").tag("focus")
+                                        Text("Always Include").tag("always_include")
+                                        Text("Avoid Mentioning").tag("avoid")
+                                    }
+                                    .pickerStyle(.menu)
                                     .padding(12)
                                     .background(theme.inputBackground)
                                     .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: theme.radiusMedium)
-                                            .stroke(focusedField == .action ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .action ? 2 : 1)
-                                    )
-                                    .focused($focusedField, equals: .action)
-                                    .scrollContentBackground(.hidden)
+                                }
+
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Setting Value")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(theme.secondaryText)
+
+                                    TextEditor(text: $settingValue)
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(minHeight: 80)
+                                        .padding(12)
+                                        .background(theme.inputBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                                .stroke(focusedField == .settingValue ? theme.inputBorderFocused : theme.inputBorder, lineWidth: focusedField == .settingValue ? 2 : 1)
+                                        )
+                                        .focused($focusedField, equals: .settingValue)
+                                        .scrollContentBackground(.hidden)
+                                }
                             }
 
                             VStack(alignment: .leading, spacing: 12) {
@@ -664,8 +898,11 @@ struct EditAIRuleView: View {
             }
             .onAppear {
                 name = rule.name ?? ""
+                ruleType = rule.ruleType ?? "condition"
                 condition = rule.condition ?? ""
                 action = rule.action ?? ""
+                settingKey = rule.settingKey ?? "tone"
+                settingValue = rule.settingValue ?? ""
                 priority = rule.priority ?? 5
                 isActive = rule.isActive ?? true
             }
@@ -673,7 +910,11 @@ struct EditAIRuleView: View {
     }
 
     private var isFormValid: Bool {
-        !name.isEmpty && !condition.isEmpty
+        if ruleType == "condition" {
+            return !name.isEmpty && !condition.isEmpty
+        } else {
+            return !name.isEmpty && !settingValue.isEmpty
+        }
     }
 
     private func saveRule() {
@@ -685,15 +926,31 @@ struct EditAIRuleView: View {
 
         Task {
             do {
-                let updatedRule = try await NetworkService.shared.updateAIRule(
-                    ruleId: ruleId,
-                    userId: userId,
-                    name: name,
-                    condition: condition,
-                    action: action,
-                    priority: priority,
-                    isActive: isActive
-                )
+                let updatedRule: AIRule
+
+                if ruleType == "condition" {
+                    updatedRule = try await NetworkService.shared.updateAIRule(
+                        ruleId: ruleId,
+                        userId: userId,
+                        name: name,
+                        ruleType: "condition",
+                        condition: condition,
+                        action: action,
+                        priority: priority,
+                        isActive: isActive
+                    )
+                } else {
+                    updatedRule = try await NetworkService.shared.updateAIRule(
+                        ruleId: ruleId,
+                        userId: userId,
+                        name: name,
+                        ruleType: "setting",
+                        settingKey: settingKey,
+                        settingValue: settingValue,
+                        priority: priority,
+                        isActive: isActive
+                    )
+                }
 
                 viewModel.updateRule(updatedRule)
                 isSaving = false

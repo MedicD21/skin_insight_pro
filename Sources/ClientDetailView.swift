@@ -17,6 +17,7 @@ struct ClientDetailView: View {
     @State private var currentClient: AppClient
     @State private var showFreeTierLimitAlert = false
     @State private var isCheckingUsage = false
+    @State private var showTrendingGraphs = false
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.dismiss) var dismiss
 
@@ -134,6 +135,53 @@ struct ClientDetailView: View {
                     selectedClient = updatedClient
                 }
             })
+        }
+        .sheet(isPresented: $showTrendingGraphs) {
+            // Convert AppClient to Client
+            let clientModel = Client(
+                id: currentClient.id ?? "",
+                name: currentClient.name ?? "",
+                companyId: currentClient.companyId ?? "",
+                email: currentClient.email,
+                phone: currentClient.phone,
+                createdAt: Date()
+            )
+
+            // Convert [SkinAnalysisResult] to [SkinAnalysis]
+            let skinAnalyses = viewModel.analyses.compactMap { analysis -> SkinAnalysis? in
+                guard let id = analysis.id,
+                      let clientId = analysis.clientId,
+                      let createdAt = analysis.createdAt else { return nil }
+
+                // Parse the date
+                let isoFormatter = ISO8601DateFormatter()
+                isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+                var date = isoFormatter.date(from: createdAt)
+                if date == nil {
+                    isoFormatter.formatOptions = [.withInternetDateTime]
+                    date = isoFormatter.date(from: createdAt)
+                }
+
+                return SkinAnalysis(
+                    id: id,
+                    clientId: clientId,
+                    timestamp: date ?? Date(),
+                    hydration: Double(analysis.analysisResults?.hydrationLevel ?? 0),
+                    oiliness: 0, // Not available in stored analysis
+                    texture: 0,
+                    pores: 0,
+                    wrinkles: 0,
+                    redness: 0,
+                    darkSpots: 0,
+                    acne: 0,
+                    recommendations: (analysis.analysisResults?.recommendations ?? []).joined(separator: "\n"),
+                    imageUrl: analysis.imageUrl,
+                    notes: analysis.notes,
+                    analysisType: "Skin Analysis"
+                )
+            }
+
+            TrendingGraphsView(client: clientModel, analyses: skinAnalyses)
         }
         .alert("Consent Required", isPresented: $showConsentAlert) {
             Button("Sign Now") {
@@ -665,13 +713,34 @@ struct ClientDetailView: View {
     
     private var analysisHistorySection: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Analysis History")
-                .font(.system(size: 20, weight: .bold))
-                .foregroundColor(theme.primaryText)
-            
+            HStack {
+                Text("Analysis History")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                if !viewModel.analyses.isEmpty {
+                    Button(action: { showTrendingGraphs = true }) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chart.line.uptrend.xyaxis")
+                                .font(.system(size: 14))
+                            Text("Trends")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundColor(theme.accent)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(theme.accent.opacity(0.1))
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+
             ForEach(viewModel.analyses) { analysis in
                 NavigationLink(
                     destination: AnalysisDetailView(
+                        client: currentClient,
                         analysis: analysis,
                         onDelete: { analysis in
                             await viewModel.deleteAnalysis(analysis)
