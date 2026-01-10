@@ -1,5 +1,5 @@
-import UIKit
 import PDFKit
+import UIKit
 
 /// Manages PDF generation for skin analysis reports
 class PDFExportManager {
@@ -26,7 +26,7 @@ class PDFExportManager {
         let pdfMetaData = [
             kCGPDFContextCreator: "SkinInsight Pro",
             kCGPDFContextAuthor: "SkinInsight Pro",
-            kCGPDFContextTitle: "Skin Analysis Report - \(client.name)"
+            kCGPDFContextTitle: "Skin Analysis Report - \(client.name)",
         ]
         let format = UIGraphicsPDFRendererFormat()
         format.documentInfo = pdfMetaData as [String: Any]
@@ -44,30 +44,100 @@ class PDFExportManager {
             let cgContext = context.cgContext
             var yPosition: CGFloat = margin
 
-            // Draw header with background
-            cgContext.setFillColor(UIColor.systemCyan.cgColor)
-            cgContext.fill(CGRect(x: 0, y: 0, width: pageWidth, height: 80))
+            // // Draw header with background
+            // cgContext.setFillColor(UIColor.systemGray.cgColor)
+            // cgContext.fill(CGRect(x: 0, y: 0, width: pageWidth, height: 80))
 
-            let headerAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 28, weight: .bold),
-                .foregroundColor: UIColor.white
+            // Draw header with gradient background
+            let headerRect = CGRect(x: 0, y: 0, width: pageWidth, height: 80)
+
+            cgContext.saveGState()
+
+            // Clip drawing to header area
+            cgContext.addRect(headerRect)
+            cgContext.clip()
+
+            // SkinInsight Pro brand gradient
+            let colors: [CGColor] = [
+                UIColor(red: 0.33, green: 0.78, blue: 0.76, alpha: 1).cgColor,  // Teal
+                UIColor(red: 0.40, green: 0.63, blue: 0.90, alpha: 1).cgColor,  // Blue
+                UIColor(red: 0.58, green: 0.45, blue: 0.86, alpha: 1).cgColor,  // Violet
+                UIColor(red: 0.85, green: 0.55, blue: 0.75, alpha: 1).cgColor,  // Soft Pink
             ]
-            "SkinInsight Pro".draw(at: CGPoint(x: margin, y: 25), withAttributes: headerAttributes)
+
+            let locations: [CGFloat] = [0.0, 0.33, 0.66, 1.0]
+
+            let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: colors as CFArray,
+                locations: locations
+            )
+
+            // Horizontal gradient (left → right)
+            if let gradient {
+                cgContext.drawLinearGradient(
+                    gradient,
+                    start: CGPoint(x: headerRect.minX, y: headerRect.midY),
+                    end: CGPoint(x: headerRect.maxX, y: headerRect.midY),
+                    options: []
+                )
+            }
+
+            cgContext.restoreGState()
+
+            let headerFont =
+                UIFont(name: "AvenirNext-DemiBold", size: 28)
+                ?? UIFont.systemFont(ofSize: 28, weight: .semibold)
+            let headerAttributes: [NSAttributedString.Key: Any] = [
+                .font: headerFont,
+                .foregroundColor: UIColor.black,
+            ]
+            "Skin Insight Pro".draw(at: CGPoint(x: margin, y: 20), withAttributes: headerAttributes)
 
             let subtitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 14, weight: .medium),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+                .foregroundColor: UIColor.black.withAlphaComponent(0.9),
             ]
-            "Skin Analysis Report".draw(at: CGPoint(x: margin, y: 52), withAttributes: subtitleAttributes)
+            "Skin Analysis Report".draw(
+                at: CGPoint(x: margin, y: 52), withAttributes: subtitleAttributes)
 
             yPosition = 100
+
+            if let logoImage = UIImage(named: "logo") {
+
+                let logoSize: CGFloat = 100
+                let padding: CGFloat = 1  // space between logo and circle edge
+                let circleDiameter = logoSize + (padding * 2)
+
+                let circleRect = CGRect(
+                    x: pageWidth - margin - circleDiameter,
+                    y: (120 - circleDiameter) / 2,  // vertically center in header
+                    width: circleDiameter,
+                    height: circleDiameter
+                )
+
+                // Draw black circle background
+                cgContext.setFillColor(UIColor.black.withAlphaComponent(0.85).cgColor)
+                cgContext.fillEllipse(in: circleRect)
+
+                // Draw logo centered inside circle
+                let logoRect = CGRect(
+                    x: circleRect.midX - (logoSize / 2),
+                    y: circleRect.midY - (logoSize / 2),
+                    width: logoSize,
+                    height: logoSize
+                )
+
+                logoImage.draw(in: logoRect)
+            }
 
             // Client name
             let clientNameAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 20, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
-            "Client: \(client.name)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
+            "Client: \(client.name)".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
             yPosition += 35
 
             // Analysis date
@@ -77,14 +147,15 @@ class PDFExportManager {
 
             let dateAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
-            "Date: \(dateFormatter.string(from: timestamp))".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
+            "Date: \(dateFormatter.string(from: timestamp))".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
             yPosition += 25
 
             // Divider line
-            cgContext.setStrokeColor(UIColor.lightGray.cgColor)
-            cgContext.setLineWidth(1)
+            cgContext.setStrokeColor(UIColor.black.cgColor)
+            cgContext.setLineWidth(3)
             cgContext.move(to: CGPoint(x: margin, y: yPosition))
             cgContext.addLine(to: CGPoint(x: pageWidth - margin, y: yPosition))
             cgContext.strokePath()
@@ -107,7 +178,8 @@ class PDFExportManager {
                 }
 
                 let imageX = (pageWidth - drawWidth) / 2
-                let imageRect = CGRect(x: imageX, y: yPosition, width: drawWidth, height: drawHeight)
+                let imageRect = CGRect(
+                    x: imageX, y: yPosition, width: drawWidth, height: drawHeight)
 
                 cgContext.setStrokeColor(UIColor.lightGray.cgColor)
                 cgContext.setLineWidth(1)
@@ -119,16 +191,19 @@ class PDFExportManager {
 
             let sectionTitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 16, weight: .bold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
             let metricLabelAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
             let metricValueAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 12, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.black,
             ]
+            let sectionBackgroundColor = UIColor(white: 0.96, alpha: 1.0)
+            let sectionBorderColor = UIColor.lightGray
+            let sectionCornerRadius: CGFloat = 14
 
             // Check if we need a new page
             func checkNewPage() {
@@ -138,77 +213,139 @@ class PDFExportManager {
                 }
             }
 
+            func drawSectionBackground(startY: CGFloat, endY: CGFloat) {
+                let padding: CGFloat = 10
+                let rect = CGRect(
+                    x: margin,
+                    y: startY - padding,
+                    width: pageWidth - (margin * 2),
+                    height: (endY - startY) + (padding * 2)
+                )
+                let path = UIBezierPath(roundedRect: rect, cornerRadius: sectionCornerRadius)
+
+                cgContext.saveGState()
+                cgContext.addPath(path.cgPath)
+                cgContext.setFillColor(sectionBackgroundColor.withAlphaComponent(0.25).cgColor)
+                cgContext.fillPath()
+                cgContext.restoreGState()
+
+                cgContext.saveGState()
+                cgContext.addPath(path.cgPath)
+                cgContext.setStrokeColor(sectionBorderColor.cgColor)
+                cgContext.setLineWidth(1)
+                cgContext.strokePath()
+                cgContext.restoreGState()
+            }
+
+            func checkNewPageForSection(_ sectionStartY: inout CGFloat) {
+                if yPosition > pageHeight - 100 {
+                    drawSectionBackground(startY: sectionStartY, endY: yPosition)
+                    context.beginPage()
+                    yPosition = margin
+                    sectionStartY = yPosition
+                }
+            }
+
             // Analysis Overview
             checkNewPage()
-            "Analysis Overview".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+            let analysisSectionStartY = yPosition
+            "Analysis Overview".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
             yPosition += 25
 
             if let skinType = analysisData.skinType {
-                "Skin Type:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
-                skinType.capitalized.draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                "Skin Type:".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                skinType.capitalized.draw(
+                    at: CGPoint(x: margin + 150, y: yPosition),
+                    withAttributes: metricValueAttributes)
                 yPosition += 20
             }
 
             if let hydration = analysisData.hydrationLevel {
-                "Hydration Level:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
-                "\(hydration)%".draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                "Hydration Level:".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                "\(hydration)%".draw(
+                    at: CGPoint(x: margin + 150, y: yPosition),
+                    withAttributes: metricValueAttributes)
                 yPosition += 20
             }
 
             if let sensitivity = analysisData.sensitivity {
-                "Sensitivity:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
-                sensitivity.capitalized.draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                "Sensitivity:".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                sensitivity.capitalized.draw(
+                    at: CGPoint(x: margin + 150, y: yPosition),
+                    withAttributes: metricValueAttributes)
                 yPosition += 20
             }
 
             if let poreCondition = analysisData.poreCondition {
-                "Pore Condition:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
-                poreCondition.capitalized.draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                "Pore Condition:".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                poreCondition.capitalized.draw(
+                    at: CGPoint(x: margin + 150, y: yPosition),
+                    withAttributes: metricValueAttributes)
                 yPosition += 20
             }
 
             if let score = analysisData.skinHealthScore {
-                "Skin Health Score:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
-                "\(score)/100".draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                "Skin Health Score:".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                "\(score)/100".draw(
+                    at: CGPoint(x: margin + 150, y: yPosition),
+                    withAttributes: metricValueAttributes)
                 yPosition += 20
             }
 
-            yPosition += 15
+            drawSectionBackground(startY: analysisSectionStartY, endY: yPosition)
+            yPosition += 20
 
             // Concerns Section
             if let concerns = analysisData.concerns, !concerns.isEmpty {
                 checkNewPage()
-                "Skin Concerns".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                var concernsSectionStartY = yPosition
+                "Skin Concerns".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let bulletAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 12, weight: .regular),
-                    .foregroundColor: UIColor.black
+                    .foregroundColor: UIColor.black,
                 ]
 
                 for concern in concerns {
-                    "• \(concern.capitalized)".draw(at: CGPoint(x: margin + 10, y: yPosition), withAttributes: bulletAttributes)
+                    checkNewPageForSection(&concernsSectionStartY)
+                    "• \(concern.capitalized)".draw(
+                        at: CGPoint(x: margin + 10, y: yPosition), withAttributes: bulletAttributes)
                     yPosition += 18
                 }
 
-                yPosition += 15
+                drawSectionBackground(startY: concernsSectionStartY, endY: yPosition)
+                yPosition += 20
             }
 
             // Medical Considerations
-            if let medicalConsiderations = analysisData.medicalConsiderations, !medicalConsiderations.isEmpty {
+            if let medicalConsiderations = analysisData.medicalConsiderations,
+                !medicalConsiderations.isEmpty
+            {
                 checkNewPage()
-                "Medical Considerations".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                var medicalSectionStartY = yPosition
+                "Medical Considerations".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let medicalAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                    .foregroundColor: UIColor.black
+                    .foregroundColor: UIColor.black,
                 ]
 
                 for consideration in medicalConsiderations {
+                    checkNewPageForSection(&medicalSectionStartY)
                     let textWidth = pageWidth - (margin * 2) - 20
                     let text = "• \(consideration)"
-                    let textRect = CGRect(x: margin + 10, y: yPosition, width: textWidth, height: 1000)
+                    let textRect = CGRect(
+                        x: margin + 10, y: yPosition, width: textWidth, height: 1000)
                     let boundingRect = (text as NSString).boundingRect(
                         with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
                         options: [.usesLineFragmentOrigin],
@@ -220,25 +357,29 @@ class PDFExportManager {
                     yPosition += boundingRect.height + 8
                 }
 
-                yPosition += 15
+                drawSectionBackground(startY: medicalSectionStartY, endY: yPosition)
+                yPosition += 20
             }
 
             // Recommendations Section
             if let recommendations = analysisData.recommendations, !recommendations.isEmpty {
                 checkNewPage()
-                "Recommendations".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                var recommendationSectionStartY = yPosition
+                "Recommendations".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let recAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                    .foregroundColor: UIColor.black
+                    .foregroundColor: UIColor.black,
                 ]
 
                 for (index, recommendation) in recommendations.enumerated() {
-                    checkNewPage()
+                    checkNewPageForSection(&recommendationSectionStartY)
                     let textWidth = pageWidth - (margin * 2) - 30
                     let text = "\(index + 1). \(recommendation)"
-                    let textRect = CGRect(x: margin + 10, y: yPosition, width: textWidth, height: 1000)
+                    let textRect = CGRect(
+                        x: margin + 10, y: yPosition, width: textWidth, height: 1000)
                     let boundingRect = (text as NSString).boundingRect(
                         with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
                         options: [.usesLineFragmentOrigin],
@@ -250,25 +391,29 @@ class PDFExportManager {
                     yPosition += boundingRect.height + 8
                 }
 
-                yPosition += 15
+                drawSectionBackground(startY: recommendationSectionStartY, endY: yPosition)
+                yPosition += 20
             }
 
             // Product Recommendations
             if let productRecs = analysisData.productRecommendations, !productRecs.isEmpty {
                 checkNewPage()
-                "Product Recommendations".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                var productSectionStartY = yPosition
+                "Product Recommendations".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let productAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                    .foregroundColor: UIColor.black
+                    .foregroundColor: UIColor.black,
                 ]
 
                 for (index, product) in productRecs.enumerated() {
-                    checkNewPage()
+                    checkNewPageForSection(&productSectionStartY)
                     let textWidth = pageWidth - (margin * 2) - 30
                     let text = "\(index + 1). \(product)"
-                    let textRect = CGRect(x: margin + 10, y: yPosition, width: textWidth, height: 1000)
+                    let textRect = CGRect(
+                        x: margin + 10, y: yPosition, width: textWidth, height: 1000)
                     let boundingRect = (text as NSString).boundingRect(
                         with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
                         options: [.usesLineFragmentOrigin],
@@ -280,18 +425,21 @@ class PDFExportManager {
                     yPosition += boundingRect.height + 8
                 }
 
-                yPosition += 15
+                drawSectionBackground(startY: productSectionStartY, endY: yPosition)
+                yPosition += 20
             }
 
             // Products Used
             if let products = productsUsed, !products.isEmpty {
                 checkNewPage()
-                "Products Used".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                let productsUsedSectionStartY = yPosition
+                "Products Used".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let textAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                    .foregroundColor: UIColor.black
+                    .foregroundColor: UIColor.black,
                 ]
 
                 let textWidth = pageWidth - (margin * 2)
@@ -305,17 +453,21 @@ class PDFExportManager {
 
                 products.draw(in: textRect, withAttributes: textAttributes)
                 yPosition += boundingRect.height + 15
+                drawSectionBackground(startY: productsUsedSectionStartY, endY: yPosition)
+                yPosition += 5
             }
 
             // Treatments Performed
             if let treatments = treatmentsPerformed, !treatments.isEmpty {
                 checkNewPage()
-                "Treatments Performed".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                let treatmentsSectionStartY = yPosition
+                "Treatments Performed".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let textAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                    .foregroundColor: UIColor.black
+                    .foregroundColor: UIColor.black,
                 ]
 
                 let textWidth = pageWidth - (margin * 2)
@@ -329,17 +481,21 @@ class PDFExportManager {
 
                 treatments.draw(in: textRect, withAttributes: textAttributes)
                 yPosition += boundingRect.height + 15
+                drawSectionBackground(startY: treatmentsSectionStartY, endY: yPosition)
+                yPosition += 5
             }
 
             // Notes Section
             if let notes = notes, !notes.isEmpty {
                 checkNewPage()
-                "Notes".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                let notesSectionStartY = yPosition
+                "Notes".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let notesAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                    .foregroundColor: UIColor.black
+                    .foregroundColor: UIColor.black,
                 ]
 
                 let textWidth = pageWidth - (margin * 2)
@@ -353,6 +509,8 @@ class PDFExportManager {
 
                 notes.draw(in: textRect, withAttributes: notesAttributes)
                 yPosition += boundingRect.height
+                drawSectionBackground(startY: notesSectionStartY, endY: yPosition)
+                yPosition += 5
             }
 
             // Footer on last page
@@ -366,13 +524,15 @@ class PDFExportManager {
 
             let footerAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 9, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
 
             let footerFormatter = DateFormatter()
             footerFormatter.dateStyle = .long
-            let footerText = "Generated by SkinInsight Pro on \(footerFormatter.string(from: Date()))"
-            footerText.draw(at: CGPoint(x: margin, y: footerY + 10), withAttributes: footerAttributes)
+            let footerText =
+                "Generated by SkinInsight Pro on \(footerFormatter.string(from: Date()))"
+            footerText.draw(
+                at: CGPoint(x: margin, y: footerY + 10), withAttributes: footerAttributes)
 
             "This report is confidential and intended for professional use only.".draw(
                 at: CGPoint(x: margin, y: footerY + 25),
@@ -388,7 +548,7 @@ class PDFExportManager {
         let pdfMetaData = [
             kCGPDFContextCreator: "SkinInsight Pro",
             kCGPDFContextAuthor: "SkinInsight Pro",
-            kCGPDFContextTitle: "Recommended Routine - \(client.name)"
+            kCGPDFContextTitle: "Recommended Routine - \(client.name)",
         ]
         let format = UIGraphicsPDFRendererFormat()
         format.documentInfo = pdfMetaData as [String: Any]
@@ -410,23 +570,26 @@ class PDFExportManager {
 
             let headerAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 26, weight: .bold),
-                .foregroundColor: UIColor.white
+                .foregroundColor: UIColor.white,
             ]
-            "Recommended Routine".draw(at: CGPoint(x: margin, y: 26), withAttributes: headerAttributes)
+            "Recommended Routine".draw(
+                at: CGPoint(x: margin, y: 26), withAttributes: headerAttributes)
 
             let subtitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 13, weight: .medium),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+                .foregroundColor: UIColor.white.withAlphaComponent(0.9),
             ]
-            "Personalized morning and evening steps".draw(at: CGPoint(x: margin, y: 54), withAttributes: subtitleAttributes)
+            "Personalized morning and evening steps".draw(
+                at: CGPoint(x: margin, y: 54), withAttributes: subtitleAttributes)
 
             yPosition = 100
 
             let clientNameAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
-            "Client: \(client.name)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
+            "Client: \(client.name)".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
             yPosition += 26
 
             let dateFormatter = DateFormatter()
@@ -435,9 +598,10 @@ class PDFExportManager {
 
             let dateAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 11, weight: .medium),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
-            "Generated: \(dateFormatter.string(from: Date()))".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
+            "Generated: \(dateFormatter.string(from: Date()))".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
             yPosition += 22
 
             cgContext.setStrokeColor(UIColor.lightGray.cgColor)
@@ -449,19 +613,19 @@ class PDFExportManager {
 
             let sectionTitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 16, weight: .bold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
             let stepTitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
             let detailAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
             let bodyAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
 
             func checkNewPage() {
@@ -471,9 +635,13 @@ class PDFExportManager {
                 }
             }
 
-            func drawWrappedText(_ text: String, attributes: [NSAttributedString.Key: Any], indent: CGFloat = 0, spacing: CGFloat = 6) {
+            func drawWrappedText(
+                _ text: String, attributes: [NSAttributedString.Key: Any], indent: CGFloat = 0,
+                spacing: CGFloat = 6
+            ) {
                 let textWidth = pageWidth - (margin * 2) - indent
-                let textRect = CGRect(x: margin + indent, y: yPosition, width: textWidth, height: 1000)
+                let textRect = CGRect(
+                    x: margin + indent, y: yPosition, width: textWidth, height: 1000)
                 let boundingRect = (text as NSString).boundingRect(
                     with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
                     options: [.usesLineFragmentOrigin],
@@ -486,7 +654,8 @@ class PDFExportManager {
 
             func drawRoutineSection(title: String, steps: [RoutineStep]) {
                 checkNewPage()
-                title.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                title.draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 22
 
                 if steps.isEmpty {
@@ -512,7 +681,9 @@ class PDFExportManager {
                         details.append("Wait: \(waitTime)s")
                     }
                     if !details.isEmpty {
-                        drawWrappedText(details.joined(separator: " • "), attributes: detailAttributes, indent: 12, spacing: 4)
+                        drawWrappedText(
+                            details.joined(separator: " • "), attributes: detailAttributes,
+                            indent: 12, spacing: 4)
                     }
                     if let instructions = step.instructions, !instructions.isEmpty {
                         drawWrappedText(instructions, attributes: bodyAttributes, indent: 12)
@@ -527,7 +698,8 @@ class PDFExportManager {
 
             if let notes = routine.notes, !notes.isEmpty {
                 checkNewPage()
-                "Routine Tips".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                "Routine Tips".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 22
                 drawWrappedText(notes, attributes: bodyAttributes)
             }
@@ -541,11 +713,12 @@ class PDFExportManager {
 
             let footerAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 9, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
 
             let footerText = "Generated by SkinInsight Pro on \(dateFormatter.string(from: Date()))"
-            footerText.draw(at: CGPoint(x: margin, y: footerY + 10), withAttributes: footerAttributes)
+            footerText.draw(
+                at: CGPoint(x: margin, y: footerY + 10), withAttributes: footerAttributes)
             "Routine guidance only. Adjust based on professional assessment.".draw(
                 at: CGPoint(x: margin, y: footerY + 25),
                 withAttributes: footerAttributes
@@ -556,11 +729,13 @@ class PDFExportManager {
     }
 
     /// Generate basic PDF (used for trending and backward compatibility)
-    private func generateBasicAnalysisPDF(client: Client, analysis: SkinAnalysis, image: UIImage?) -> Data? {
+    private func generateBasicAnalysisPDF(client: Client, analysis: SkinAnalysis, image: UIImage?)
+        -> Data?
+    {
         let pdfMetaData = [
             kCGPDFContextCreator: "SkinInsight Pro",
             kCGPDFContextAuthor: "SkinInsight Pro",
-            kCGPDFContextTitle: "Skin Analysis Report - \(client.name)"
+            kCGPDFContextTitle: "Skin Analysis Report - \(client.name)",
         ]
         let format = UIGraphicsPDFRendererFormat()
         format.documentInfo = pdfMetaData as [String: Any]
@@ -585,24 +760,26 @@ class PDFExportManager {
 
             let headerAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 28, weight: .bold),
-                .foregroundColor: UIColor.white
+                .foregroundColor: UIColor.white,
             ]
             "SkinInsight Pro".draw(at: CGPoint(x: margin, y: 25), withAttributes: headerAttributes)
 
             let subtitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 14, weight: .medium),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+                .foregroundColor: UIColor.white.withAlphaComponent(0.9),
             ]
-            "Skin Analysis Report".draw(at: CGPoint(x: margin, y: 52), withAttributes: subtitleAttributes)
+            "Skin Analysis Report".draw(
+                at: CGPoint(x: margin, y: 52), withAttributes: subtitleAttributes)
 
             yPosition = 100
 
             // Client name
             let clientNameAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 20, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
-            "Client: \(client.name)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
+            "Client: \(client.name)".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
             yPosition += 35
 
             // Analysis date
@@ -612,9 +789,10 @@ class PDFExportManager {
 
             let dateAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
-            "Date: \(dateFormatter.string(from: analysis.timestamp))".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
+            "Date: \(dateFormatter.string(from: analysis.timestamp))".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
             yPosition += 25
 
             // Divider line
@@ -642,7 +820,8 @@ class PDFExportManager {
                 }
 
                 let imageX = (pageWidth - drawWidth) / 2
-                let imageRect = CGRect(x: imageX, y: yPosition, width: drawWidth, height: drawHeight)
+                let imageRect = CGRect(
+                    x: imageX, y: yPosition, width: drawWidth, height: drawHeight)
 
                 // Draw border around image
                 cgContext.setStrokeColor(UIColor.lightGray.cgColor)
@@ -656,25 +835,29 @@ class PDFExportManager {
             // Analysis Results Section
             let sectionTitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 16, weight: .bold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
-            "Analysis Results".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+            "Analysis Results".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
             yPosition += 25
 
             // Metrics - only show hydration if we have it
             let metricLabelAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 13, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
             let metricValueAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 13, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
 
             if analysis.hydration > 0 {
-                "Hydration Level:".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
+                "Hydration Level:".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: metricLabelAttributes)
                 let valueText = String(format: "%.0f%%", analysis.hydration)
-                valueText.draw(at: CGPoint(x: margin + 150, y: yPosition), withAttributes: metricValueAttributes)
+                valueText.draw(
+                    at: CGPoint(x: margin + 150, y: yPosition),
+                    withAttributes: metricValueAttributes)
                 yPosition += 20
             }
 
@@ -684,7 +867,8 @@ class PDFExportManager {
             if let recommendations = analysis.recommendations, !recommendations.isEmpty {
                 yPosition += 10
 
-                "Recommendations".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                "Recommendations".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let paragraphStyle = NSMutableParagraphStyle()
@@ -694,12 +878,13 @@ class PDFExportManager {
                 let recAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 12, weight: .regular),
                     .foregroundColor: UIColor.black,
-                    .paragraphStyle: paragraphStyle
+                    .paragraphStyle: paragraphStyle,
                 ]
 
                 let textWidth = pageWidth - (margin * 2)
                 let recText = NSAttributedString(string: recommendations, attributes: recAttributes)
-                let textRect = CGRect(x: margin, y: yPosition, width: textWidth, height: pageHeight - yPosition - 80)
+                let textRect = CGRect(
+                    x: margin, y: yPosition, width: textWidth, height: pageHeight - yPosition - 80)
                 recText.draw(in: textRect)
 
                 let textHeight = recText.boundingRect(
@@ -719,7 +904,8 @@ class PDFExportManager {
                     yPosition = margin
                 }
 
-                "Notes".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+                "Notes".draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
                 yPosition += 25
 
                 let paragraphStyle = NSMutableParagraphStyle()
@@ -728,12 +914,13 @@ class PDFExportManager {
                 let notesAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 12, weight: .regular),
                     .foregroundColor: UIColor.black,
-                    .paragraphStyle: paragraphStyle
+                    .paragraphStyle: paragraphStyle,
                 ]
 
                 let textWidth = pageWidth - (margin * 2)
                 let notesText = NSAttributedString(string: notes, attributes: notesAttributes)
-                let textRect = CGRect(x: margin, y: yPosition, width: textWidth, height: pageHeight - yPosition - 80)
+                let textRect = CGRect(
+                    x: margin, y: yPosition, width: textWidth, height: pageHeight - yPosition - 80)
                 notesText.draw(in: textRect)
             }
 
@@ -748,13 +935,15 @@ class PDFExportManager {
 
             let footerAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 9, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
 
             let footerFormatter = DateFormatter()
             footerFormatter.dateStyle = .long
-            let footerText = "Generated by SkinInsight Pro on \(footerFormatter.string(from: Date()))"
-            footerText.draw(at: CGPoint(x: margin, y: footerY + 10), withAttributes: footerAttributes)
+            let footerText =
+                "Generated by SkinInsight Pro on \(footerFormatter.string(from: Date()))"
+            footerText.draw(
+                at: CGPoint(x: margin, y: footerY + 10), withAttributes: footerAttributes)
 
             "This report is confidential and intended for professional use only.".draw(
                 at: CGPoint(x: margin, y: footerY + 25),
@@ -772,7 +961,7 @@ class PDFExportManager {
         let pdfMetaData = [
             kCGPDFContextCreator: "SkinInsight Pro",
             kCGPDFContextAuthor: "SkinInsight Pro",
-            kCGPDFContextTitle: "Skin Analysis Trends - \(client.name)"
+            kCGPDFContextTitle: "Skin Analysis Trends - \(client.name)",
         ]
         let format = UIGraphicsPDFRendererFormat()
         format.documentInfo = pdfMetaData as [String: Any]
@@ -797,41 +986,47 @@ class PDFExportManager {
 
             let headerAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 24, weight: .bold),
-                .foregroundColor: UIColor.white
+                .foregroundColor: UIColor.white,
             ]
-            "SkinInsight Pro - Trending Analysis".draw(at: CGPoint(x: margin, y: 20), withAttributes: headerAttributes)
+            "SkinInsight Pro - Trending Analysis".draw(
+                at: CGPoint(x: margin, y: 20), withAttributes: headerAttributes)
 
             yPosition = 90
 
             // Client name
             let clientNameAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
-            "Client: \(client.name)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
+            "Client: \(client.name)".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: clientNameAttributes)
             yPosition += 30
 
             // Date range
             let sortedAnalyses = analyses.sorted { $0.timestamp < $1.timestamp }
             if let firstDate = sortedAnalyses.first?.timestamp,
-               let lastDate = sortedAnalyses.last?.timestamp {
+                let lastDate = sortedAnalyses.last?.timestamp
+            {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateStyle = .medium
 
                 let dateAttributes: [NSAttributedString.Key: Any] = [
                     .font: UIFont.systemFont(ofSize: 12, weight: .medium),
-                    .foregroundColor: UIColor.darkGray
+                    .foregroundColor: UIColor.darkGray,
                 ]
-                let dateRangeText = "Period: \(dateFormatter.string(from: firstDate)) - \(dateFormatter.string(from: lastDate))"
-                dateRangeText.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
+                let dateRangeText =
+                    "Period: \(dateFormatter.string(from: firstDate)) - \(dateFormatter.string(from: lastDate))"
+                dateRangeText.draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: dateAttributes)
                 yPosition += 20
             }
 
             let countAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 12, weight: .medium),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
-            "Total Scans: \(analyses.count)".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: countAttributes)
+            "Total Scans: \(analyses.count)".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: countAttributes)
             yPosition += 35
 
             // Divider
@@ -845,9 +1040,10 @@ class PDFExportManager {
             // Statistics Section
             let sectionTitleAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 14, weight: .bold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
-            "Hydration Statistics".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+            "Hydration Statistics".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
             yPosition += 25
 
             let values = analyses.map { $0.hydration }
@@ -860,11 +1056,11 @@ class PDFExportManager {
 
             let statsLabelAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 11, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
             let statsValueAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
 
             let stats = [
@@ -873,35 +1069,40 @@ class PDFExportManager {
                 ("Maximum:", String(format: "%.1f%%", max)),
                 ("Latest:", String(format: "%.1f%%", latest)),
                 ("First:", String(format: "%.1f%%", first)),
-                ("Change:", (change >= 0 ? "+" : "") + String(format: "%.1f%%", change))
+                ("Change:", (change >= 0 ? "+" : "") + String(format: "%.1f%%", change)),
             ]
 
             for (index, stat) in stats.enumerated() {
                 let xOffset: CGFloat = margin + CGFloat((index % 3) * 220)
                 let yOffset = yPosition + CGFloat((index / 3) * 25)
 
-                stat.0.draw(at: CGPoint(x: xOffset, y: yOffset), withAttributes: statsLabelAttributes)
-                stat.1.draw(at: CGPoint(x: xOffset + 80, y: yOffset), withAttributes: statsValueAttributes)
+                stat.0.draw(
+                    at: CGPoint(x: xOffset, y: yOffset), withAttributes: statsLabelAttributes)
+                stat.1.draw(
+                    at: CGPoint(x: xOffset + 80, y: yOffset), withAttributes: statsValueAttributes)
             }
 
             yPosition += 70
 
             // Scan History
-            "Scan History".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
+            "Scan History".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: sectionTitleAttributes)
             yPosition += 25
 
             let historyLabelAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 10, weight: .semibold),
-                .foregroundColor: UIColor.black
+                .foregroundColor: UIColor.black,
             ]
             let historyValueAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 10, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
 
             // Table headers
-            "Date".draw(at: CGPoint(x: margin, y: yPosition), withAttributes: historyLabelAttributes)
-            "Hydration".draw(at: CGPoint(x: margin + 200, y: yPosition), withAttributes: historyLabelAttributes)
+            "Date".draw(
+                at: CGPoint(x: margin, y: yPosition), withAttributes: historyLabelAttributes)
+            "Hydration".draw(
+                at: CGPoint(x: margin + 200, y: yPosition), withAttributes: historyLabelAttributes)
             yPosition += 20
 
             let shortDateFormatter = DateFormatter()
@@ -910,10 +1111,13 @@ class PDFExportManager {
 
             for analysis in sortedAnalyses.prefix(15) {
                 let dateStr = shortDateFormatter.string(from: analysis.timestamp)
-                dateStr.draw(at: CGPoint(x: margin, y: yPosition), withAttributes: historyValueAttributes)
+                dateStr.draw(
+                    at: CGPoint(x: margin, y: yPosition), withAttributes: historyValueAttributes)
 
                 let hydrationStr = String(format: "%.1f%%", analysis.hydration)
-                hydrationStr.draw(at: CGPoint(x: margin + 200, y: yPosition), withAttributes: historyValueAttributes)
+                hydrationStr.draw(
+                    at: CGPoint(x: margin + 200, y: yPosition),
+                    withAttributes: historyValueAttributes)
 
                 yPosition += 18
 
@@ -933,13 +1137,15 @@ class PDFExportManager {
 
             let footerAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 9, weight: .regular),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor.darkGray,
             ]
 
             let footerFormatter = DateFormatter()
             footerFormatter.dateStyle = .long
-            let footerText = "Generated by SkinInsight Pro on \(footerFormatter.string(from: Date()))"
-            footerText.draw(at: CGPoint(x: margin, y: footerY + 8), withAttributes: footerAttributes)
+            let footerText =
+                "Generated by SkinInsight Pro on \(footerFormatter.string(from: Date()))"
+            footerText.draw(
+                at: CGPoint(x: margin, y: footerY + 8), withAttributes: footerAttributes)
         }
 
         return data

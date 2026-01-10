@@ -17,7 +17,7 @@ struct ProductImportView: View {
     @State private var csvFileURL: URL?
 
     let validSkinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"]
-    let validConcerns = ["Acne", "Aging", "Dark Spots", "Redness", "Dryness", "Oiliness", "Fine Lines", "Pores"]
+    let validConcerns = AppConstants.concernOptions
 
     var body: some View {
         NavigationStack {
@@ -456,12 +456,28 @@ Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,
             if columns.count > 6 {
                 let concernsStr = columns[6].trimmingCharacters(in: .whitespaces)
                 if !concernsStr.isEmpty {
-                    concerns = concernsStr.components(separatedBy: ",")
-                    for concern in concerns {
-                        if !validConcerns.contains(concern) {
+                    let rawConcerns = concernsStr.components(separatedBy: ",")
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
+                    var normalizedConcerns: [String] = []
+
+                    for concern in rawConcerns {
+                        if let normalized = AppConstants.normalizeConcernLabel(concern) {
+                            if !normalizedConcerns.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame }) {
+                                normalizedConcerns.append(normalized)
+                            }
+                        } else {
                             importErrors.append("Row \(rowNumber): Invalid concern '\(concern)'")
                         }
                     }
+
+                    for concern in normalizedConcerns {
+                        if !validConcerns.contains(where: { $0.caseInsensitiveCompare(concern) == .orderedSame }) {
+                            importErrors.append("Row \(rowNumber): Invalid concern '\(concern)'")
+                        }
+                    }
+
+                    concerns = normalizedConcerns
                 }
             }
 

@@ -128,8 +128,8 @@ class AIAnalysisService {
 
             // Aggregate concerns across passes to catch subtle issues
             if metricsPasses.contains(where: { $0.pigmentation.hyperpigmentationLevel > 0.35 }) {
-                if !concerns.contains("Dark spots") {
-                    concerns.append("Dark spots")
+                if !concerns.contains("Dark Spots") {
+                    concerns.append("Dark Spots")
                 }
             }
 
@@ -144,14 +144,14 @@ class AIAnalysisService {
             }
 
             if metricsPasses.contains(where: { $0.texture.smoothness < 0.45 }) {
-                if !concerns.contains("Uneven texture") {
-                    concerns.append("Uneven texture")
+                if !concerns.contains("Uneven Texture") {
+                    concerns.append("Uneven Texture")
                 }
             }
 
             if metricsPasses.contains(where: { $0.structure.lineDensity > 0.45 }) {
-                if !concerns.contains("Fine lines") {
-                    concerns.append("Fine lines")
+                if !concerns.contains("Fine Lines") {
+                    concerns.append("Fine Lines")
                 }
             }
 
@@ -162,8 +162,8 @@ class AIAnalysisService {
             }
 
             if metricsPasses.contains(where: { $0.texture.porelikeStructures > 0.45 }) {
-                if !concerns.contains("Enlarged pores") {
-                    concerns.append("Enlarged pores")
+                if !concerns.contains("Enlarged Pores") {
+                    concerns.append("Enlarged Pores")
                 }
             }
 
@@ -180,6 +180,9 @@ class AIAnalysisService {
             }
         }
 
+        let concernsForScore = concerns
+        concerns = expandConcerns(concerns)
+
         // Apply AI Rules to recommendations (not product recommendations)
         let appliedRules = applyAIRules(concerns: concerns, rules: aiRules)
         recommendations.append(contentsOf: appliedRules)
@@ -195,22 +198,27 @@ class AIAnalysisService {
         )
         productRecommendations = matchedProducts
 
+        let hasOilinessConcern = concerns.contains { concern in
+            let normalized = concern.lowercased()
+            return normalized == "excess oil" || normalized == "oiliness"
+        }
+
         // Generate intelligent recommendations based on detected concerns
         if concerns.contains("Redness") {
             recommendations.append("Use a gentle, fragrance-free cleanser to avoid irritation")
             recommendations.append("Apply products with soothing ingredients like centella asiatica, aloe, or niacinamide")
             recommendations.append("Avoid hot water and harsh exfoliants")
         }
-        if concerns.contains("Dark spots") {
+        if concerns.contains("Dark Spots") {
             recommendations.append("Use vitamin C serum in the morning for brightening")
             recommendations.append("Apply SPF 50+ daily to prevent further darkening")
             recommendations.append("Consider retinol or alpha hydroxy acids for evening use")
         }
-        if concerns.contains("Uneven texture") {
+        if concerns.contains("Uneven Texture") {
             recommendations.append("Incorporate gentle chemical exfoliation (AHA/BHA) 2-3x weekly")
             recommendations.append("Use a hydrating serum with hyaluronic acid")
         }
-        if concerns.contains("Excess oil") {
+        if hasOilinessConcern {
             recommendations.append("Use a salicylic acid cleanser to control oil")
             recommendations.append("Apply lightweight, oil-free moisturizer")
             recommendations.append("Use clay masks 1-2x weekly")
@@ -220,7 +228,7 @@ class AIAnalysisService {
             recommendations.append("Apply a rich moisturizer with ceramides and hyaluronic acid")
             recommendations.append("Consider adding a facial oil for extra hydration")
         }
-        if concerns.contains("Enlarged pores") {
+        if concerns.contains("Enlarged Pores") {
             recommendations.append("Use niacinamide or salicylic acid to help minimize pore appearance")
             recommendations.append("Avoid heavy, occlusive products that can clog pores")
         }
@@ -247,7 +255,7 @@ class AIAnalysisService {
         )
 
         // Calculate health score tuned to align closer to Claude scoring
-        let healthScore = calculateAppleHealthScore(concerns: concerns, metrics: trendingMetrics)
+        let healthScore = calculateAppleHealthScore(concerns: concernsForScore, metrics: trendingMetrics)
 
         let recommendedRoutine = buildRecommendedRoutine(
             productRecommendations: productRecommendations,
@@ -578,6 +586,130 @@ class AIAnalysisService {
         return productRecommendations
     }
 
+    private func appendConcern(_ concern: String, to concerns: inout [String]) {
+        let trimmed = concern.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let exists = concerns.contains { $0.caseInsensitiveCompare(trimmed) == .orderedSame }
+        if !exists {
+            concerns.append(trimmed)
+        }
+    }
+
+    private func expandConcerns(_ concerns: [String]) -> [String] {
+        var expanded: [String] = []
+        let normalized = concerns
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+
+        func containsAny(_ terms: [String]) -> Bool {
+            normalized.contains { value in
+                terms.contains { value.contains($0) }
+            }
+        }
+
+        let hasFineLinesPlus = containsAny(["fine lines + wrinkles", "fine lines and wrinkles"])
+        let hasFineLines = containsAny(["fine line", "fine lines"])
+        let hasWrinkles = containsAny(["wrinkle"])
+
+        let hasDiscoloration = containsAny(["discoloration", "discolouration", "uneven tone", "uneven color", "uneven colour"])
+        let hasDarkSpots = containsAny(["dark spot", "dark spots", "hyperpigmentation", "pigmentation"])
+
+        let hasBlemishes = containsAny(["blemish", "blemishes", "blackhead", "blackheads", "clogged pores", "pimple", "pimples"])
+        let hasAcne = containsAny(["acne", "breakout", "breakouts"])
+
+        let hasDehydrated = containsAny(["dehydrated", "dehydration"])
+        let hasDryness = containsAny(["dryness", "dry skin", "flaky", "flaking"])
+
+        let hasDull = containsAny(["dull", "lackluster", "lacklustre", "lifeless"])
+        let hasUnevenTexture = containsAny(["uneven texture", "rough texture"])
+
+        let hasEnlargedPores = containsAny(["enlarged pores", "large pores"])
+        let hasPores = containsAny(["pores"])
+
+        let hasOiliness = containsAny(["excess oil", "oiliness", "oily", "sebum"])
+
+        let hasRedness = containsAny(["redness", "flushing", "blotching"])
+        let hasPuffiness = containsAny(["puffiness", "puffy", "under eye", "under-eye"])
+        let hasPollution = containsAny(["pollution", "environmental"])
+        let hasScar = containsAny(["scar", "scarring"])
+        let hasAging = containsAny(["aging", "ageing", "mature"])
+
+        if hasFineLinesPlus {
+            appendConcern("Wrinkles", to: &expanded)
+        } else {
+            if hasFineLines {
+                appendConcern("Fine Lines", to: &expanded)
+            }
+            if hasWrinkles {
+                appendConcern("Wrinkles", to: &expanded)
+            }
+        }
+
+        if hasDiscoloration {
+            appendConcern("Discoloration", to: &expanded)
+        }
+
+        if hasDarkSpots {
+            appendConcern("Dark Spots", to: &expanded)
+        }
+
+        if hasBlemishes {
+            appendConcern("Blemishes", to: &expanded)
+        }
+
+        if hasAcne {
+            appendConcern("Acne", to: &expanded)
+        }
+
+        if hasDehydrated {
+            appendConcern("Dehydrated Skin", to: &expanded)
+        }
+
+        if hasDryness {
+            appendConcern("Dryness", to: &expanded)
+        }
+
+        if hasDull {
+            appendConcern("Dull Skin", to: &expanded)
+        }
+
+        if hasUnevenTexture {
+            appendConcern("Uneven Texture", to: &expanded)
+        }
+
+        if hasEnlargedPores {
+            appendConcern("Enlarged Pores", to: &expanded)
+        } else if hasPores {
+            appendConcern("Pores", to: &expanded)
+        }
+
+        if hasOiliness {
+            appendConcern("Oiliness", to: &expanded)
+        }
+
+        if hasRedness {
+            appendConcern("Redness", to: &expanded)
+        }
+
+        if hasPuffiness {
+            appendConcern("Puffiness Under Eyes", to: &expanded)
+        }
+
+        if hasPollution {
+            appendConcern("Pollution", to: &expanded)
+        }
+
+        if hasScar {
+            appendConcern("Scar Prevention", to: &expanded)
+        }
+
+        if hasAging {
+            appendConcern("Aging", to: &expanded)
+        }
+
+        return expanded
+    }
+
     private func parseAvoidList(_ value: String?) -> [String] {
         guard let value, !value.isEmpty else { return [] }
         let separators = CharacterSet(charactersIn: ",;\n")
@@ -777,7 +909,7 @@ class AIAnalysisService {
     }
 
     private func inferPoreCondition(metrics: ImageMetrics?, concerns: [String]) -> String {
-        if concerns.contains("Enlarged pores") {
+        if concerns.contains("Enlarged Pores") {
             return "Enlarged"
         }
         guard let metrics else { return "Normal" }
@@ -874,21 +1006,23 @@ class AIAnalysisService {
             sensitivityScore = min(10.0, sensitivityScore)
         } else {
             // Fallback to concern-based estimation when comprehensive metrics not available
-            if concerns.contains("Excess oil") || concerns.contains("Oiliness") || skinType == "Oily" {
+            if concerns.contains("Oiliness") || skinType == "Oily" {
                 oiliness = 7.0
             } else if concerns.contains("Dryness") || skinType == "Dry" {
                 oiliness = 2.5
             }
 
-            if concerns.contains("Uneven texture") {
+            if concerns.contains("Uneven Texture") {
                 texture = 4.0
             }
 
-            if concerns.contains("Enlarged pores") || poreCondition == "Enlarged" {
+            if concerns.contains("Enlarged Pores") || poreCondition == "Enlarged" {
                 pores = 6.0
             }
 
-            if concerns.contains("Fine lines") {
+            if concerns.contains("Wrinkles") {
+                wrinkles = 7.0
+            } else if concerns.contains("Fine Lines") {
                 wrinkles = 6.0
             } else if concerns.contains("Aging") {
                 wrinkles = 5.0
@@ -898,7 +1032,7 @@ class AIAnalysisService {
                 redness = 6.0
             }
 
-            if concerns.contains("Dark spots") {
+            if concerns.contains("Dark Spots") {
                 darkSpots = 6.0
             }
 
@@ -1107,6 +1241,8 @@ class AIAnalysisService {
             }
         }
 
+        let concernLabels = AppConstants.concernOptions.joined(separator: ", ")
+
         prompt += """
 
         Provide your analysis in this EXACT JSON format:
@@ -1137,6 +1273,9 @@ class AIAnalysisService {
             "notes": "General routine tips"
           }
         }
+
+        CONCERN LABELS:
+        - Use standardized concern labels only: \(concernLabels).
 
         HYDRATION GUIDANCE:
         - "hydration_level" is an estimated percent (0-100) of moisture appearance.
@@ -1232,7 +1371,9 @@ class AIAnalysisService {
         let skinType = normalizeSkinType(analysisResponse.skinType)
         let sensitivity = normalizeSensitivity(analysisResponse.sensitivity)
         let poreCondition = normalizePoreCondition(analysisResponse.poreCondition)
-        let healthScore = normalizeHealthScore(analysisResponse.skinHealthScore, concerns: analysisResponse.concerns)
+        let baseConcerns = analysisResponse.concerns ?? []
+        let expandedConcerns = expandConcerns(baseConcerns)
+        let healthScore = normalizeHealthScore(analysisResponse.skinHealthScore, concerns: baseConcerns)
 
         let normalizedRoutine = normalizeRecommendedRoutine(analysisResponse.recommendedRoutine, products: products)
 
@@ -1240,7 +1381,7 @@ class AIAnalysisService {
             skinType: skinType,
             hydrationLevel: hydratedLevel,
             sensitivity: sensitivity,
-            concerns: analysisResponse.concerns,
+            concerns: expandedConcerns.isEmpty ? nil : expandedConcerns,
             poreCondition: poreCondition,
             skinHealthScore: healthScore,
             recommendations: analysisResponse.recommendations,

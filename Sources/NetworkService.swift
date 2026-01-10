@@ -1524,7 +1524,16 @@ class NetworkService {
             }
 
             let analyses = try JSONDecoder().decode([SkinAnalysisResult].self, from: data)
-            return analyses
+            let normalizedAnalyses = analyses.map { analysis in
+                var normalizedAnalysis = analysis
+                if var results = normalizedAnalysis.analysisResults {
+                    let normalizedConcerns = AppConstants.normalizeConcerns(results.concerns)
+                    results.concerns = normalizedConcerns.isEmpty ? nil : normalizedConcerns
+                    normalizedAnalysis.analysisResults = results
+                }
+                return normalizedAnalysis
+            }
+            return normalizedAnalyses
         } catch is CancellationError {
             return []
         } catch let error as URLError where error.code == .cancelled {
@@ -1658,7 +1667,14 @@ class NetworkService {
                 throw NetworkError.invalidResponse
             }
 
-            return savedAnalysis
+            var normalizedAnalysis = savedAnalysis
+            if var results = normalizedAnalysis.analysisResults {
+                let normalizedConcerns = AppConstants.normalizeConcerns(results.concerns)
+                results.concerns = normalizedConcerns.isEmpty ? nil : normalizedConcerns
+                normalizedAnalysis.analysisResults = results
+            }
+
+            return normalizedAnalysis
         } catch is CancellationError {
             throw CancellationError()
         } catch let error as URLError where error.code == .cancelled {

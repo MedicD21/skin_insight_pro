@@ -462,7 +462,12 @@ class ProductCatalogViewModel: ObservableObject {
                 userId: userId,
                 companyId: user.companyId
             )
-            products = fetchedProducts.sorted { ($0.name ?? "") < ($1.name ?? "") }
+            let normalizedProducts = fetchedProducts.map { product in
+                var normalizedProduct = product
+                normalizedProduct.concerns = AppConstants.normalizeConcerns(product.concerns)
+                return normalizedProduct
+            }
+            products = normalizedProducts.sorted { ($0.name ?? "") < ($1.name ?? "") }
         } catch {
             errorMessage = error.localizedDescription
             showError = true
@@ -474,7 +479,9 @@ class ProductCatalogViewModel: ObservableObject {
 
         do {
             let savedProduct = try await NetworkService.shared.createOrUpdateProduct(product: product, userId: userId)
-            products.append(savedProduct)
+            var normalizedProduct = savedProduct
+            normalizedProduct.concerns = AppConstants.normalizeConcerns(savedProduct.concerns)
+            products.append(normalizedProduct)
             products.sort { ($0.name ?? "") < ($1.name ?? "") }
         } catch {
             errorMessage = error.localizedDescription
@@ -488,10 +495,12 @@ class ProductCatalogViewModel: ObservableObject {
 
         do {
             let updatedProduct = try await NetworkService.shared.createOrUpdateProduct(product: product, userId: userId)
+            var normalizedProduct = updatedProduct
+            normalizedProduct.concerns = AppConstants.normalizeConcerns(updatedProduct.concerns)
 
             // Replace the product in the list
             if let index = products.firstIndex(where: { $0.id == productId }) {
-                products[index] = updatedProduct
+                products[index] = normalizedProduct
                 products.sort { ($0.name ?? "") < ($1.name ?? "") }
             }
         } catch {

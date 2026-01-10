@@ -58,6 +58,8 @@
 		CB45DF6D2F11AA0B00881A92 /* RecommendedRoutineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF6C2F11AA0B00881A92 /* RecommendedRoutineView.swift */; };
 		CB45DF6F2F11D83600881A92 /* ProductScraper.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF6E2F11D83600881A92 /* ProductScraper.swift */; };
 		CB45DF712F11D84700881A92 /* ProductScrapeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF702F11D84700881A92 /* ProductScrapeReviewView.swift */; };
+		CB45DF732F12094500881A92 /* PDFExportPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF722F12094500881A92 /* PDFExportPreview.swift */; };
+		CB45DF752F12095200881A92 /* PDFPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF742F12095200881A92 /* PDFPreviewView.swift */; };
 		CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB092F0D587500D65A4A /* Secrets.swift */; };
 		CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */; };
 		CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */; };
@@ -118,6 +120,8 @@
 		CB45DF6C2F11AA0B00881A92 /* RecommendedRoutineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendedRoutineView.swift; sourceTree = "<group>"; };
 		CB45DF6E2F11D83600881A92 /* ProductScraper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductScraper.swift; sourceTree = "<group>"; };
 		CB45DF702F11D84700881A92 /* ProductScrapeReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductScrapeReviewView.swift; sourceTree = "<group>"; };
+		CB45DF722F12094500881A92 /* PDFExportPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExportPreview.swift; sourceTree = "<group>"; };
+		CB45DF742F12095200881A92 /* PDFPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewView.swift; sourceTree = "<group>"; };
 		CB82FB092F0D587500D65A4A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDataExportView.swift; sourceTree = "<group>"; };
 		CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTeamMemberView.swift; sourceTree = "<group>"; };
@@ -169,6 +173,8 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				CB45DF742F12095200881A92 /* PDFPreviewView.swift */,
+				CB45DF722F12094500881A92 /* PDFExportPreview.swift */,
 				CB45DF702F11D84700881A92 /* ProductScrapeReviewView.swift */,
 				CB45DF6E2F11D83600881A92 /* ProductScraper.swift */,
 				CB45DF6C2F11AA0B00881A92 /* RecommendedRoutineView.swift */,
@@ -309,6 +315,7 @@
 				C0B9D5EC1AEE6C617E6091AE /* AppLogger.swift in Sources */,
 				CB00CD112F0632B6009ED8F1 /* HIPAAConsentView.swift in Sources */,
 				CB45DF612F1054D500881A92 /* BiometricAuthManager.swift in Sources */,
+				CB45DF752F12095200881A92 /* PDFPreviewView.swift in Sources */,
 				CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */,
 				CB45DF6D2F11AA0B00881A92 /* RecommendedRoutineView.swift in Sources */,
 				97E2EC5EFE880BB226A085A1 /* AuthenticationManager.swift in Sources */,
@@ -339,6 +346,7 @@
 				CB00CD132F063847009ED8F1 /* ConsentHelpers.swift in Sources */,
 				C835309C901CA8A2BB8A56CB /* ProfileView.swift in Sources */,
 				CB45DF652F10719600881A92 /* AnalysisDetailView.swift in Sources */,
+				CB45DF732F12094500881A92 /* PDFExportPreview.swift in Sources */,
 				CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */,
 				9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */,
 				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,

@@ -38,7 +38,7 @@ struct AddProductView: View {
     }
 
     let skinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"]
-    let concerns = ["Acne", "Aging", "Dark Spots", "Redness", "Dryness", "Oiliness", "Fine Lines", "Pores"]
+    let concerns = AppConstants.concernOptions
     let categoryOptions = [
         "Select Category",
         "Cleanser",
@@ -160,7 +160,7 @@ struct AddProductView: View {
                     }
 
                     if let concerns = product.concerns {
-                        selectedConcerns = Set(concerns)
+                        selectedConcerns = Set(AppConstants.normalizeConcerns(concerns))
                     }
                 }
             }
