@@ -1,5 +1,13 @@
 # SkinInsightPro Production Launch TODO
 
+--- 01-09-2026 Items to work on:
+
+- [ ] If using products, add step by step instructions/order of application by AI. make products reorder able by user if AI does not put in correct order. optional link?
+
+- [ ] Add Product usage guidelines
+
+- [ ] Add to adding products, a URL scraper that gets photos, description, price, ingredients, and have user review and edit/approve the scrape.
+
 **Last Updated:** 2026-01-07
 
 ---
@@ -7,6 +15,7 @@
 ## 🔴 CRITICAL (Must Complete Before Launch)
 
 ### 1. App Store & IAP Setup
+
 - [ ] Submit 7 IAP products for review in App Store Connect
   - Add screenshots and descriptions for each tier
   - Submit all products together
@@ -23,6 +32,7 @@
   - Verify Claude usage is enabled after purchase
 
 ### 2. HIPAA Compliance
+
 - [x] ~~Audit log sync to Supabase implemented~~
 - [ ] **Test audit log sync** to verify it's working
   - Perform actions in app (view client, create analysis)
@@ -45,6 +55,7 @@
   - Designate responsible parties
 
 ### 3. Legal/Privacy Documents
+
 - [ ] Create comprehensive Privacy Policy
   - Cover data collection, cookies, third-party services
   - Include contact information for privacy concerns
@@ -62,6 +73,7 @@
   - Backup/archive procedures
 
 ### 4. Essential Testing
+
 - [ ] Test complete purchase flow with sandbox account
   - Create company → Purchase subscription → Verify activation
 - [ ] Verify Claude usage enforcement works
@@ -91,6 +103,7 @@
 ## 🟡 IMPORTANT (Should Complete Soon)
 
 ### 5. Production Enhancements
+
 - [ ] Add App Store Server Notifications webhooks
   - Handle automatic renewals
   - Handle cancellations
@@ -109,6 +122,7 @@
   - Email/message functionality
 
 ### 6. Security
+
 - [ ] Conduct security risk assessment
   - Review authentication mechanisms
   - Audit data encryption (in-transit and at-rest)
@@ -128,6 +142,7 @@
   - Useful for security monitoring
 
 ### 7. Admin Features
+
 - [ ] Create admin dashboard to view audit logs
   - Search/filter by user, event type, date
   - Export to CSV
@@ -150,6 +165,7 @@
 ## 🟢 NICE-TO-HAVE (Future Enhancements)
 
 ### 8. Analytics & Optimization
+
 - [ ] Track conversion rates (signups → subscriptions)
   - Measure funnel: Sign up → Company setup → Purchase
   - Identify drop-off points
@@ -167,6 +183,7 @@
   - Prompt to upgrade before hitting limit
 
 ### 9. User Experience Improvements
+
 - [ ] Add onboarding tour for new users
   - Highlight key features
   - Show how to create first client
@@ -189,18 +206,21 @@
 ## 📋 PRIORITY ORDER (What to Do Next)
 
 ### Week 1: Edge Functions & Testing
+
 1. ✅ Deploy `validate-receipt` Edge Function
 2. ⏳ Test sandbox IAP purchases end-to-end
 3. ⏳ Test audit log sync to Supabase
 4. ⏳ Submit IAPs for App Store review
 
 ### Week 2: Legal & Compliance
+
 5. Create Privacy Policy and Terms of Service
 6. Contact Supabase to sign BAA
 7. Contact Anthropic to sign BAA
 8. Create Breach Notification Plan document
 
 ### Week 3: Final Testing & Launch
+
 9. Complete all testing checklist items
 10. Set up App Store Server Notifications
 11. Conduct security risk assessment
@@ -217,21 +237,25 @@
 **Steps:**
 
 1. **Navigate to project directory:**
+
    ```bash
    cd /Users/dustinschaaf/Desktop/skin_insight_pro
    ```
 
 2. **Deploy the function:**
+
    ```bash
    supabase functions deploy validate-receipt
    ```
 
 3. **Verify deployment:**
+
    - Go to: https://supabase.com/dashboard/project/meqrnevrimzvvhmopxrq/functions
    - You should see `validate-receipt` in the list
    - Check logs for any errors
 
 4. **Test the function:**
+
    ```bash
    curl -X POST \
      'https://meqrnevrimzvvhmopxrq.supabase.co/functions/v1/validate-receipt' \
@@ -256,6 +280,7 @@
 **Status:** ✅ Already deployed with server-side validation
 
 This function:
+
 - Validates JWT tokens
 - Calls `record_claude_usage` to check subscription & limits
 - Returns 402 if limit exceeded
@@ -268,6 +293,7 @@ This function:
 **Overall Progress:** ~75% Complete
 
 ### Completed ✅
+
 - [x] StoreKit 2 monetization system
 - [x] Company onboarding flow
 - [x] Subscription UI with 7 pricing tiers
@@ -283,10 +309,12 @@ This function:
 - [x] All IAP products created in App Store Connect
 
 ### In Progress 🟡
+
 - Edge function deployment (validate-receipt)
 - Testing phase
 
 ### Not Started 🔴
+
 - BAA signing (Supabase & Anthropic)
 - Legal documents (Privacy Policy, Terms, Breach Plan)
 - App Store submission
@@ -307,11 +335,13 @@ This function:
 ## ⚠️ BLOCKERS
 
 **Cannot launch without:**
+
 1. Signed BAA with Supabase (legal requirement for PHI)
 2. Privacy Policy (legal requirement for App Store)
 3. IAPs approved by Apple (required for monetization)
 
 **Should not launch without:**
+
 1. Comprehensive testing of all features
 2. Edge functions deployed and tested
 3. Security risk assessment completed

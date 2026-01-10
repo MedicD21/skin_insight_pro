@@ -1,10 +1,12 @@
 import UIKit
 import Vision
 import VisionKit
+import CoreImage
 
 class AIAnalysisService {
     static let shared = AIAnalysisService()
     private init() {}
+    private let ciContext = CIContext()
 
     func analyzeImage(
         image: UIImage,
@@ -100,49 +102,80 @@ class AIAnalysisService {
             concerns = manualConcerns.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         }
 
-        // Perform enhanced image analysis
-        if let cgImage = image.cgImage {
-            imageMetrics = await analyzeImageMetrics(cgImage: cgImage)
+        // Perform comprehensive skin image analysis with multiple passes
+        var comprehensiveMetrics: SkinImageAnalyzer.ComprehensiveMetrics?
+        if image.cgImage != nil {
+            let skinAnalyzer = SkinImageAnalyzer()
+            let variants = generateImageVariants(from: image)
+            var metricsPasses: [SkinImageAnalyzer.ComprehensiveMetrics] = []
+            metricsPasses.reserveCapacity(variants.count)
 
-            // Analyze brightness for dark spots and hyperpigmentation
-            if let imageMetrics, imageMetrics.brightness < 0.35 {
+            for variant in variants {
+                let metrics = await skinAnalyzer.analyze(image: variant)
+                metricsPasses.append(metrics)
+            }
+
+            comprehensiveMetrics = selectMostSevereMetrics(from: metricsPasses)
+
+            if let metrics = comprehensiveMetrics {
+                imageMetrics = ImageMetrics(
+                    brightness: metrics.perceptualColor.averageBrightness,
+                    rednessLevel: max(0, metrics.perceptualColor.averageRedness / 20.0),
+                    saturation: metrics.perceptualColor.averageSaturation,
+                    textureVariance: (metrics.texture.fineTextureLevel + metrics.texture.mediumTextureLevel + metrics.texture.coarseTextureLevel) / 3.0
+                )
+            }
+
+            // Aggregate concerns across passes to catch subtle issues
+            if metricsPasses.contains(where: { $0.pigmentation.hyperpigmentationLevel > 0.35 }) {
                 if !concerns.contains("Dark spots") {
                     concerns.append("Dark spots")
                 }
             }
 
-            // Analyze redness
-            if let imageMetrics, imageMetrics.rednessLevel > 0.45 {
+            if metricsPasses.contains(where: {
+                $0.vascular.overallRednessLevel == SkinImageAnalyzer.VascularMetrics.RednessLevel.elevated ||
+                $0.vascular.overallRednessLevel == SkinImageAnalyzer.VascularMetrics.RednessLevel.high ||
+                $0.perceptualColor.averageRedness > 8
+            }) {
                 if !concerns.contains("Redness") {
                     concerns.append("Redness")
                 }
             }
 
-            // Analyze texture/smoothness
-            if let imageMetrics, imageMetrics.textureVariance > 0.6 {
+            if metricsPasses.contains(where: { $0.texture.smoothness < 0.45 }) {
                 if !concerns.contains("Uneven texture") {
                     concerns.append("Uneven texture")
                 }
             }
 
-            // Analyze oiliness (high brightness + color saturation)
-            if let imageMetrics, imageMetrics.brightness > 0.7 && imageMetrics.saturation > 0.5 {
-                if !concerns.contains("Excess oil") {
-                    concerns.append("Excess oil")
+            if metricsPasses.contains(where: { $0.structure.lineDensity > 0.45 }) {
+                if !concerns.contains("Fine lines") {
+                    concerns.append("Fine lines")
                 }
             }
 
-            // Analyze dryness (low saturation, uneven texture)
-            if let imageMetrics, imageMetrics.saturation < 0.3 && imageMetrics.textureVariance > 0.5 {
+            if metricsPasses.contains(where: { $0.texture.flakingLikelihood > 0.4 }) {
                 if !concerns.contains("Dryness") {
                     concerns.append("Dryness")
                 }
             }
 
-            // Indicate pores when texture variance is elevated
-            if let imageMetrics, imageMetrics.textureVariance > 0.55 {
+            if metricsPasses.contains(where: { $0.texture.porelikeStructures > 0.45 }) {
                 if !concerns.contains("Enlarged pores") {
                     concerns.append("Enlarged pores")
+                }
+            }
+
+            if metricsPasses.contains(where: { $0.vascular.hasActiveBreakouts }) {
+                if !concerns.contains("Acne") {
+                    concerns.append("Acne")
+                }
+            }
+
+            if metricsPasses.contains(where: { $0.structure.laxityScore > 0.45 }) {
+                if !concerns.contains("Aging") {
+                    concerns.append("Aging")
                 }
             }
         }
@@ -157,7 +190,8 @@ class AIAnalysisService {
             skinType: manualSkinType,
             products: products,
             allergies: allergies,
-            sensitivities: knownSensitivities
+            sensitivities: knownSensitivities,
+            productsToAvoid: productsToAvoid
         )
         productRecommendations = matchedProducts
 
@@ -203,8 +237,22 @@ class AIAnalysisService {
         let sensitivity = manualSensitivity ?? inferSensitivity(metrics: imageMetrics, concerns: concerns)
         let poreCondition = manualPoreCondition ?? inferPoreCondition(metrics: imageMetrics, concerns: concerns)
 
-        // Calculate basic health score
-        let healthScore = calculateHealthScore(concerns: concerns)
+        // Calculate trending metrics
+        let trendingMetrics = calculateTrendingMetrics(
+            comprehensiveMetrics: comprehensiveMetrics,
+            concerns: concerns,
+            skinType: skinType,
+            sensitivity: sensitivity,
+            poreCondition: poreCondition
+        )
+
+        // Calculate health score tuned to align closer to Claude scoring
+        let healthScore = calculateAppleHealthScore(concerns: concerns, metrics: trendingMetrics)
+
+        let recommendedRoutine = buildRecommendedRoutine(
+            productRecommendations: productRecommendations,
+            products: products
+        )
 
         return AnalysisData(
             skinType: skinType,
@@ -220,7 +268,16 @@ class AIAnalysisService {
                 allergies: allergies,
                 medications: medications
             ),
-            progressNotes: buildProgressNotes(previousAnalyses: previousAnalyses)
+            progressNotes: buildProgressNotes(previousAnalyses: previousAnalyses),
+            oilinessScore: trendingMetrics.oiliness,
+            textureScore: trendingMetrics.texture,
+            poresScore: trendingMetrics.pores,
+            wrinklesScore: trendingMetrics.wrinkles,
+            rednessScore: trendingMetrics.redness,
+            darkSpotsScore: trendingMetrics.darkSpots,
+            acneScore: trendingMetrics.acne,
+            sensitivityScore: trendingMetrics.sensitivityScore,
+            recommendedRoutine: recommendedRoutine
         )
     }
 
@@ -252,6 +309,17 @@ class AIAnalysisService {
         }
         let base64Image = imageData.base64EncodedString()
 
+        // Perform comprehensive skin analysis for additional context
+        var clinicalSummary: String?
+        if image.cgImage != nil {
+            let skinAnalyzer = SkinImageAnalyzer()
+            let comprehensiveMetrics = await skinAnalyzer.analyze(image: image)
+            clinicalSummary = comprehensiveMetrics.clinicalSummary()
+            if let summary = clinicalSummary {
+                print("📊 CLINICAL SUMMARY:\n\(summary)")
+            }
+        }
+
         // Build the prompt
         let prompt = buildClaudePrompt(
             medicalHistory: medicalHistory,
@@ -269,7 +337,8 @@ class AIAnalysisService {
             injectablesHistory: injectablesHistory,
             previousAnalyses: previousAnalyses,
             aiRules: aiRules,
-            products: products
+            products: products,
+            clinicalSummary: clinicalSummary
         )
 
         // Call Supabase Edge Function (enforces usage caps)
@@ -447,7 +516,7 @@ class AIAnalysisService {
         }
 
         // Parse Claude response
-        return try parseClaudeResponse(data: data)
+        return try parseClaudeResponse(data: data, products: products)
     }
 
     private func extractClaudeErrorMessage(from data: Data) -> String? {
@@ -477,66 +546,13 @@ class AIAnalysisService {
 
     // MARK: - Helper Methods
 
+    // Legacy ImageMetrics structure maintained for backward compatibility with existing inference functions
+    // These are populated from the new ComprehensiveMetrics in analyzeWithAppleVision
     struct ImageMetrics {
         let brightness: CGFloat
         let rednessLevel: CGFloat
         let saturation: CGFloat
         let textureVariance: CGFloat
-    }
-
-    private func analyzeImageMetrics(cgImage: CGImage) async -> ImageMetrics {
-        return await withCheckedContinuation { continuation in
-            let ciImage = CIImage(cgImage: cgImage)
-            let extentVector = CIVector(x: ciImage.extent.origin.x, y: ciImage.extent.origin.y, z: ciImage.extent.size.width, w: ciImage.extent.size.height)
-
-            // Analyze average color
-            guard let averageFilter = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: ciImage, kCIInputExtentKey: extentVector]),
-                  let outputImage = averageFilter.outputImage else {
-                continuation.resume(returning: ImageMetrics(brightness: 0.5, rednessLevel: 0.3, saturation: 0.4, textureVariance: 0.4))
-                return
-            }
-
-            var bitmap = [UInt8](repeating: 0, count: 4)
-            let context = CIContext(options: [.workingColorSpace: kCFNull as Any])
-            context.render(outputImage, toBitmap: &bitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
-
-            let r = CGFloat(bitmap[0]) / 255.0
-            let g = CGFloat(bitmap[1]) / 255.0
-            let b = CGFloat(bitmap[2]) / 255.0
-
-            // Calculate metrics
-            let brightness = (r + g + b) / 3.0
-            let rednessLevel = r / max(g + b, 0.01) // How much more red than other colors
-
-            // Calculate saturation
-            let maxChannel = max(r, g, b)
-            let minChannel = min(r, g, b)
-            let saturation = maxChannel > 0 ? (maxChannel - minChannel) / maxChannel : 0
-
-            // Estimate texture variance using edge detection
-            let edgeFilter = CIFilter(name: "CIEdges")
-            edgeFilter?.setValue(ciImage, forKey: kCIInputImageKey)
-            edgeFilter?.setValue(1.5, forKey: kCIInputIntensityKey)
-
-            var textureVariance: CGFloat = 0.4 // Default
-            if let edgeOutput = edgeFilter?.outputImage {
-                let avgEdgeFilter = CIFilter(name: "CIAreaAverage", parameters: [kCIInputImageKey: edgeOutput, kCIInputExtentKey: extentVector])
-                if let edgeAvg = avgEdgeFilter?.outputImage {
-                    var edgeBitmap = [UInt8](repeating: 0, count: 4)
-                    context.render(edgeAvg, toBitmap: &edgeBitmap, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1), format: .RGBA8, colorSpace: nil)
-                    textureVariance = CGFloat(edgeBitmap[0]) / 255.0
-                }
-            }
-
-            let metrics = ImageMetrics(
-                brightness: brightness,
-                rednessLevel: rednessLevel,
-                saturation: saturation,
-                textureVariance: textureVariance
-            )
-
-            continuation.resume(returning: metrics)
-        }
     }
 
     private func applyAIRules(concerns: [String], rules: [AIRule]) -> [String] {
@@ -562,22 +578,32 @@ class AIAnalysisService {
         return productRecommendations
     }
 
+    private func parseAvoidList(_ value: String?) -> [String] {
+        guard let value, !value.isEmpty else { return [] }
+        let separators = CharacterSet(charactersIn: ",;\n")
+        return value
+            .components(separatedBy: separators)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+            .filter { !$0.isEmpty }
+    }
+
     private func matchProducts(
         concerns: [String],
         skinType: String?,
         products: [Product],
         allergies: String?,
-        sensitivities: String?
+        sensitivities: String?,
+        productsToAvoid: String?
     ) -> [String] {
         var matchedProducts: [String] = []
 
         // Build list of ingredients to avoid
         var ingredientsToAvoid: [String] = []
-        if let allergies = allergies, !allergies.isEmpty {
-            ingredientsToAvoid.append(contentsOf: allergies.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
-        }
-        if let sensitivities = sensitivities, !sensitivities.isEmpty {
-            ingredientsToAvoid.append(contentsOf: sensitivities.components(separatedBy: ",").map { $0.trimmingCharacters(in: .whitespaces).lowercased() })
+        ingredientsToAvoid.append(contentsOf: parseAvoidList(allergies))
+        ingredientsToAvoid.append(contentsOf: parseAvoidList(sensitivities))
+        ingredientsToAvoid.append(contentsOf: parseAvoidList(productsToAvoid))
+        if !ingredientsToAvoid.isEmpty {
+            ingredientsToAvoid = Array(Set(ingredientsToAvoid))
         }
 
         // Filter active products
@@ -590,10 +616,24 @@ class AIAnalysisService {
         }
 
         for product in activeProducts {
-            // Check if product ingredients contain allergens
-            if let ingredients = product.ingredients {
+            // Check if product ingredients contain allergens/avoid list
+            let ingredientText = [
+                product.ingredients,
+                product.allIngredients
+            ]
+            .compactMap { $0?.lowercased() }
+            .joined(separator: " ")
+
+            let nameText = [
+                product.brand,
+                product.name
+            ]
+            .compactMap { $0?.lowercased() }
+            .joined(separator: " ")
+
+            if !ingredientsToAvoid.isEmpty {
                 let hasAllergen = ingredientsToAvoid.contains { allergen in
-                    ingredients.lowercased().contains(allergen)
+                    !allergen.isEmpty && (ingredientText.contains(allergen) || nameText.contains(allergen))
                 }
                 if hasAllergen {
                     continue // Skip this product
@@ -653,6 +693,34 @@ class AIAnalysisService {
         let baseScore = 85
         let deduction = concerns.count * 10
         return max(0, min(100, baseScore - deduction))
+    }
+
+    private func calculateAppleHealthScore(
+        concerns: [String],
+        metrics: (oiliness: Double, texture: Double, pores: Double, wrinkles: Double, redness: Double, darkSpots: Double, acne: Double, sensitivityScore: Double)
+    ) -> Int {
+        let baseScore = Double(calculateHealthScore(concerns: concerns))
+        let oilinessIssue = min(10.0, abs(metrics.oiliness - 5.0) * 2.0)
+        let textureIssue = min(10.0, 10.0 - metrics.texture)
+
+        let issues = [
+            oilinessIssue,
+            textureIssue,
+            metrics.pores,
+            metrics.wrinkles,
+            metrics.redness,
+            metrics.darkSpots,
+            metrics.acne,
+            metrics.sensitivityScore
+        ]
+        let sortedIssues = issues.sorted(by: >)
+        let topIssues = sortedIssues.prefix(3)
+        let topAverage = topIssues.reduce(0.0, +) / Double(topIssues.count)
+        let severityPenalty = max(0.0, topAverage - 5.0) * 4.0
+        let improvementBonus = max(0.0, 5.0 - topAverage) * 2.0
+        let score = baseScore - severityPenalty + improvementBonus
+
+        return max(0, min(100, Int(score.rounded())))
     }
 
     private func parseManualHydrationLevel(_ manualHydrationLevel: String?) -> Int? {
@@ -723,6 +791,132 @@ class AIAnalysisService {
         return "Normal"
     }
 
+    private func calculateTrendingMetrics(
+        comprehensiveMetrics: SkinImageAnalyzer.ComprehensiveMetrics?,
+        concerns: [String],
+        skinType: String?,
+        sensitivity: String?,
+        poreCondition: String?
+    ) -> (oiliness: Double, texture: Double, pores: Double, wrinkles: Double, redness: Double, darkSpots: Double, acne: Double, sensitivityScore: Double) {
+
+        // Default scores (0-10 scale)
+        var oiliness: Double = 5.0
+        var texture: Double = 7.0
+        var pores: Double = 4.0
+        var wrinkles: Double = 2.0
+        var redness: Double = 2.0
+        var darkSpots: Double = 2.0
+        var acne: Double = 2.0
+        var sensitivityScore: Double = 3.0
+
+        // Calculate from comprehensive metrics if available
+        if let metrics = comprehensiveMetrics {
+            // Oiliness: Based on skin type and brightness
+            switch skinType {
+            case "Oily": oiliness = 7.5 + (metrics.perceptualColor.averageBrightness * 2.5)
+            case "Dry": oiliness = 2.0 + (metrics.perceptualColor.averageBrightness * 1.5)
+            case "Combination": oiliness = 5.0 + (metrics.perceptualColor.averageBrightness * 2.0)
+            default: oiliness = 5.0
+            }
+            oiliness = min(10.0, max(0.0, oiliness))
+
+            // Texture: Inverse of smoothness (0 = rough, 10 = smooth)
+            texture = metrics.texture.smoothness * 10.0
+
+            // Pores: Based on pore-like structures
+            pores = metrics.texture.porelikeStructures * 10.0
+            if poreCondition == "Enlarged" {
+                pores = max(pores, 6.0)
+            } else if poreCondition == "Fine" {
+                pores = min(pores, 3.0)
+            }
+
+            // Wrinkles: Based on line density and laxity
+            wrinkles = (metrics.structure.lineDensity * 6.0) + (metrics.structure.laxityScore * 4.0)
+            wrinkles = min(10.0, wrinkles)
+
+            // Redness: Based on vascular metrics
+            switch metrics.vascular.overallRednessLevel {
+            case SkinImageAnalyzer.VascularMetrics.RednessLevel.minimal:
+                redness = 1.0
+            case SkinImageAnalyzer.VascularMetrics.RednessLevel.low:
+                redness = 3.0
+            case SkinImageAnalyzer.VascularMetrics.RednessLevel.moderate:
+                redness = 5.0
+            case SkinImageAnalyzer.VascularMetrics.RednessLevel.elevated:
+                redness = 7.0
+            case SkinImageAnalyzer.VascularMetrics.RednessLevel.high:
+                redness = 9.0
+            }
+            redness += (metrics.vascular.inflammationScore * 1.0)
+            redness = min(10.0, redness)
+
+            // Dark Spots: Based on hyperpigmentation
+            darkSpots = metrics.pigmentation.hyperpigmentationLevel * 10.0
+
+            // Acne: Based on active breakouts and inflammation
+            if metrics.vascular.hasActiveBreakouts {
+                acne = 5.0 + (metrics.vascular.inflammationScore * 5.0)
+            } else {
+                acne = metrics.vascular.inflammationScore * 3.0
+            }
+            acne = min(10.0, acne)
+
+            // Sensitivity: Based on sensitivity string and redness
+            switch sensitivity {
+            case "High": sensitivityScore = 8.0
+            case "Moderate": sensitivityScore = 5.0
+            case "Low": sensitivityScore = 2.0
+            default: sensitivityScore = 3.0
+            }
+            // Adjust based on actual redness
+            sensitivityScore = (sensitivityScore + redness) / 2.0
+            sensitivityScore = min(10.0, sensitivityScore)
+        } else {
+            // Fallback to concern-based estimation when comprehensive metrics not available
+            if concerns.contains("Excess oil") || concerns.contains("Oiliness") || skinType == "Oily" {
+                oiliness = 7.0
+            } else if concerns.contains("Dryness") || skinType == "Dry" {
+                oiliness = 2.5
+            }
+
+            if concerns.contains("Uneven texture") {
+                texture = 4.0
+            }
+
+            if concerns.contains("Enlarged pores") || poreCondition == "Enlarged" {
+                pores = 6.0
+            }
+
+            if concerns.contains("Fine lines") {
+                wrinkles = 6.0
+            } else if concerns.contains("Aging") {
+                wrinkles = 5.0
+            }
+
+            if concerns.contains("Redness") {
+                redness = 6.0
+            }
+
+            if concerns.contains("Dark spots") {
+                darkSpots = 6.0
+            }
+
+            if concerns.contains("Acne") {
+                acne = 6.0
+            }
+
+            switch sensitivity {
+            case "High": sensitivityScore = 8.0
+            case "Moderate": sensitivityScore = 5.0
+            case "Low": sensitivityScore = 2.0
+            default: sensitivityScore = 3.0
+            }
+        }
+
+        return (oiliness, texture, pores, wrinkles, redness, darkSpots, acne, sensitivityScore)
+    }
+
     private func buildMedicalConsiderations(medicalHistory: String?, allergies: String?, medications: String?) -> [String]? {
         var considerations: [String] = []
 
@@ -762,7 +956,8 @@ class AIAnalysisService {
         injectablesHistory: String?,
         previousAnalyses: [SkinAnalysisResult],
         aiRules: [AIRule],
-        products: [Product]
+        products: [Product],
+        clinicalSummary: String?
     ) -> String {
         // Separate rules into settings and conditions
         let activeRules = aiRules.filter { $0.isActive == true }
@@ -846,6 +1041,16 @@ class AIAnalysisService {
             prompt += "Injectables History: \(injectablesHistory)\n"
         }
 
+        // Add comprehensive clinical image analysis
+        if let clinicalSummary = clinicalSummary, !clinicalSummary.isEmpty {
+            prompt += "\n\n📊 DETAILED CLINICAL IMAGE ANALYSIS:\n"
+            prompt += "The following metrics were extracted from the image using advanced perceptual color analysis (LAB color space),\n"
+            prompt += "spatial region mapping, multi-scale texture analysis, structural feature detection, vascular assessment,\n"
+            prompt += "and pigmentation analysis. Use these objective measurements to inform your professional assessment:\n\n"
+            prompt += clinicalSummary
+            prompt += "\n\nInterpret these metrics in combination with your visual analysis of the image to provide the most accurate assessment.\n"
+        }
+
         // Add manual assessments if provided
         if let manualSkinType = manualSkinType {
             prompt += "Esthetician's skin type assessment: \(manualSkinType)\n"
@@ -892,6 +1097,9 @@ class AIAnalysisService {
                         if let description = product.description, !description.isEmpty {
                             productDetails += " | Details: \(description)"
                         }
+                        if let usageGuidelines = product.usageGuidelines, !usageGuidelines.isEmpty {
+                            productDetails += " | Usage: \(usageGuidelines)"
+                        }
 
                         prompt += productDetails + "\n"
                     }
@@ -911,7 +1119,23 @@ class AIAnalysisService {
           "skin_health_score": 0-100,
           "recommendations": ["recommendation1", "recommendation2"],
           "product_recommendations": ["product1", "product2"],
-          "medical_considerations": ["consideration1"]
+          "medical_considerations": ["consideration1"],
+          "recommended_routine": {
+            "morning_steps": [
+              {
+                "id": "uuid",
+                "product_name": "Brand - Product Name",
+                "product_id": "optional_product_id",
+                "step_number": 1,
+                "instructions": "Apply to clean, damp skin",
+                "amount": "Pea-sized",
+                "wait_time": 60,
+                "frequency": "Daily"
+              }
+            ],
+            "evening_steps": [...],
+            "notes": "General routine tips"
+          }
         }
 
         HYDRATION GUIDANCE:
@@ -947,12 +1171,32 @@ class AIAnalysisService {
         Example: If you detect "Redness" and "Dry" skin type:
         - recommendations: Your professional advice + ALL matching AI rules
         - product_recommendations: The 2-3 BEST products for redness on dry skin (excluding allergens)
+
+        3. "recommended_routine" - Create a structured morning and evening skincare routine:
+           - Order products by category: Cleanser → Toner → Treatment/Serum → Eye Cream → Moisturizer → Sunscreen (AM only)
+           - ONLY include products from the catalog that match the client's skin concerns
+           - For each step provide:
+             * product_name: "Brand - Product Name" (must match catalog exactly)
+             * step_number: Sequential order (1, 2, 3...)
+             * instructions: Brief how-to (e.g., "Gently massage into damp skin in circular motions")
+             * amount: How much to use (e.g., "Pea-sized", "2-3 drops", "Dime-sized", "Generous layer")
+             * wait_time: Seconds to wait before next step (optional, e.g., 60 for actives, 30 for serums)
+             * frequency: "Daily", "2-3 times per week", "Every other day", etc.
+           - Morning routine: Focus on protection (antioxidants, sunscreen)
+           - Evening routine: Focus on treatment and repair (actives, retinol, heavier moisturizers)
+           - Add routine notes with general tips (e.g., "Always apply products to damp skin for better absorption")
+           - Keep routines simple (3-5 steps each) - don't overwhelm the client
+           - Use the product's "Usage Guidelines" field when available to inform instructions
+
+        Example routine for dry, aging skin:
+        Morning: Gentle Cleanser → Vitamin C Serum → Eye Cream → Moisturizer → SPF 50
+        Evening: Oil Cleanser → Gentle Cleanser → Hyaluronic Acid Serum → Retinol → Night Cream
         """
 
         return prompt
     }
 
-    private func parseClaudeResponse(data: Data) throws -> AnalysisData {
+    private func parseClaudeResponse(data: Data, products: [Product]) throws -> AnalysisData {
         struct ClaudeResponse: Codable {
             let content: [ClaudeContent]
         }
@@ -990,6 +1234,8 @@ class AIAnalysisService {
         let poreCondition = normalizePoreCondition(analysisResponse.poreCondition)
         let healthScore = normalizeHealthScore(analysisResponse.skinHealthScore, concerns: analysisResponse.concerns)
 
+        let normalizedRoutine = normalizeRecommendedRoutine(analysisResponse.recommendedRoutine, products: products)
+
         return AnalysisData(
             skinType: skinType,
             hydrationLevel: hydratedLevel,
@@ -1000,8 +1246,286 @@ class AIAnalysisService {
             recommendations: analysisResponse.recommendations,
             productRecommendations: analysisResponse.productRecommendations,
             medicalConsiderations: analysisResponse.medicalConsiderations,
-            progressNotes: analysisResponse.progressNotes
+            progressNotes: analysisResponse.progressNotes,
+            recommendedRoutine: normalizedRoutine
         )
+    }
+
+    private func normalizeRecommendedRoutine(_ routine: SkinCareRoutine?, products: [Product]) -> SkinCareRoutine? {
+        guard let routine else { return nil }
+
+        let morningSteps = normalizeRoutineSteps(routine.morningSteps, products: products)
+        let eveningSteps = normalizeRoutineSteps(routine.eveningSteps, products: products)
+        let notes = routine.notes?.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return SkinCareRoutine(
+            morningSteps: morningSteps,
+            eveningSteps: eveningSteps,
+            notes: notes?.isEmpty == true ? nil : notes
+        )
+    }
+
+    private func normalizeRoutineSteps(_ steps: [RoutineStep], products: [Product]) -> [RoutineStep] {
+        let sortedSteps = steps.sorted { lhs, rhs in
+            if lhs.stepNumber == rhs.stepNumber {
+                return lhs.productName.localizedCaseInsensitiveCompare(rhs.productName) == .orderedAscending
+            }
+            if lhs.stepNumber == 0 { return false }
+            if rhs.stepNumber == 0 { return true }
+            return lhs.stepNumber < rhs.stepNumber
+        }
+
+        return sortedSteps.enumerated().map { index, step in
+            var updatedStep = step
+            updatedStep.stepNumber = index + 1
+
+            if let matchedProduct = matchProduct(for: step.productName, products: products) {
+                let canonicalName = formattedProductName(for: matchedProduct)
+                if !canonicalName.isEmpty {
+                    updatedStep.productName = canonicalName
+                }
+                updatedStep.productId = matchedProduct.id
+                updatedStep.imageUrl = matchedProduct.imageUrl
+                if (updatedStep.instructions ?? "").isEmpty,
+                   let guidelines = matchedProduct.usageGuidelines,
+                   !guidelines.isEmpty {
+                    updatedStep.instructions = guidelines
+                }
+            }
+
+            return updatedStep
+        }
+    }
+
+    private func matchProduct(for stepName: String, products: [Product]) -> Product? {
+        let normalizedStepName = normalizeProductName(stepName)
+        guard !normalizedStepName.isEmpty else { return nil }
+
+        return products.first { product in
+            let displayName = formattedProductName(for: product)
+            let normalizedDisplay = normalizeProductName(displayName)
+            let normalizedProductName = normalizeProductName(product.name ?? "")
+            return normalizedDisplay == normalizedStepName || normalizedProductName == normalizedStepName
+        }
+    }
+
+    private func formattedProductName(for product: Product) -> String {
+        let brand = product.brand?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = product.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        if brand.isEmpty { return name }
+        if name.isEmpty { return brand }
+        return "\(brand) - \(name)"
+    }
+
+    private func normalizeProductName(_ value: String) -> String {
+        value
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .joined()
+    }
+
+    private func generateImageVariants(from image: UIImage) -> [UIImage] {
+        var variants: [UIImage] = [image]
+
+        if let boosted = applyColorBoost(image: image, contrast: 1.2, saturation: 1.15, brightness: 0.02) {
+            variants.append(boosted)
+        }
+        if let highContrast = applyColorBoost(image: image, contrast: 1.3, saturation: 1.05, brightness: 0.0) {
+            variants.append(highContrast)
+        }
+
+        return variants
+    }
+
+    private func applyColorBoost(image: UIImage, contrast: CGFloat, saturation: CGFloat, brightness: CGFloat) -> UIImage? {
+        guard let ciImage = CIImage(image: image) else { return nil }
+        guard let filter = CIFilter(name: "CIColorControls") else { return nil }
+        filter.setValue(ciImage, forKey: kCIInputImageKey)
+        filter.setValue(contrast, forKey: kCIInputContrastKey)
+        filter.setValue(saturation, forKey: kCIInputSaturationKey)
+        filter.setValue(brightness, forKey: kCIInputBrightnessKey)
+
+        guard let outputImage = filter.outputImage,
+              let cgImage = ciContext.createCGImage(outputImage, from: outputImage.extent) else {
+            return nil
+        }
+
+        return UIImage(cgImage: cgImage, scale: image.scale, orientation: image.imageOrientation)
+    }
+
+    private func selectMostSevereMetrics(
+        from metricsList: [SkinImageAnalyzer.ComprehensiveMetrics]
+    ) -> SkinImageAnalyzer.ComprehensiveMetrics? {
+        guard !metricsList.isEmpty else { return nil }
+        return metricsList.max { lhs, rhs in
+            severityScore(for: lhs) < severityScore(for: rhs)
+        }
+    }
+
+    private func severityScore(for metrics: SkinImageAnalyzer.ComprehensiveMetrics) -> Double {
+        let redness = min(1.0, metrics.perceptualColor.averageRedness / 20.0)
+        let roughness = 1.0 - metrics.texture.smoothness
+        let score = (metrics.vascular.inflammationScore * 1.5)
+            + metrics.texture.flakingLikelihood
+            + metrics.texture.porelikeStructures
+            + metrics.structure.lineDensity
+            + metrics.structure.laxityScore
+            + metrics.pigmentation.hyperpigmentationLevel
+            + roughness
+            + redness
+        return score
+    }
+
+    private func buildRecommendedRoutine(
+        productRecommendations: [String],
+        products: [Product]
+    ) -> SkinCareRoutine? {
+        let normalizedRecommendations = productRecommendations
+            .map(normalizeProductName)
+            .filter { !$0.isEmpty }
+
+        guard !normalizedRecommendations.isEmpty else { return nil }
+
+        var seen = Set<String>()
+        var uniqueRecommendations: [String] = []
+        for recommendation in productRecommendations {
+            let normalized = normalizeProductName(recommendation)
+            guard !normalized.isEmpty else { continue }
+            if seen.insert(normalized).inserted {
+                uniqueRecommendations.append(recommendation)
+            }
+        }
+
+        var morningSteps: [RoutineStep] = []
+        var eveningSteps: [RoutineStep] = []
+
+        for recommendation in uniqueRecommendations {
+            if let product = matchProduct(for: recommendation, products: products) {
+                let targets = routineTargets(for: product)
+                if targets.includeMorning {
+                    morningSteps.append(makeRoutineStep(for: product))
+                }
+                if targets.includeEvening {
+                    eveningSteps.append(makeRoutineStep(for: product))
+                }
+            } else {
+                morningSteps.append(RoutineStep(productName: recommendation, stepNumber: 0))
+                if !isMorningOnlyProduct(recommendation) {
+                    eveningSteps.append(RoutineStep(productName: recommendation, stepNumber: 0))
+                }
+            }
+        }
+
+        morningSteps = normalizeAndSortRoutineSteps(morningSteps, products: products)
+        eveningSteps = normalizeAndSortRoutineSteps(eveningSteps, products: products)
+
+        return SkinCareRoutine(morningSteps: morningSteps, eveningSteps: eveningSteps, notes: nil)
+    }
+
+    private func makeRoutineStep(for product: Product) -> RoutineStep {
+        let usageText = product.usageGuidelines?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let instructions = usageText?.isEmpty == true ? nil : usageText
+        let amount = instructions.flatMap { extractAmount(from: $0) }
+        return RoutineStep(
+            productName: formattedProductName(for: product),
+            productId: product.id,
+            stepNumber: 0,
+            instructions: instructions,
+            amount: amount,
+            imageUrl: product.imageUrl
+        )
+    }
+
+    private func extractAmount(from text: String) -> String? {
+        let patterns = [
+            "\\b\\d+\\s*-\\s*\\d+\\s*(drops|pumps)\\b",
+            "\\b\\d+\\s*(drops|pumps)\\b",
+            "\\b(pea[- ]sized|pea[- ]size|dime[- ]sized|nickel[- ]sized|coin[- ]sized|rice[- ]grain|two fingers|thin layer|generous layer)\\b"
+        ]
+
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) {
+                let range = NSRange(text.startIndex..<text.endIndex, in: text)
+                if let match = regex.firstMatch(in: text, options: [], range: range),
+                   let matchRange = Range(match.range, in: text) {
+                    return String(text[matchRange]).trimmingCharacters(in: .whitespacesAndNewlines)
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func normalizeAndSortRoutineSteps(_ steps: [RoutineStep], products: [Product]) -> [RoutineStep] {
+        let sortedSteps = steps.sorted { lhs, rhs in
+            let lhsOrder = routineCategoryOrder(for: lhs, products: products)
+            let rhsOrder = routineCategoryOrder(for: rhs, products: products)
+            if lhsOrder == rhsOrder {
+                return lhs.productName.localizedCaseInsensitiveCompare(rhs.productName) == .orderedAscending
+            }
+            return lhsOrder < rhsOrder
+        }
+
+        return sortedSteps.enumerated().map { index, step in
+            var updated = step
+            updated.stepNumber = index + 1
+            return updated
+        }
+    }
+
+    private func routineCategoryOrder(for step: RoutineStep, products: [Product]) -> Int {
+        if let product = matchProduct(for: step.productName, products: products) {
+            return routineCategoryOrder(for: product)
+        }
+        return routineCategoryOrder(forText: step.productName)
+    }
+
+    private func routineCategoryOrder(for product: Product) -> Int {
+        let combined = "\(product.category ?? "") \(product.name ?? "")"
+        return routineCategoryOrder(forText: combined)
+    }
+
+    private func routineCategoryOrder(forText value: String) -> Int {
+        let text = value.lowercased()
+        if text.contains("cleanser") || text.contains("cleanse") {
+            return 1
+        }
+        if text.contains("toner") || text.contains("essence") || text.contains("mist") {
+            return 2
+        }
+        if text.contains("serum") || text.contains("treatment") || text.contains("retinol") || text.contains("exfol") || text.contains("acid") || text.contains("mask") {
+            return 3
+        }
+        if text.contains("eye") {
+            return 4
+        }
+        if text.contains("moistur") || text.contains("cream") || text.contains("lotion") {
+            return 5
+        }
+        if text.contains("oil") {
+            return 6
+        }
+        if text.contains("spf") || text.contains("sunscreen") {
+            return 7
+        }
+        return 99
+    }
+
+    private func routineTargets(for product: Product) -> (includeMorning: Bool, includeEvening: Bool) {
+        let combined = "\(product.category ?? "") \(product.name ?? "")".lowercased()
+        if combined.contains("spf") || combined.contains("sunscreen") {
+            return (true, false)
+        }
+        if combined.contains("retinol") || combined.contains("night") || combined.contains("pm") {
+            return (false, true)
+        }
+        return (true, true)
+    }
+
+    private func isMorningOnlyProduct(_ name: String) -> Bool {
+        let text = name.lowercased()
+        return text.contains("spf") || text.contains("sunscreen")
     }
 
     private func normalizeHydrationLevel(_ hydrationLevel: Int?) -> Int? {

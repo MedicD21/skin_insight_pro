@@ -248,8 +248,24 @@ class HIPAAComplianceManager: ObservableObject {
     // MARK: - Audit Log Sync to Supabase
 
     func syncAuditLogsToSupabase() async {
+        guard let currentUserId = userDefaults.string(forKey: AppConstants.userIdKey),
+              !currentUserId.isEmpty,
+              let accessToken = userDefaults.string(forKey: AppConstants.accessTokenKey),
+              !accessToken.isEmpty else {
+            #if DEBUG
+            print("🔒 [HIPAAComplianceManager] Skipping audit log sync (no authenticated session)")
+            #endif
+            return
+        }
+
         let logs = getAuditLogs()
-        guard !logs.isEmpty else { return }
+        let userLogs = logs.filter { $0.userId == currentUserId }
+        guard !userLogs.isEmpty else {
+            #if DEBUG
+            print("🔒 [HIPAAComplianceManager] No audit logs for current user to upload")
+            #endif
+            return
+        }
 
         // Get the last synced log ID
         let lastSyncedId = userDefaults.string(forKey: lastSyncedLogIdKey)
@@ -257,13 +273,20 @@ class HIPAAComplianceManager: ObservableObject {
         // Find logs that haven't been synced yet
         var unsyncedLogs: [HIPAAAuditLog] = []
         var foundLastSynced = lastSyncedId == nil // If no last sync, sync all logs
+        var foundLastSyncedIdInLogs = false
 
-        for log in logs {
+        for log in userLogs {
             if foundLastSynced {
                 unsyncedLogs.append(log)
             } else if log.id == lastSyncedId {
                 foundLastSynced = true
+                foundLastSyncedIdInLogs = true
             }
+        }
+
+        if !foundLastSynced, lastSyncedId != nil, !foundLastSyncedIdInLogs {
+            unsyncedLogs = userLogs
+            foundLastSynced = true
         }
 
         guard !unsyncedLogs.isEmpty else {

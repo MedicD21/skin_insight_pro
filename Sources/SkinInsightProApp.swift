@@ -5,10 +5,7 @@ struct SkinInsightProApp: App {
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var eventManager = SimpleForegroundLogger.shared
     @StateObject private var complianceManager = HIPAAComplianceManager.shared
-    @StateObject private var biometricManager = BiometricAuthManager.shared
     @State private var showSessionTimeout = false
-    @State private var biometricAuthPassed = false
-    @State private var requiresBiometricAuth = false
 
     var body: some Scene {
         WindowGroup {
@@ -17,10 +14,7 @@ struct SkinInsightProApp: App {
                     if authManager.isLoading {
                         SplashScreen()
                     } else if authManager.isAuthenticated {
-                        // Check if biometric authentication is required
-                        if requiresBiometricAuth && !biometricAuthPassed {
-                            BiometricAuthView(isAuthenticated: $biometricAuthPassed)
-                        } else if !complianceManager.hasUserConsented {
+                        if !complianceManager.hasUserConsented {
                             // Show consent screen first
                             HIPAAConsentView { }
                         } else if authManager.needsProfileCompletion {
@@ -47,9 +41,6 @@ struct SkinInsightProApp: App {
                 }
             }
             .onAppear {
-                // Check if biometric auth is required
-                checkBiometricRequirement()
-
                 if authManager.isAuthenticated {
                     complianceManager.startSessionMonitoring()
 
@@ -64,22 +55,12 @@ struct SkinInsightProApp: App {
             }
             .onChange(of: authManager.isAuthenticated) { _, isAuthenticated in
                 if isAuthenticated {
-                    // Reset biometric auth when user logs in
-                    checkBiometricRequirement()
                     complianceManager.startSessionMonitoring()
                 } else {
-                    // Reset biometric auth when user logs out
-                    biometricAuthPassed = false
-                    requiresBiometricAuth = false
                     complianceManager.stopSessionMonitoring()
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
-                // Require biometric auth again when returning to foreground (if enabled)
-                if authManager.isAuthenticated && !authManager.isGuestMode {
-                    checkBiometricRequirement()
-                }
-
                 // Refresh user profile when app returns to foreground
                 // This ensures data is always current (e.g., if GOD mode was enabled in Supabase)
                 if authManager.isAuthenticated, !authManager.isGuestMode,
@@ -90,24 +71,6 @@ struct SkinInsightProApp: App {
                     }
                 }
             }
-        }
-    }
-
-    /// Check if biometric authentication is required
-    private func checkBiometricRequirement() {
-        let isEnabled = biometricManager.isBiometricEnabled
-        let isAvailable = biometricManager.isBiometricAvailable
-        let isGuest = authManager.isGuestMode
-
-        // Require biometric auth if:
-        // 1. User has enabled it
-        // 2. Device supports it
-        // 3. User is not in guest mode
-        requiresBiometricAuth = isEnabled && isAvailable && !isGuest
-
-        // Reset auth passed state to require re-authentication
-        if requiresBiometricAuth {
-            biometricAuthPassed = false
         }
     }
 }

@@ -204,8 +204,7 @@ struct HIPAAConsentView: View {
                 eventType: .userLogin,
                 userId: userId,
                 userEmail: email,
-                resourceType: "CONSENT",
-                resourceId: "HIPAA_NOTICE"
+                resourceType: "CONSENT"
             )
         }
 

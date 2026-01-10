@@ -3,7 +3,6 @@ import SwiftUI
 struct ProfileView: View {
     @ObservedObject var theme = ThemeManager.shared
     @StateObject private var authManager = AuthenticationManager.shared
-    @StateObject private var biometricManager = BiometricAuthManager.shared
     @State private var showLogoutConfirmation = false
     @State private var showDeleteConfirmation = false
     @State private var isDeleting = false
@@ -676,14 +675,6 @@ struct ProfileView: View {
                 title: "Provider",
                 value: authManager.isGuestMode ? "Guest" : "Email"
             )
-
-            // Only show biometric toggle if device supports it and user is not in guest mode
-            if biometricManager.isBiometricAvailable && !authManager.isGuestMode {
-                Divider()
-                    .padding(.leading, 56)
-
-                biometricToggleRow
-            }
         }
         .background(
             RoundedRectangle(cornerRadius: theme.radiusLarge)
@@ -693,32 +684,6 @@ struct ProfileView: View {
             RoundedRectangle(cornerRadius: theme.radiusLarge)
                 .stroke(theme.cardBorder, lineWidth: 1)
         )
-    }
-
-    private var biometricToggleRow: some View {
-        HStack(spacing: 16) {
-            Image(systemName: biometricManager.biometricIcon)
-                .font(.system(size: 24))
-                .foregroundColor(theme.accent)
-                .frame(width: 40)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(biometricManager.biometricTypeName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(theme.primaryText)
-
-                Text("Unlock app with biometrics")
-                    .font(.system(size: 14))
-                    .foregroundColor(theme.secondaryText)
-            }
-
-            Spacer()
-
-            Toggle("", isOn: $biometricManager.isBiometricEnabled)
-                .labelsHidden()
-                .tint(theme.accent)
-        }
-        .padding(16)
     }
 
     private var metricsInfoSection: some View {

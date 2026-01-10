@@ -1429,31 +1429,33 @@ class NetworkService {
 
         // Convert logs to the format expected by Supabase
         let logsData: [[String: Any]] = logs.map { log in
-            var logDict: [String: Any] = [
-                "user_id": log.userId,
-                "user_email": log.userEmail,
-                "event_type": log.eventType.rawValue,
-                "device_info": log.deviceInfo
-            ]
+            var resolvedResourceType = log.resourceType
+            var resolvedResourceId: String?
 
-            if let resourceType = log.resourceType {
-                logDict["resource_type"] = resourceType
-            }
-
-            if let resourceId = log.resourceId {
-                logDict["resource_id"] = resourceId
-            }
-
-            if let ipAddress = log.ipAddress {
-                logDict["ip_address"] = ipAddress
+            if let resourceId = log.resourceId?.trimmingCharacters(in: .whitespacesAndNewlines),
+               let parsedId = UUID(uuidString: resourceId) {
+                resolvedResourceId = parsedId.uuidString
+            } else if let resourceId = log.resourceId,
+                      log.resourceType == nil,
+                      !resourceId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                resolvedResourceType = resourceId
             }
 
             // Convert timestamp to ISO8601 string
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            logDict["created_at"] = formatter.string(from: log.timestamp)
+            let createdAt = formatter.string(from: log.timestamp)
 
-            return logDict
+            return [
+                "user_id": log.userId,
+                "user_email": log.userEmail,
+                "event_type": log.eventType.rawValue,
+                "resource_type": resolvedResourceType ?? NSNull(),
+                "resource_id": resolvedResourceId ?? NSNull(),
+                "ip_address": log.ipAddress ?? NSNull(),
+                "device_info": log.deviceInfo,
+                "created_at": createdAt
+            ]
         }
 
         let jsonData = try JSONSerialization.data(withJSONObject: logsData)
@@ -1463,7 +1465,7 @@ class NetworkService {
         print("🔒 [NetworkService] Syncing \(logs.count) audit logs to Supabase")
         #endif
 
-        let (_, response) = try await session.data(for: request)
+        let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
@@ -1474,6 +1476,11 @@ class NetworkService {
         #endif
 
         guard (200...299).contains(httpResponse.statusCode) else {
+            #if DEBUG
+            if let responseBody = String(data: data, encoding: .utf8), !responseBody.isEmpty {
+                print("🔒 [NetworkService] Audit log sync response: \(responseBody)")
+            }
+            #endif
             throw NetworkError.serverError(httpResponse.statusCode)
         }
     }
@@ -1872,6 +1879,10 @@ class NetworkService {
             throw NetworkError.invalidCredentials
         }
 
+        return try await refreshAccessToken(using: refreshToken)
+    }
+
+    func refreshAccessToken(using refreshToken: String) async throws -> String {
         let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/token?grant_type=refresh_token")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -2368,6 +2379,26 @@ class NetworkService {
             }
 
             return newProduct
+        }
+    }
+
+    func deleteProduct(productId: String) async throws {
+        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/products?id=eq.\(productId)")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "DELETE"
+        for (key, value) in supabaseHeaders(authenticated: true) {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
+        request.setValue("return=minimal", forHTTPHeaderField: "Prefer")
+
+        let (_, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NetworkError.invalidResponse
+        }
+
+        guard (200...299).contains(httpResponse.statusCode) else {
+            throw NetworkError.serverError(httpResponse.statusCode)
         }
     }
 

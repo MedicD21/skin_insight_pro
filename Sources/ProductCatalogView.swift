@@ -7,6 +7,11 @@ struct ProductCatalogView: View {
     @State private var showImportProducts = false
     @State private var searchText = ""
     @State private var productToEdit: Product?
+    @State private var showFilters = false
+    @State private var selectedBrands: Set<String> = []
+    @State private var selectedCategories: Set<String> = []
+    @State private var selectedSkinTypes: Set<String> = []
+    @State private var selectedConcerns: Set<String> = []
     @Environment(\.dismiss) var dismiss
 
     var body: some View {
@@ -22,12 +27,21 @@ struct ProductCatalogView: View {
                 emptyStateView
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(filteredProducts) { product in
-                            ProductRowView(product: product)
-                                .onTapGesture {
-                                    productToEdit = product
+                    VStack(spacing: 12) {
+                        searchBar
+                        filterBar
+
+                        if filteredProducts.isEmpty {
+                            filteredEmptyState
+                        } else {
+                            LazyVStack(spacing: 12) {
+                                ForEach(filteredProducts) { product in
+                                    ProductRowView(product: product)
+                                        .onTapGesture {
+                                            productToEdit = product
+                                        }
                                 }
+                            }
                         }
                     }
                     .padding(.horizontal, 16)
@@ -65,7 +79,6 @@ struct ProductCatalogView: View {
                 }
             }
         }
-        .searchable(text: $searchText, prompt: "Search products")
         .sheet(isPresented: $showAddProduct) {
             AddProductView(viewModel: viewModel)
         }
@@ -75,20 +88,217 @@ struct ProductCatalogView: View {
         .sheet(isPresented: $showImportProducts) {
             ProductImportView(viewModel: viewModel)
         }
+        .sheet(isPresented: $showFilters) {
+            ProductFilterSheet(
+                brandOptions: brandOptions,
+                categoryOptions: categoryOptions,
+                skinTypeOptions: skinTypeOptions,
+                concernOptions: concernOptions,
+                selectedBrands: $selectedBrands,
+                selectedCategories: $selectedCategories,
+                selectedSkinTypes: $selectedSkinTypes,
+                selectedConcerns: $selectedConcerns,
+                onClear: clearFilters
+            )
+        }
         .task {
             await viewModel.loadProducts()
         }
     }
 
     private var filteredProducts: [Product] {
-        if searchText.isEmpty {
-            return viewModel.products
+        let filteredBySearch = viewModel.products.filter { product in
+            guard !searchText.isEmpty else { return true }
+            return matchesSearch(product)
         }
-        return viewModel.products.filter { product in
-            (product.name?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-            (product.brand?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-            (product.category?.localizedCaseInsensitiveContains(searchText) ?? false)
+
+        return filteredBySearch.filter { product in
+            matchesFilters(product)
         }
+    }
+
+    private func matchesFilters(_ product: Product) -> Bool {
+        if !selectedBrands.isEmpty {
+            let brand = product.brand?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if brand.isEmpty || !selectedBrands.contains(where: { $0.caseInsensitiveCompare(brand) == .orderedSame }) {
+                return false
+            }
+        }
+
+        if !selectedCategories.isEmpty {
+            let category = product.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            if category.isEmpty || !selectedCategories.contains(where: { $0.caseInsensitiveCompare(category) == .orderedSame }) {
+                return false
+            }
+        }
+
+        if !selectedSkinTypes.isEmpty {
+            guard let skinTypes = product.skinTypes, !skinTypes.isEmpty else { return false }
+            let match = skinTypes.contains { type in
+                selectedSkinTypes.contains { $0.caseInsensitiveCompare(type) == .orderedSame }
+            }
+            if !match { return false }
+        }
+
+        if !selectedConcerns.isEmpty {
+            guard let concerns = product.concerns, !concerns.isEmpty else { return false }
+            let match = concerns.contains { concern in
+                selectedConcerns.contains { $0.caseInsensitiveCompare(concern) == .orderedSame }
+            }
+            if !match { return false }
+        }
+
+        return true
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(theme.tertiaryText)
+
+            TextField("Search products", text: $searchText)
+                .font(.system(size: 16))
+                .foregroundColor(theme.primaryText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(theme.inputBackground)
+        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        .overlay(
+            RoundedRectangle(cornerRadius: theme.radiusMedium)
+                .stroke(theme.inputBorder, lineWidth: 1)
+        )
+    }
+
+    private func matchesSearch(_ product: Product) -> Bool {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+
+        let searchable = [
+            product.name,
+            product.brand,
+            product.category,
+            product.ingredients,
+            product.allIngredients
+        ]
+        .compactMap { $0?.lowercased() }
+        .joined(separator: " ")
+
+        let tokens = query
+            .lowercased()
+            .components(separatedBy: CharacterSet(charactersIn: ", "))
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if tokens.isEmpty {
+            return searchable.contains(query.lowercased())
+        }
+
+        return tokens.allSatisfy { searchable.contains($0) }
+    }
+
+    private var filterBar: some View {
+        HStack(spacing: 12) {
+            Button(action: { showFilters = true }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                    Text("Filter")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundColor(theme.primaryText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(theme.cardBackground)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(theme.cardBorder, lineWidth: 1)
+                )
+            }
+
+            if !searchText.isEmpty {
+                Button(action: { searchText = "" }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "xmark.circle.fill")
+                        Text("Clear Search")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(theme.secondaryText)
+                }
+            }
+
+            if activeFiltersCount > 0 {
+                Text("\(activeFiltersCount) active")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(theme.secondaryText)
+
+                Button("Clear") {
+                    clearFilters()
+                }
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(theme.accent)
+            }
+
+            Spacer()
+        }
+    }
+
+    private var filteredEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 32))
+                .foregroundColor(theme.tertiaryText)
+
+            Text("No matching products")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(theme.primaryText)
+
+            Text("Try adjusting your search or filters.")
+                .font(.system(size: 13))
+                .foregroundColor(theme.secondaryText)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 24)
+    }
+
+    private var activeFiltersCount: Int {
+        selectedBrands.count + selectedCategories.count + selectedSkinTypes.count + selectedConcerns.count
+    }
+
+    private func clearFilters() {
+        selectedBrands.removeAll()
+        selectedCategories.removeAll()
+        selectedSkinTypes.removeAll()
+        selectedConcerns.removeAll()
+    }
+
+    private var brandOptions: [String] {
+        let brands = viewModel.products.compactMap { $0.brand?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return Array(Set(brands)).sorted()
+    }
+
+    private var categoryOptions: [String] {
+        let categories = viewModel.products.compactMap { $0.category?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return Array(Set(categories)).sorted()
+    }
+
+    private var skinTypeOptions: [String] {
+        let values = viewModel.products.flatMap { $0.skinTypes ?? [] }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return Array(Set(values)).sorted()
+    }
+
+    private var concernOptions: [String] {
+        let values = viewModel.products.flatMap { $0.concerns ?? [] }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return Array(Set(values)).sorted()
     }
 
     private var emptyStateView: some View {
@@ -288,5 +498,114 @@ class ProductCatalogViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             showError = true
         }
+    }
+
+    func deleteProduct(productId: String) async {
+        do {
+            try await NetworkService.shared.deleteProduct(productId: productId)
+            products.removeAll { $0.id == productId }
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+        }
+    }
+}
+
+private struct ProductFilterSheet: View {
+    @ObservedObject var theme = ThemeManager.shared
+    let brandOptions: [String]
+    let categoryOptions: [String]
+    let skinTypeOptions: [String]
+    let concernOptions: [String]
+    @Binding var selectedBrands: Set<String>
+    @Binding var selectedCategories: Set<String>
+    @Binding var selectedSkinTypes: Set<String>
+    @Binding var selectedConcerns: Set<String>
+    let onClear: () -> Void
+    @Environment(\.dismiss) var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 20) {
+                    filterSection(title: "Brand", options: brandOptions, selection: $selectedBrands)
+                    filterSection(title: "Category", options: categoryOptions, selection: $selectedCategories)
+                    filterSection(title: "Skin Type", options: skinTypeOptions, selection: $selectedSkinTypes)
+                    filterSection(title: "Concerns", options: concernOptions, selection: $selectedConcerns)
+                }
+                .padding(20)
+            }
+            .background(theme.primaryBackground.ignoresSafeArea())
+            .navigationTitle("Filters")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Clear") {
+                        onClear()
+                    }
+                    .foregroundColor(theme.accent)
+                }
+            }
+        }
+    }
+
+    private func filterSection(title: String, options: [String], selection: Binding<Set<String>>) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(theme.primaryText)
+
+            if options.isEmpty {
+                Text("No options available")
+                    .font(.system(size: 13))
+                    .foregroundColor(theme.secondaryText)
+            } else {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120), spacing: 8)], spacing: 8) {
+                    ForEach(options, id: \.self) { option in
+                        FilterOptionChip(
+                            title: option,
+                            isSelected: selection.wrappedValue.contains(option)
+                        ) {
+                            if selection.wrappedValue.contains(option) {
+                                selection.wrappedValue.remove(option)
+                            } else {
+                                selection.wrappedValue.insert(option)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+private struct FilterOptionChip: View {
+    @ObservedObject var theme = ThemeManager.shared
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(isSelected ? .white : theme.primaryText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .frame(maxWidth: .infinity)
+                .background(isSelected ? theme.accent : theme.tertiaryBackground)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? Color.clear : theme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
 }

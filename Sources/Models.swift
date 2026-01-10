@@ -117,6 +117,19 @@ struct AnalysisData: Hashable, Codable {
     var progressNotes: [String]?
     var analysisNotice: String? = nil
 
+    // Trending metrics (0-10 scale) - Added for trending analysis
+    var oilinessScore: Double?
+    var textureScore: Double?
+    var poresScore: Double?
+    var wrinklesScore: Double?
+    var rednessScore: Double?
+    var darkSpotsScore: Double?
+    var acneScore: Double?
+    var sensitivityScore: Double?
+
+    // Skincare routine - Added for structured product application
+    var recommendedRoutine: SkinCareRoutine?
+
     enum CodingKeys: String, CodingKey {
         case skinType = "skin_type"
         case hydrationLevel = "hydration_level"
@@ -128,6 +141,111 @@ struct AnalysisData: Hashable, Codable {
         case productRecommendations = "product_recommendations"
         case medicalConsiderations = "medical_considerations"
         case progressNotes = "progress_notes"
+        case oilinessScore = "oiliness_score"
+        case textureScore = "texture_score"
+        case poresScore = "pores_score"
+        case wrinklesScore = "wrinkles_score"
+        case rednessScore = "redness_score"
+        case darkSpotsScore = "dark_spots_score"
+        case acneScore = "acne_score"
+        case sensitivityScore = "sensitivity_score"
+        case recommendedRoutine = "recommended_routine"
+    }
+}
+
+// MARK: - Skincare Routine Models
+
+struct RoutineStep: Identifiable, Hashable, Codable {
+    var id: String
+    var productName: String
+    var productId: String?  // Reference to product in catalog
+    var stepNumber: Int
+    var instructions: String?  // How to apply (e.g., "Apply pea-sized amount to clean, damp skin")
+    var amount: String?  // e.g., "Pea-sized", "2-3 drops", "Generous layer"
+    var waitTime: Int?  // Seconds to wait before next step
+    var frequency: String?  // e.g., "Daily", "2-3 times per week", "As needed"
+    var imageUrl: String?  // Product image
+
+    init(id: String = UUID().uuidString, productName: String, productId: String? = nil, stepNumber: Int, instructions: String? = nil, amount: String? = nil, waitTime: Int? = nil, frequency: String? = nil, imageUrl: String? = nil) {
+        self.id = id
+        self.productName = productName
+        self.productId = productId
+        self.stepNumber = stepNumber
+        self.instructions = instructions
+        self.amount = amount
+        self.waitTime = waitTime
+        self.frequency = frequency
+        self.imageUrl = imageUrl
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case productName = "product_name"
+        case productId = "product_id"
+        case stepNumber = "step_number"
+        case instructions
+        case amount
+        case waitTime = "wait_time"
+        case frequency
+        case imageUrl = "image_url"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString
+        productName = try container.decodeIfPresent(String.self, forKey: .productName) ?? "Product"
+        productId = try container.decodeIfPresent(String.self, forKey: .productId)
+        stepNumber = try container.decodeIfPresent(Int.self, forKey: .stepNumber) ?? 0
+        instructions = try container.decodeIfPresent(String.self, forKey: .instructions)
+        amount = try container.decodeIfPresent(String.self, forKey: .amount)
+        waitTime = try container.decodeIfPresent(Int.self, forKey: .waitTime)
+        frequency = try container.decodeIfPresent(String.self, forKey: .frequency)
+        imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(productName, forKey: .productName)
+        try container.encode(productId, forKey: .productId)
+        try container.encode(stepNumber, forKey: .stepNumber)
+        try container.encode(instructions, forKey: .instructions)
+        try container.encode(amount, forKey: .amount)
+        try container.encode(waitTime, forKey: .waitTime)
+        try container.encode(frequency, forKey: .frequency)
+        try container.encode(imageUrl, forKey: .imageUrl)
+    }
+}
+
+struct SkinCareRoutine: Hashable, Codable {
+    var morningSteps: [RoutineStep]
+    var eveningSteps: [RoutineStep]
+    var notes: String?  // General routine notes/tips
+
+    init(morningSteps: [RoutineStep] = [], eveningSteps: [RoutineStep] = [], notes: String? = nil) {
+        self.morningSteps = morningSteps
+        self.eveningSteps = eveningSteps
+        self.notes = notes
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case morningSteps = "morning_steps"
+        case eveningSteps = "evening_steps"
+        case notes
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        morningSteps = try container.decodeIfPresent([RoutineStep].self, forKey: .morningSteps) ?? []
+        eveningSteps = try container.decodeIfPresent([RoutineStep].self, forKey: .eveningSteps) ?? []
+        notes = try container.decodeIfPresent(String.self, forKey: .notes)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(morningSteps, forKey: .morningSteps)
+        try container.encode(eveningSteps, forKey: .eveningSteps)
+        try container.encode(notes, forKey: .notes)
     }
 }
 
@@ -336,6 +454,7 @@ struct AIAnalysisResponse: Codable {
     let productRecommendations: [String]?
     let medicalConsiderations: [String]?
     let progressNotes: [String]?
+    let recommendedRoutine: SkinCareRoutine?
 
     enum CodingKeys: String, CodingKey {
         case skinType = "skin_type"
@@ -348,6 +467,7 @@ struct AIAnalysisResponse: Codable {
         case productRecommendations = "product_recommendations"
         case medicalConsiderations = "medical_considerations"
         case progressNotes = "progress_notes"
+        case recommendedRoutine = "recommended_routine"
     }
 }
 
@@ -360,6 +480,7 @@ struct Product: Identifiable, Hashable, Codable {
     var description: String?
     var ingredients: String?  // Key ingredients
     var allIngredients: String?  // Complete ingredients list
+    var usageGuidelines: String?  // How to use the product, frequency, application tips
     var skinTypes: [String]?
     var concerns: [String]?
     var imageUrl: String?
@@ -376,6 +497,7 @@ struct Product: Identifiable, Hashable, Codable {
         case description
         case ingredients
         case allIngredients = "all_ingredients"
+        case usageGuidelines = "usage_guidelines"
         case skinTypes = "skin_types"
         case concerns
         case imageUrl = "image_url"
@@ -439,6 +561,7 @@ struct CreateProductRequest: Codable {
         let description: String
         let ingredients: String
         let allIngredients: String?
+        let usageGuidelines: String?
         let skinTypes: [String]
         let concerns: [String]
         let imageUrl: String?
@@ -454,6 +577,7 @@ struct CreateProductRequest: Codable {
             case description
             case ingredients
             case allIngredients = "all_ingredients"
+            case usageGuidelines = "usage_guidelines"
             case skinTypes = "skin_types"
             case concerns
             case imageUrl = "image_url"

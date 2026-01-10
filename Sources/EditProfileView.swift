@@ -19,6 +19,11 @@ struct EditProfileView: View {
     @State private var newPassword = ""
     @State private var confirmPassword = ""
     @State private var showPasswordSuccess = false
+    @State private var showPINSection = false
+    @State private var currentPIN = ""
+    @State private var newPIN = ""
+    @State private var confirmPIN = ""
+    @State private var showPINSuccess = false
 
     init() {
         _firstName = State(initialValue: AuthenticationManager.shared.currentUser?.firstName ?? "")
@@ -40,6 +45,8 @@ struct EditProfileView: View {
                         formSection
 
                         passwordSection
+
+                        pinSection
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
@@ -84,6 +91,16 @@ struct EditProfileView: View {
                 }
             } message: {
                 Text("Your password has been updated successfully.")
+            }
+            .alert("PIN Updated", isPresented: $showPINSuccess) {
+                Button("OK", role: .cancel) {
+                    currentPIN = ""
+                    newPIN = ""
+                    confirmPIN = ""
+                    showPINSection = false
+                }
+            } message: {
+                Text("Your PIN has been updated successfully.")
             }
             .sheet(isPresented: $showImagePicker) {
                 ImagePicker(image: $selectedImage, sourceType: .photoLibrary)
@@ -329,11 +346,156 @@ struct EditProfileView: View {
         }
     }
 
+    private var pinSection: some View {
+        VStack(spacing: 16) {
+            Button(action: { showPINSection.toggle() }) {
+                HStack {
+                    Image(systemName: "circle.grid.3x3.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(theme.accent)
+
+                    Text(hasExistingPIN ? "Change PIN" : "Set PIN")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(theme.primaryText)
+
+                    Spacer()
+
+                    Image(systemName: showPINSection ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                }
+                .padding(16)
+                .background(theme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+            }
+
+            if showPINSection {
+                VStack(spacing: 20) {
+                    if hasExistingPIN {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Current PIN")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(theme.secondaryText)
+
+                            SecureField("Enter current PIN", text: $currentPIN)
+                                .font(.system(size: 17))
+                                .foregroundColor(theme.primaryText)
+                                .keyboardType(.numberPad)
+                                .padding(16)
+                                .background(theme.tertiaryBackground)
+                                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                        .stroke(theme.border, lineWidth: 1)
+                                )
+                                .onChange(of: currentPIN) { _, value in
+                                    let sanitized = sanitizePIN(value)
+                                    if sanitized != value {
+                                        currentPIN = sanitized
+                                    }
+                                }
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("New PIN")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(theme.secondaryText)
+
+                        SecureField("Enter new 4-digit PIN", text: $newPIN)
+                            .font(.system(size: 17))
+                            .foregroundColor(theme.primaryText)
+                            .keyboardType(.numberPad)
+                            .padding(16)
+                            .background(theme.tertiaryBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                    .stroke(theme.border, lineWidth: 1)
+                            )
+                            .onChange(of: newPIN) { _, value in
+                                let sanitized = sanitizePIN(value)
+                                if sanitized != value {
+                                    newPIN = sanitized
+                                }
+                            }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Confirm PIN")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(theme.secondaryText)
+
+                        SecureField("Confirm new PIN", text: $confirmPIN)
+                            .font(.system(size: 17))
+                            .foregroundColor(theme.primaryText)
+                            .keyboardType(.numberPad)
+                            .padding(16)
+                            .background(theme.tertiaryBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: theme.radiusMedium)
+                                    .stroke(theme.border, lineWidth: 1)
+                            )
+                            .onChange(of: confirmPIN) { _, value in
+                                let sanitized = sanitizePIN(value)
+                                if sanitized != value {
+                                    confirmPIN = sanitized
+                                }
+                            }
+                    }
+
+                    if !isPINValid && !newPIN.isEmpty {
+                        Text("PIN must be 4 digits and match the confirmation.")
+                            .font(.system(size: 12))
+                            .foregroundColor(.red)
+                    }
+
+                    Button(action: { updatePIN() }) {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text(hasExistingPIN ? "Update PIN" : "Set PIN")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(16)
+                        .background(isPINUpdateEnabled ? theme.accent : Color.gray)
+                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    }
+                    .disabled(!isPINUpdateEnabled || isSaving)
+                }
+                .padding(20)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.radiusXL)
+                        .fill(theme.cardBackground)
+                        .shadow(color: theme.shadowColor, radius: theme.shadowRadiusMedium, x: 0, y: 8)
+                )
+            }
+        }
+    }
+
     private var isPasswordValid: Bool {
         let hasMinLength = newPassword.count >= 6
         let hasCapital = newPassword.range(of: "[A-Z]", options: .regularExpression) != nil
         let hasSpecial = newPassword.range(of: "[!@#$%^&*(),.?\":{}|<>]", options: .regularExpression) != nil
         return hasMinLength && hasCapital && hasSpecial
+    }
+
+    private var hasExistingPIN: Bool {
+        guard let userId = authManager.currentUser?.id else { return false }
+        return DeviceLoginManager.shared.hasPIN(for: userId)
+    }
+
+    private var isPINValid: Bool {
+        newPIN.count == 4 && confirmPIN.count == 4 && newPIN == confirmPIN
+    }
+
+    private var isPINUpdateEnabled: Bool {
+        guard authManager.currentUser?.id != nil else { return false }
+        let currentValid = !hasExistingPIN || currentPIN.count == 4
+        return currentValid && isPINValid
     }
 
     private func updatePassword() {
@@ -367,6 +529,49 @@ struct EditProfileView: View {
                 }
             }
         }
+    }
+
+    private func updatePIN() {
+        guard let userId = authManager.currentUser?.id else { return }
+
+        if hasExistingPIN {
+            guard currentPIN.count == 4 else {
+                errorMessage = "Enter your current 4-digit PIN"
+                showError = true
+                return
+            }
+
+            guard DeviceLoginManager.shared.verifyPIN(currentPIN, for: userId) else {
+                errorMessage = "Current PIN is incorrect"
+                showError = true
+                return
+            }
+        }
+
+        guard newPIN == confirmPIN else {
+            errorMessage = "PINs do not match"
+            showError = true
+            return
+        }
+
+        guard newPIN.count == 4 else {
+            errorMessage = "PIN must be exactly 4 digits"
+            showError = true
+            return
+        }
+
+        let success = DeviceLoginManager.shared.updatePIN(newPIN, for: userId)
+        if success {
+            showPINSuccess = true
+        } else {
+            errorMessage = "Failed to update PIN. Please try again."
+            showError = true
+        }
+    }
+
+    private func sanitizePIN(_ value: String) -> String {
+        let digits = value.filter { $0.isNumber }
+        return String(digits.prefix(4))
     }
 
     private func saveProfile() {

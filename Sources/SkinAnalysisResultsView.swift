@@ -24,8 +24,11 @@ struct SkinAnalysisResultsView: View {
     @State private var showShareSheet = false
     @State private var companyProducts: [Product] = []
     @State private var isLoadingProducts = false
-    @State private var manualProductRecommendations: [String] = []
-    @State private var showProductPicker = false
+    @State private var showRecommendedRoutine = false
+    @State private var recommendedRoutine: SkinCareRoutine
+    @State private var editedRecommendations: [String]
+    @State private var isEditingRecommendations = false
+    @State private var newRecommendationDrafts: [String]
     @FocusState private var notesFieldFocused: Bool
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     private var flaggedProducts: [Product] { viewModel.flaggedProducts }
@@ -37,6 +40,25 @@ struct SkinAnalysisResultsView: View {
         "bacterial", "viral", "wart", "herpes", "shingles", "lupus",
         "scleroderma", "cellulitis", "abscess", "ulcer", "tumor"
     ]
+
+    init(
+        client: AppClient,
+        image: UIImage,
+        analysisResult: AnalysisData,
+        viewModel: ClientDetailViewModel,
+        productsUsed: String,
+        treatmentsPerformed: String
+    ) {
+        self.client = client
+        self.image = image
+        self.analysisResult = analysisResult
+        self.viewModel = viewModel
+        self.productsUsed = productsUsed
+        self.treatmentsPerformed = treatmentsPerformed
+        _recommendedRoutine = State(initialValue: analysisResult.recommendedRoutine ?? SkinCareRoutine())
+        _editedRecommendations = State(initialValue: analysisResult.recommendations ?? [])
+        _newRecommendationDrafts = State(initialValue: [""])
+    }
     
     var body: some View {
         ZStack {
@@ -73,7 +95,7 @@ struct SkinAnalysisResultsView: View {
                         treatmentCard
                     }
                     
-                    if let recommendations = analysisResult.recommendations, !recommendations.isEmpty {
+                    if hasRecommendationsSection {
                         recommendationsCard
                     }
 
@@ -132,8 +154,13 @@ struct SkinAnalysisResultsView: View {
                 dismissButton: .default(Text("OK"))
             )
         }
-        .sheet(isPresented: $showProductPicker) {
-            productPickerSheet
+        .sheet(isPresented: $showRecommendedRoutine) {
+            RecommendedRoutineView(
+                client: routineClient,
+                routine: $recommendedRoutine,
+                availableProducts: routineProducts,
+                flaggedProductIds: flaggedProductIds
+            )
         }
         .onAppear {
             Task {
@@ -614,20 +641,116 @@ struct SkinAnalysisResultsView: View {
                 Text("Recommendations")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(theme.primaryText)
+
+                Spacer()
+
+                Button(action: { toggleRecommendationsEdit() }) {
+                    if isEditingRecommendations {
+                        Text("Save")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(theme.accent)
+                            .clipShape(Capsule())
+                    } else {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(theme.accent)
+                            .padding(6)
+                            .background(theme.accent.opacity(0.12))
+                            .clipShape(Circle())
+                    }
+                }
             }
             
             VStack(alignment: .leading, spacing: 12) {
-                ForEach(Array((analysisResult.recommendations ?? []).enumerated()), id: \.offset) { index, recommendation in
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("\(index + 1).")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(theme.accent)
-                            .frame(width: 24, alignment: .leading)
-                        
-                        Text(recommendation)
+                if isEditingRecommendations {
+                    ForEach(editedRecommendations.indices, id: \.self) { index in
+                        HStack(alignment: .top, spacing: 12) {
+                            Text("\(index + 1).")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.accent)
+                                .frame(width: 24, alignment: .leading)
+
+                            TextField("Recommendation", text: Binding(
+                                get: { editedRecommendations[index] },
+                                set: { editedRecommendations[index] = $0 }
+                            ), axis: .vertical)
                             .font(.system(size: 15))
                             .foregroundColor(theme.primaryText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .lineLimit(2...6)
+
+                            VStack(spacing: 6) {
+                                Button(action: {
+                                    moveRecommendation(at: index, direction: -1)
+                                }) {
+                                    Image(systemName: "chevron.up")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(width: 22, height: 22)
+                                        .background(theme.accent.opacity(0.12))
+                                        .clipShape(Circle())
+                                }
+                                .disabled(index == 0)
+                                .opacity(index == 0 ? 0.4 : 1.0)
+
+                                Button(action: {
+                                    moveRecommendation(at: index, direction: 1)
+                                }) {
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(theme.primaryText)
+                                        .frame(width: 22, height: 22)
+                                        .background(theme.accent.opacity(0.12))
+                                        .clipShape(Circle())
+                                }
+                                .disabled(index == editedRecommendations.count - 1)
+                                .opacity(index == editedRecommendations.count - 1 ? 0.4 : 1.0)
+                            }
+
+                            Button(action: {
+                                editedRecommendations.remove(at: index)
+                            }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(theme.secondaryText)
+                                    .font(.system(size: 16))
+                            }
+                        }
+                    }
+
+                    ForEach(newRecommendationDrafts.indices, id: \.self) { index in
+                        HStack(alignment: .top, spacing: 12) {
+                            Text("\(editedRecommendations.count + index + 1).")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.accent)
+                                .frame(width: 24, alignment: .leading)
+
+                            TextField("Add recommendation", text: Binding(
+                                get: { newRecommendationDrafts[index] },
+                                set: { newRecommendationDrafts[index] = $0 }
+                            ), axis: .vertical)
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.primaryText)
+                            .lineLimit(2...6)
+                            .onChange(of: newRecommendationDrafts[index]) { _, value in
+                                handleRecommendationDraftChange(value, at: index)
+                            }
+                        }
+                    }
+                } else {
+                    ForEach(Array(displayRecommendations.enumerated()), id: \.offset) { index, recommendation in
+                        HStack(alignment: .top, spacing: 12) {
+                            Text("\(index + 1).")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(theme.accent)
+                                .frame(width: 24, alignment: .leading)
+
+                            Text(recommendation)
+                                .font(.system(size: 15))
+                                .foregroundColor(theme.primaryText)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     }
                 }
             }
@@ -648,21 +771,6 @@ struct SkinAnalysisResultsView: View {
                 Text("Product Recommendations")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundColor(theme.primaryText)
-
-                Spacer()
-
-                Button(action: { showProductPicker = true }) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus.circle.fill")
-                        Text("Add")
-                    }
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(theme.accent)
-                    .clipShape(Capsule())
-                }
             }
 
             // Safety reminder if client has allergies, sensitivities, or products to avoid
@@ -708,29 +816,23 @@ struct SkinAnalysisResultsView: View {
                     }
                 }
 
-                // Manual recommendations
-                ForEach(Array(manualProductRecommendations.enumerated()), id: \.offset) { index, product in
-                    let totalIndex = (analysisResult.productRecommendations?.count ?? 0) + index + 1
-                    HStack(alignment: .top, spacing: 12) {
-                        Text("\(totalIndex).")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(theme.accent)
-                            .frame(width: 24, alignment: .leading)
+            }
 
-                        Text(product)
-                            .font(.system(size: 15))
-                            .foregroundColor(theme.primaryText)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                        Button(action: {
-                            manualProductRecommendations.remove(at: index)
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(theme.secondaryText)
-                                .font(.system(size: 18))
-                        }
-                    }
+            Button(action: { openRecommendedRoutine() }) {
+                HStack {
+                    Image(systemName: hasRoutineSteps ? "list.bullet.rectangle" : "sparkles")
+                    Text(hasRoutineSteps ? "Recommended Routine" : "Create Recommended Routine")
+                        .fontWeight(.semibold)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(theme.secondaryText)
                 }
+                .font(.system(size: 15))
+                .foregroundColor(theme.primaryText)
+                .padding(12)
+                .background(theme.tertiaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
             }
         }
         .padding(20)
@@ -884,13 +986,9 @@ struct SkinAnalysisResultsView: View {
                 createdAt: Date()
             )
 
-            // Combine AI and manual product recommendations for PDF
             var pdfAnalysisResult = analysisResult
-            if !manualProductRecommendations.isEmpty {
-                var allProductRecs = analysisResult.productRecommendations ?? []
-                allProductRecs.append(contentsOf: manualProductRecommendations)
-                pdfAnalysisResult.productRecommendations = allProductRecs
-            }
+            pdfAnalysisResult.recommendedRoutine = recommendedRoutine
+            pdfAnalysisResult.recommendations = displayRecommendations
 
             // Use the new detailed PDF export method
             guard let pdfData = PDFExportManager.shared.generateDetailedAnalysisPDF(
@@ -997,13 +1095,9 @@ struct SkinAnalysisResultsView: View {
             do {
                 let imageUrl = try await NetworkService.shared.uploadImage(image: image, userId: userId)
 
-                // Combine AI and manual product recommendations
                 var updatedAnalysisResult = analysisResult
-                if !manualProductRecommendations.isEmpty {
-                    var allProductRecs = analysisResult.productRecommendations ?? []
-                    allProductRecs.append(contentsOf: manualProductRecommendations)
-                    updatedAnalysisResult.productRecommendations = allProductRecs
-                }
+                updatedAnalysisResult.recommendedRoutine = recommendedRoutine
+                updatedAnalysisResult.recommendations = displayRecommendations
 
                 let savedAnalysis = try await NetworkService.shared.saveAnalysis(
                     clientId: clientId,
@@ -1059,69 +1153,322 @@ struct SkinAnalysisResultsView: View {
         ]
     }
 
+    private var hasRoutineSteps: Bool {
+        !(recommendedRoutine.morningSteps.isEmpty && recommendedRoutine.eveningSteps.isEmpty)
+    }
+
+    private var hasRecommendationsSection: Bool {
+        !displayRecommendations.isEmpty || isEditingRecommendations
+    }
+
+    private var displayRecommendations: [String] {
+        editedRecommendations
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+    }
+
+    private func openRecommendedRoutine() {
+        if !hasRoutineSteps {
+            recommendedRoutine = generateRoutineFromRecommendations()
+        }
+        showRecommendedRoutine = true
+    }
+
+    private func toggleRecommendationsEdit() {
+        if isEditingRecommendations {
+            commitRecommendationEdits()
+        } else {
+            isEditingRecommendations = true
+            if newRecommendationDrafts.isEmpty {
+                newRecommendationDrafts = [""]
+            }
+        }
+    }
+
+    private func commitRecommendationEdits() {
+        var combined = editedRecommendations + newRecommendationDrafts
+        combined = combined
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        var seen = Set<String>()
+        let unique = combined.filter { recommendation in
+            let key = recommendation.lowercased()
+            if seen.contains(key) { return false }
+            seen.insert(key)
+            return true
+        }
+
+        editedRecommendations = unique
+        newRecommendationDrafts = [""]
+        isEditingRecommendations = false
+    }
+
+    private func handleRecommendationDraftChange(_ value: String, at index: Int) {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if index == newRecommendationDrafts.count - 1, !trimmed.isEmpty {
+            newRecommendationDrafts.append("")
+        }
+    }
+
+    private func moveRecommendation(at index: Int, direction: Int) {
+        let newIndex = index + direction
+        guard editedRecommendations.indices.contains(index),
+              editedRecommendations.indices.contains(newIndex) else { return }
+        editedRecommendations.swapAt(index, newIndex)
+    }
+
+
+    private func generateRoutineFromRecommendations() -> SkinCareRoutine {
+        let allRecommendations = combinedProductRecommendations()
+        let availableProducts = routineProducts
+        var morningSteps: [RoutineStep] = []
+        var eveningSteps: [RoutineStep] = []
+
+        for recommendation in allRecommendations {
+            if let product = matchProduct(for: recommendation, products: availableProducts) {
+                let instructions = product.usageGuidelines?.trimmingCharacters(in: .whitespacesAndNewlines)
+                let baseStep = RoutineStep(
+                    productName: formattedProductName(for: product),
+                    productId: product.id,
+                    stepNumber: 0,
+                    instructions: instructions?.isEmpty == true ? nil : instructions,
+                    imageUrl: product.imageUrl
+                )
+
+                let targets = routineTargets(for: product)
+                if targets.includeMorning {
+                    morningSteps.append(baseStep)
+                }
+                if targets.includeEvening {
+                    eveningSteps.append(baseStep)
+                }
+            } else {
+                let baseStep = RoutineStep(productName: recommendation, stepNumber: 0)
+                morningSteps.append(baseStep)
+                if !isMorningOnlyProduct(recommendation) {
+                    eveningSteps.append(baseStep)
+                }
+            }
+        }
+
+        morningSteps = normalizeAndSortRoutineSteps(morningSteps, products: availableProducts)
+        eveningSteps = normalizeAndSortRoutineSteps(eveningSteps, products: availableProducts)
+
+        let notes = recommendedRoutine.notes
+        return SkinCareRoutine(morningSteps: morningSteps, eveningSteps: eveningSteps, notes: notes)
+    }
+
+    private func mergeRoutineWithRecommendations(current: SkinCareRoutine) -> SkinCareRoutine {
+        let recommendations = combinedProductRecommendations()
+        let normalizedRecommendations = Set(recommendations.map(normalizeProductName).filter { !$0.isEmpty })
+        let availableProducts = routineProducts
+
+        var morningSteps = current.morningSteps.filter {
+            normalizedRecommendations.contains(normalizeProductName($0.productName))
+        }
+        var eveningSteps = current.eveningSteps.filter {
+            normalizedRecommendations.contains(normalizeProductName($0.productName))
+        }
+
+        var existingSet = Set(morningSteps.map { normalizeProductName($0.productName) })
+        existingSet.formUnion(eveningSteps.map { normalizeProductName($0.productName) })
+
+        for recommendation in recommendations {
+            let normalized = normalizeProductName(recommendation)
+            guard !normalized.isEmpty, !existingSet.contains(normalized) else { continue }
+
+            if let product = matchProduct(for: recommendation, products: availableProducts) {
+                let baseStep = RoutineStep(
+                    productName: formattedProductName(for: product),
+                    productId: product.id,
+                    stepNumber: 0,
+                    imageUrl: product.imageUrl
+                )
+
+                let targets = routineTargets(for: product)
+                if targets.includeMorning {
+                    morningSteps.append(baseStep)
+                }
+                if targets.includeEvening {
+                    eveningSteps.append(baseStep)
+                }
+            } else {
+                let baseStep = RoutineStep(productName: recommendation, stepNumber: 0)
+                morningSteps.append(baseStep)
+                if !isMorningOnlyProduct(recommendation) {
+                    eveningSteps.append(baseStep)
+                }
+            }
+
+            existingSet.insert(normalized)
+        }
+
+        normalizeStepNumbers(&morningSteps)
+        normalizeStepNumbers(&eveningSteps)
+
+        return SkinCareRoutine(
+            morningSteps: morningSteps,
+            eveningSteps: eveningSteps,
+            notes: current.notes
+        )
+    }
+
+    private func combinedProductRecommendations() -> [String] {
+        let recommendations = analysisResult.productRecommendations ?? []
+
+        var seen = Set<String>()
+        var uniqueRecommendations: [String] = []
+        for recommendation in recommendations {
+            let normalized = normalizeProductName(recommendation)
+            guard !normalized.isEmpty else { continue }
+            if seen.insert(normalized).inserted {
+                uniqueRecommendations.append(recommendation)
+            }
+        }
+
+        return uniqueRecommendations
+    }
+
+    private func normalizeAndSortRoutineSteps(_ steps: [RoutineStep], products: [Product]) -> [RoutineStep] {
+        let sortedSteps = steps.sorted { lhs, rhs in
+            let lhsOrder = categoryOrder(for: lhs, products: products)
+            let rhsOrder = categoryOrder(for: rhs, products: products)
+            if lhsOrder == rhsOrder {
+                return lhs.productName.localizedCaseInsensitiveCompare(rhs.productName) == .orderedAscending
+            }
+            return lhsOrder < rhsOrder
+        }
+
+        return sortedSteps.enumerated().map { index, step in
+            var updated = step
+            updated.stepNumber = index + 1
+            return updated
+        }
+    }
+
+    private func normalizeStepNumbers(_ steps: inout [RoutineStep]) {
+        for index in steps.indices {
+            steps[index].stepNumber = index + 1
+        }
+    }
+
+    private func categoryOrder(for step: RoutineStep, products: [Product]) -> Int {
+        if let product = matchProduct(for: step.productName, products: products) {
+            return categoryOrder(for: product)
+        }
+        return categoryOrder(forText: step.productName)
+    }
+
+    private func categoryOrder(for product: Product) -> Int {
+        let combined = "\(product.category ?? "") \(product.name ?? "")"
+        return categoryOrder(forText: combined)
+    }
+
+    private func categoryOrder(forText value: String) -> Int {
+        let text = value.lowercased()
+        if text.contains("cleanser") || text.contains("cleanse") {
+            return 1
+        }
+        if text.contains("toner") || text.contains("essence") || text.contains("mist") {
+            return 2
+        }
+        if text.contains("serum") || text.contains("treatment") || text.contains("retinol") || text.contains("exfol") || text.contains("acid") || text.contains("mask") {
+            return 3
+        }
+        if text.contains("eye") {
+            return 4
+        }
+        if text.contains("moistur") || text.contains("cream") || text.contains("lotion") {
+            return 5
+        }
+        if text.contains("oil") {
+            return 6
+        }
+        if text.contains("spf") || text.contains("sunscreen") {
+            return 7
+        }
+        return 99
+    }
+
+    private func routineTargets(for product: Product) -> (includeMorning: Bool, includeEvening: Bool) {
+        let combined = "\(product.category ?? "") \(product.name ?? "")".lowercased()
+        if combined.contains("spf") || combined.contains("sunscreen") {
+            return (true, false)
+        }
+        if combined.contains("retinol") || combined.contains("night") || combined.contains("pm") {
+            return (false, true)
+        }
+        return (true, true)
+    }
+
+    private func isMorningOnlyProduct(_ name: String) -> Bool {
+        let text = name.lowercased()
+        return text.contains("spf") || text.contains("sunscreen")
+    }
+
+    private func matchProduct(for stepName: String, products: [Product]) -> Product? {
+        let normalizedStepName = normalizeProductName(stepName)
+        guard !normalizedStepName.isEmpty else { return nil }
+
+        return products.first { product in
+            let displayName = formattedProductName(for: product)
+            let normalizedDisplay = normalizeProductName(displayName)
+            let normalizedProductName = normalizeProductName(product.name ?? "")
+            return normalizedDisplay == normalizedStepName || normalizedProductName == normalizedStepName
+        }
+    }
+
+    private func formattedProductName(for product: Product) -> String {
+        let brand = product.brand?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = product.name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+        if brand.isEmpty { return name }
+        if name.isEmpty { return brand }
+        return "\(brand) - \(name)"
+    }
+
+    private func normalizeProductName(_ value: String) -> String {
+        value
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .joined()
+    }
+
+    private var clientDisplayName: String {
+        if let name = client.name, !name.isEmpty {
+            return name
+        }
+
+        let firstName = client.firstName ?? ""
+        let lastName = client.lastName ?? ""
+        let combined = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+        return combined.isEmpty ? "Client" : combined
+    }
+
+    private var routineClient: Client {
+        Client(
+            id: client.id ?? "",
+            name: clientDisplayName,
+            companyId: client.companyId ?? "",
+            email: client.email,
+            phone: client.phone,
+            createdAt: Date()
+        )
+    }
+
+    private var routineProducts: [Product] {
+        companyProducts.filter { $0.isActive == true }
+    }
+
+    private var flaggedProductIds: Set<String> {
+        Set(flaggedProducts.compactMap { $0.id })
+    }
+
     private struct MetricInfo: Identifiable {
         let title: String
         let description: String
         var id: String { title }
-    }
-
-    // MARK: - Product Picker Sheet
-
-    private var productPickerSheet: some View {
-        NavigationView {
-            ZStack {
-                theme.primaryBackground
-                    .ignoresSafeArea()
-
-                if isLoadingProducts {
-                    VStack(spacing: 16) {
-                        ProgressView()
-                            .scaleEffect(1.2)
-                        Text("Loading products...")
-                            .font(.system(size: 15))
-                            .foregroundColor(theme.secondaryText)
-                    }
-                } else if companyProducts.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "shippingbox")
-                            .font(.system(size: 48))
-                            .foregroundColor(theme.tertiaryText)
-                        Text("No products available")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundColor(theme.primaryText)
-                        Text("Add products to your company inventory first")
-                            .font(.system(size: 14))
-                            .foregroundColor(theme.secondaryText)
-                    }
-                } else {
-                    List {
-                        ForEach(companyProducts) { product in
-                            ProductPickerRowView(
-                                product: product,
-                                isFlagged: isProductFlagged(product),
-                                theme: theme
-                            )
-                            .listRowBackground(theme.secondaryBackground)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                            .onTapGesture {
-                                addProduct(product)
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                }
-            }
-            .navigationTitle("Add Product")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") {
-                        showProductPicker = false
-                    }
-                }
-            }
-        }
     }
 
     // MARK: - Helper Functions
@@ -1146,90 +1493,4 @@ struct SkinAnalysisResultsView: View {
         isLoadingProducts = false
     }
 
-    private func isProductFlagged(_ product: Product) -> Bool {
-        // Check if product is in the flagged products list
-        return flaggedProducts.contains { $0.id == product.id }
-    }
-
-    private func addProduct(_ product: Product) {
-        let productName = "\(product.brand ?? "") \(product.name ?? "")".trimmingCharacters(in: .whitespaces)
-
-        // Don't add if already in manual recommendations
-        guard !manualProductRecommendations.contains(productName) else {
-            showProductPicker = false
-            return
-        }
-
-        // Don't add if already in AI recommendations
-        let aiRecommendations = analysisResult.productRecommendations ?? []
-        guard !aiRecommendations.contains(where: { $0.contains(productName) }) else {
-            showProductPicker = false
-            return
-        }
-
-        manualProductRecommendations.append(productName)
-        showProductPicker = false
-    }
-}
-
-// MARK: - Product Picker Row View
-
-private struct ProductPickerRowView: View {
-    let product: Product
-    let isFlagged: Bool
-    @ObservedObject var theme = ThemeManager.shared
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(product.brand ?? "") \(product.name ?? "")")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(isFlagged ? theme.error : theme.primaryText)
-
-                    if let category = product.category {
-                        Text(category)
-                            .font(.system(size: 13))
-                            .foregroundColor(theme.secondaryText)
-                    }
-                }
-
-                Spacer()
-
-                if isFlagged {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(theme.error)
-                        .font(.system(size: 20))
-                }
-            }
-
-            if isFlagged {
-                HStack(spacing: 6) {
-                    Image(systemName: "hand.raised.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(theme.error)
-
-                    Text("WARNING: Contains ingredients client is allergic/sensitive to")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(theme.error)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(theme.error.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(theme.error.opacity(0.3), lineWidth: 1)
-                )
-            }
-
-            if let ingredients = product.allIngredients, !ingredients.isEmpty {
-                Text(ingredients)
-                    .font(.system(size: 12))
-                    .foregroundColor(theme.tertiaryText)
-                    .lineLimit(2)
-            }
-        }
-        .padding(.vertical, 4)
-    }
 }

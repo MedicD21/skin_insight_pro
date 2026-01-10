@@ -84,11 +84,27 @@ struct AnalysisDetailView: View {
                         notesCard(notes: notes)
                     }
 
+                    exportButton
+
                     deleteButton
                 }
                 .padding(.horizontal, horizontalSizeClass == .regular ? 32 : 16)
                 .padding(.top, 20)
                 .padding(.bottom, horizontalSizeClass == .regular ? 40 : 100)
+            }
+
+            if isExportingPDF {
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .scaleEffect(1.4)
+                        .tint(.white)
+                    Text("Exporting PDF...")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                }
             }
         }
         .navigationTitle("Analysis Details")
@@ -104,16 +120,12 @@ struct AnalysisDetailView: View {
                 }
             }
 
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: exportPDF) {
-                    Label("Export PDF", systemImage: "square.and.arrow.up")
-                }
-                .disabled(isExportingPDF)
-            }
         }
         .sheet(isPresented: $showShareSheet) {
             if let url = pdfURL {
                 ShareSheet(items: [url])
+            } else if let pdfData = exportedPDF {
+                ShareSheet(items: [pdfData])
             }
         }
         .alert("Delete Analysis", isPresented: $showDeleteConfirm) {
@@ -436,6 +448,23 @@ struct AnalysisDetailView: View {
         activeMetricInfo = MetricInfo(title: title, description: description)
     }
 
+    private var exportButton: some View {
+        Button(action: exportPDF) {
+            HStack {
+                Image(systemName: "square.and.arrow.up")
+                Text(isExportingPDF ? "Exporting..." : "Export PDF")
+            }
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(isExportingPDF ? theme.tertiaryText : theme.accent)
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        }
+        .disabled(isExportingPDF)
+        .padding(.top, 8)
+    }
+
     private var deleteButton: some View {
         Button(role: .destructive) {
             showDeleteConfirm = true
@@ -477,6 +506,24 @@ struct AnalysisDetailView: View {
             "Pore Condition": "Estimated from pore visibility and texture detail.",
             "Skin Health Score": "Overall score (0-100) combining concerns, hydration, and sensitivity."
         ]
+    }
+
+    private var clientDisplayName: String {
+        if let name = client.name, !name.isEmpty {
+            return name
+        }
+
+        let firstName = client.firstName ?? ""
+        let lastName = client.lastName ?? ""
+        let combined = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
+        return combined.isEmpty ? "Client" : combined
+    }
+
+    private func sanitizeFileName(_ value: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_-"))
+        let sanitized = value.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
+        let result = String(sanitized).trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        return result.isEmpty ? "Client" : result
     }
 
     private struct MetricInfo: Identifiable {
@@ -521,7 +568,7 @@ struct AnalysisDetailView: View {
             // Convert AppClient to Client
             let clientModel = Client(
                 id: client.id ?? "",
-                name: client.name ?? "",
+                name: clientDisplayName,
                 companyId: client.companyId ?? "",
                 email: client.email,
                 phone: client.phone,
@@ -552,7 +599,8 @@ struct AnalysisDetailView: View {
 
             // Save PDF to temporary file
             let tempDir = FileManager.default.temporaryDirectory
-            let fileName = "Analysis_\(client.name?.replacingOccurrences(of: " ", with: "_") ?? "Client")_\(Date().timeIntervalSince1970).pdf"
+            let fileSafeName = sanitizeFileName(clientDisplayName)
+            let fileName = "Analysis_\(fileSafeName)_\(Date().timeIntervalSince1970).pdf"
             let fileURL = tempDir.appendingPathComponent(fileName)
 
             do {
@@ -566,9 +614,10 @@ struct AnalysisDetailView: View {
                 }
             } catch {
                 await MainActor.run {
+                    exportedPDF = pdfData
+                    pdfURL = nil
                     isExportingPDF = false
-                    errorMessage = "Failed to save PDF: \(error.localizedDescription)"
-                    showError = true
+                    showShareSheet = true
                 }
             }
         }

@@ -15,7 +15,8 @@
       "Bash(psql:*)",
       "Bash(supabase db execute:*)",
       "Bash(supabase db push:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(ruby -e:*)"
     ]
   }
 }

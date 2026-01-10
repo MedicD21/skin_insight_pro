@@ -12,6 +12,7 @@ class AuthenticationManager: NSObject, ObservableObject {
     @Published var isGuestMode = false
     @Published var needsProfileCompletion = false
     @Published var needsCompanySetup = false
+    @Published var needsPINSetup = false
     
     private let userIdKey = "user_id"
     private let userEmailKey = "user_email"
@@ -97,17 +98,28 @@ class AuthenticationManager: NSObject, ObservableObject {
     func login(email: String, password: String) async throws {
         do {
             let user = try await NetworkService.shared.login(email: email, password: password)
-            
+
             if let userId = user.id {
                 UserDefaults.standard.set(userId, forKey: userIdKey)
                 UserDefaults.standard.set(email, forKey: userEmailKey)
                 UserDefaults.standard.set("email", forKey: loginProviderKey)
                 UserDefaults.standard.removeObject(forKey: guestModeKey)
                 UserDefaults.standard.removeObject(forKey: guestUserIdKey)
-                
+
                 currentUser = user
                 isGuestMode = false
                 isAuthenticated = true
+
+                // Save user profile to device login manager
+                let fullName = user.firstName != nil && user.lastName != nil ? "\(user.firstName!) \(user.lastName!)" : nil
+                DeviceLoginManager.shared.saveUserProfile(
+                    userId: userId,
+                    email: email,
+                    name: fullName,
+                    profileImageUrl: user.profileImageUrl
+                )
+
+                cacheRefreshToken(for: userId)
             }
         } catch let error as NetworkError where error.localizedDescription.contains("400") {
             throw NetworkError.invalidCredentials
@@ -130,6 +142,11 @@ class AuthenticationManager: NSObject, ObservableObject {
             isGuestMode = false
             isAuthenticated = true
 
+            // Check if user needs PIN setup (new user on this device)
+            if !DeviceLoginManager.shared.hasPIN(for: userId) {
+                needsPINSetup = true
+            }
+
             // Check if profile needs completion (no first/last name)
             if user.firstName == nil || user.firstName?.isEmpty == true ||
                user.lastName == nil || user.lastName?.isEmpty == true {
@@ -138,6 +155,8 @@ class AuthenticationManager: NSObject, ObservableObject {
                 // Profile complete but no company - needs company setup
                 needsCompanySetup = true
             }
+
+            cacheRefreshToken(for: userId)
         }
     }
     
@@ -163,6 +182,59 @@ class AuthenticationManager: NSObject, ObservableObject {
 
         try await NetworkService.shared.deleteUser(userId: userId)
         logout()
+    }
+
+    func loginWithPIN(userId: String, email: String) async throws {
+        let accessToken = UserDefaults.standard.string(forKey: AppConstants.accessTokenKey)
+        if let storedUserId = UserDefaults.standard.string(forKey: AppConstants.userIdKey),
+           storedUserId != userId,
+           accessToken != nil,
+           accessToken?.isEmpty == false {
+            throw NSError(domain: "Authentication", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Please sign in with your password to continue."
+            ])
+        } else if let storedUserId = UserDefaults.standard.string(forKey: AppConstants.userIdKey),
+                  storedUserId != userId,
+                  accessToken == nil || accessToken?.isEmpty == true {
+            UserDefaults.standard.removeObject(forKey: AppConstants.userIdKey)
+        }
+
+        if accessToken == nil || accessToken?.isEmpty == true {
+            var refreshToken = UserDefaults.standard.string(forKey: AppConstants.refreshTokenKey)
+            if refreshToken?.isEmpty ?? true {
+                refreshToken = DeviceLoginManager.shared.getRefreshToken(for: userId)
+            }
+
+            guard let refreshToken, !refreshToken.isEmpty else {
+                throw NSError(domain: "Authentication", code: 2, userInfo: [
+                    NSLocalizedDescriptionKey: "Please sign in with your password to continue."
+                ])
+            }
+
+            _ = try await NetworkService.shared.refreshAccessToken(using: refreshToken)
+        }
+
+        if let refreshedUserId = UserDefaults.standard.string(forKey: AppConstants.userIdKey),
+           !refreshedUserId.isEmpty,
+           refreshedUserId != userId {
+            throw NSError(domain: "Authentication", code: 3, userInfo: [
+                NSLocalizedDescriptionKey: "Please sign in with your password to continue."
+            ])
+        }
+
+        UserDefaults.standard.set(userId, forKey: userIdKey)
+        UserDefaults.standard.set(email, forKey: userEmailKey)
+        UserDefaults.standard.set("email", forKey: loginProviderKey)
+        UserDefaults.standard.removeObject(forKey: guestModeKey)
+        UserDefaults.standard.removeObject(forKey: guestUserIdKey)
+
+        currentUser = AppUser(id: userId, email: email, provider: "email", createdAt: nil)
+        isGuestMode = false
+        isAuthenticated = true
+        isLoading = true
+
+        await refreshUserProfile(userId: userId)
+        cacheRefreshToken(for: userId)
     }
 
     func signInWithApple() async throws {
@@ -196,7 +268,29 @@ class AuthenticationManager: NSObject, ObservableObject {
             currentUser = user
             isGuestMode = false
             isAuthenticated = true
+
+            // Check if user needs PIN setup (new user on this device)
+            if !DeviceLoginManager.shared.hasPIN(for: serverUserId) {
+                needsPINSetup = true
+            }
+
+            // Save user profile to device login manager
+            let fullName = user.firstName != nil && user.lastName != nil ? "\(user.firstName!) \(user.lastName!)" : nil
+            DeviceLoginManager.shared.saveUserProfile(
+                userId: serverUserId,
+                email: displayEmail,
+                name: fullName,
+                profileImageUrl: user.profileImageUrl
+            )
+
+            cacheRefreshToken(for: serverUserId)
         }
+    }
+
+    private func cacheRefreshToken(for userId: String) {
+        guard let refreshToken = UserDefaults.standard.string(forKey: AppConstants.refreshTokenKey),
+              !refreshToken.isEmpty else { return }
+        _ = DeviceLoginManager.shared.saveRefreshToken(refreshToken, for: userId)
     }
 }
 
