@@ -54,6 +54,7 @@ struct AppClient: Identifiable, Hashable, Codable {
     var profileImageUrl: String?
     var fillersDate: String?
     var biostimulatorsDate: String?
+    var wrinkleRelaxersDate: String?
     var consentSignature: String?
     var consentDate: String?
     var isPregnant: Bool?
@@ -77,6 +78,7 @@ struct AppClient: Identifiable, Hashable, Codable {
         case profileImageUrl = "profile_image_url"
         case fillersDate = "fillers_date"
         case biostimulatorsDate = "biostimulators_date"
+        case wrinkleRelaxersDate = "wrinkle_relaxers_date"
         case consentSignature = "consent_signature"
         case consentDate = "consent_date"
         case isPregnant = "is_pregnant"

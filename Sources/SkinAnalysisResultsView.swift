@@ -1,4 +1,5 @@
 import SwiftUI
+import MessageUI
 
 extension Notification.Name {
     static let dismissAnalysisInput = Notification.Name("dismissAnalysisInput")
@@ -34,6 +35,9 @@ struct SkinAnalysisResultsView: View {
     @FocusState private var notesFieldFocused: Bool
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     private var flaggedProducts: [Product] { viewModel.flaggedProducts }
+    @State private var showMailComposer = false
+    @State private var showMailError = false
+    @State private var mailErrorMessage = ""
     
     private let medicalConditionKeywords = [
         "rosacea", "eczema", "psoriasis", "dermatitis", "acne", "melasma",
@@ -114,6 +118,8 @@ struct SkinAnalysisResultsView: View {
                     saveButton
 
                     exportButton
+
+                    emailButton
                 }
                 .padding(.horizontal, horizontalSizeClass == .regular ? 32 : 16)
                 .padding(.top, 20)
@@ -123,6 +129,22 @@ struct SkinAnalysisResultsView: View {
             .sheet(isPresented: $showShareSheet) {
                 if let url = pdfURL {
                     ShareSheet(items: [url])
+                }
+            }
+            .sheet(isPresented: $showMailComposer) {
+                if let pdfData = exportedPDF,
+                   let email = client.email,
+                   !email.isEmpty {
+                    MailComposerView(
+                        recipient: email,
+                        subject: "Your Skin Analysis Results - \(client.name ?? "Client")",
+                        body: "Please find your skin analysis results attached.\n\nThank you for your visit!",
+                        pdfData: pdfData,
+                        pdfFileName: "Analysis_\(client.name?.replacingOccurrences(of: " ", with: "_") ?? "Client")_\(Date().timeIntervalSince1970).pdf",
+                        onResult: { result in
+                            handleMailResult(result)
+                        }
+                    )
                 }
             }
             
@@ -148,6 +170,11 @@ struct SkinAnalysisResultsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(errorMessage)
+        }
+        .alert("Email Unavailable", isPresented: $showMailError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(mailErrorMessage)
         }
         .alert(item: $activeMetricInfo) { info in
             Alert(
@@ -975,6 +1002,24 @@ struct SkinAnalysisResultsView: View {
         .disabled(isExportingPDF)
     }
 
+    private var emailButton: some View {
+        Button(action: emailClientResults) {
+            HStack {
+                Spacer()
+                Image(systemName: "envelope.fill")
+                Text("Email Client Results")
+                Spacer()
+            }
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(height: 52)
+            .background(theme.accent.opacity(0.8))
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        }
+        .disabled(isExportingPDF || client.email == nil || client.email?.isEmpty == true)
+        .opacity((client.email == nil || client.email?.isEmpty == true) ? 0.5 : 1.0)
+    }
+
     private func exportCurrentAnalysisPDF() {
         isExportingPDF = true
 
@@ -1512,6 +1557,93 @@ struct SkinAnalysisResultsView: View {
             #if DEBUG
             print("⚠️ Failed to load company for PDF: \(error)")
             #endif
+        }
+    }
+
+    private func emailClientResults() {
+        // Check if mail is available
+        guard MFMailComposeViewController.canSendMail() else {
+            mailErrorMessage = "Email is not configured on this device. Please set up an email account in Settings."
+            showMailError = true
+            return
+        }
+
+        // Check if client has email
+        guard let clientEmail = client.email, !clientEmail.isEmpty else {
+            mailErrorMessage = "No email address found for this client. Please add an email address to the client's profile."
+            showMailError = true
+            return
+        }
+
+        // Generate PDF if not already generated
+        if exportedPDF == nil {
+            isExportingPDF = true
+
+            Task {
+                let clientModel = Client(
+                    id: client.id ?? "",
+                    name: client.name ?? "",
+                    companyId: client.companyId ?? "",
+                    email: client.email,
+                    phone: client.phone,
+                    createdAt: Date()
+                )
+
+                var pdfAnalysisResult = analysisResult
+                pdfAnalysisResult.recommendedRoutine = recommendedRoutine
+                pdfAnalysisResult.recommendations = displayRecommendations
+
+                guard let pdfData = PDFExportManager.shared.generateDetailedAnalysisPDF(
+                    client: clientModel,
+                    analysisData: pdfAnalysisResult,
+                    image: image,
+                    notes: notes.isEmpty ? nil : notes,
+                    productsUsed: productsUsed.isEmpty ? nil : productsUsed,
+                    treatmentsPerformed: treatmentsPerformed.isEmpty ? nil : treatmentsPerformed,
+                    timestamp: Date(),
+                    company: company
+                ) else {
+                    await MainActor.run {
+                        isExportingPDF = false
+                        mailErrorMessage = "Failed to generate PDF"
+                        showMailError = true
+                    }
+                    return
+                }
+
+                await MainActor.run {
+                    exportedPDF = pdfData
+                    isExportingPDF = false
+                    showMailComposer = true
+                }
+            }
+        } else {
+            showMailComposer = true
+        }
+    }
+
+    private func handleMailResult(_ result: Result<MFMailComposeResult, Error>) {
+        switch result {
+        case .success(let mailResult):
+            switch mailResult {
+            case .sent:
+                // Optionally show success message
+                break
+            case .saved:
+                // Draft saved
+                break
+            case .cancelled:
+                // User cancelled
+                break
+            case .failed:
+                mailErrorMessage = "Failed to send email. Please try again."
+                showMailError = true
+            @unknown default:
+                break
+            }
+        case .failure(let error):
+            mailErrorMessage = "Email error: \(error.localizedDescription)"
+            showMailError = true
         }
     }
 

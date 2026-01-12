@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import MessageUI
 
 struct TrendingGraphsView: View {
     @ObservedObject var theme = ThemeManager.shared
@@ -15,6 +16,9 @@ struct TrendingGraphsView: View {
     @State private var exportedPDF: Data?
     @State private var showShareSheet = false
     @State private var company: Company?
+    @State private var showMailComposer = false
+    @State private var showMailError = false
+    @State private var mailErrorMessage = ""
 
     enum MetricType: String, CaseIterable {
         case hydration = "Hydration"
@@ -81,6 +85,8 @@ struct TrendingGraphsView: View {
                         statisticsSection
 
                         exportButton
+
+                        emailButton
                     }
                     .padding(20)
                 }
@@ -108,6 +114,27 @@ struct TrendingGraphsView: View {
                 if let pdfData = exportedPDF {
                     ShareSheet(items: [pdfData as Any])
                 }
+            }
+            .sheet(isPresented: $showMailComposer) {
+                if let pdfData = exportedPDF,
+                   let email = client.email,
+                   !email.isEmpty {
+                    MailComposerView(
+                        recipient: email,
+                        subject: "Your Skin Analysis Trends - \(client.name)",
+                        body: "Please find your skin analysis trends attached.\n\nThank you for your continued visits!",
+                        pdfData: pdfData,
+                        pdfFileName: "Trends_\(sanitizeFileName(client.name))_\(Date().timeIntervalSince1970).pdf",
+                        onResult: { result in
+                            handleMailResult(result)
+                        }
+                    )
+                }
+            }
+            .alert("Email Unavailable", isPresented: $showMailError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(mailErrorMessage)
             }
         }
     }
@@ -397,6 +424,23 @@ struct TrendingGraphsView: View {
         .disabled(isExporting)
     }
 
+    private var emailButton: some View {
+        Button(action: emailTrendsToClient) {
+            HStack {
+                Image(systemName: "envelope.fill")
+                Text("Email Trends to Client")
+            }
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(16)
+            .background(theme.accent.opacity(0.8))
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        }
+        .disabled(isExporting || client.email == nil || client.email?.isEmpty == true)
+        .opacity((client.email == nil || client.email?.isEmpty == true) ? 0.5 : 1.0)
+    }
+
     private func getMetricValue(for analysis: SkinAnalysis, metric: MetricType) -> Double {
         switch metric {
         case .hydration: return analysis.hydration
@@ -445,6 +489,76 @@ struct TrendingGraphsView: View {
             #if DEBUG
             print("⚠️ Failed to load company for PDF: \(error)")
             #endif
+        }
+    }
+
+    private func emailTrendsToClient() {
+        // Check if mail is available
+        guard MFMailComposeViewController.canSendMail() else {
+            mailErrorMessage = "Email is not configured on this device. Please set up an email account in Settings."
+            showMailError = true
+            return
+        }
+
+        // Check if client has email
+        guard let clientEmail = client.email, !clientEmail.isEmpty else {
+            mailErrorMessage = "No email address found for this client."
+            showMailError = true
+            return
+        }
+
+        // Generate PDF if not already generated
+        if exportedPDF == nil {
+            isExporting = true
+
+            Task {
+                // Load company for branding
+                if company == nil {
+                    await loadCompany()
+                }
+
+                let pdfData = PDFExportManager.shared.generateTrendingPDF(client: client, analyses: sortedAnalyses, company: company)
+
+                await MainActor.run {
+                    exportedPDF = pdfData
+                    isExporting = false
+                    showMailComposer = true
+                }
+            }
+        } else {
+            showMailComposer = true
+        }
+    }
+
+    private func sanitizeFileName(_ value: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_-"))
+        let sanitized = value.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
+        let result = String(sanitized).trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        return result.isEmpty ? "Client" : result
+    }
+
+    private func handleMailResult(_ result: Result<MFMailComposeResult, Error>) {
+        switch result {
+        case .success(let mailResult):
+            switch mailResult {
+            case .sent:
+                // Optionally show success message
+                break
+            case .saved:
+                // Draft saved
+                break
+            case .cancelled:
+                // User cancelled
+                break
+            case .failed:
+                mailErrorMessage = "Failed to send email. Please try again."
+                showMailError = true
+            @unknown default:
+                break
+            }
+        case .failure(let error):
+            mailErrorMessage = "Email error: \(error.localizedDescription)"
+            showMailError = true
         }
     }
 }

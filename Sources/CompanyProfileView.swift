@@ -424,6 +424,8 @@ struct EditCompanyView: View {
     @State private var errorMessage = ""
     @State private var showImagePicker = false
     @State private var selectedImage: UIImage?
+    @State private var showImageCropper = false
+    @State private var pickedImage: UIImage?
 
     init(company: Company?) {
         self.company = company
@@ -482,7 +484,19 @@ struct EditCompanyView: View {
                 Text(errorMessage)
             }
             .sheet(isPresented: $showImagePicker) {
-                ImagePicker(image: $selectedImage, sourceType: .photoLibrary)
+                ImagePicker(image: $pickedImage, sourceType: .photoLibrary)
+            }
+            .sheet(isPresented: $showImageCropper) {
+                if let pickedImage = pickedImage {
+                    ImageCropperView(image: pickedImage) { croppedImage in
+                        selectedImage = croppedImage
+                    }
+                }
+            }
+            .onChange(of: pickedImage) { _, newImage in
+                if newImage != nil {
+                    showImageCropper = true
+                }
             }
         }
     }

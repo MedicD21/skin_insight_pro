@@ -60,8 +60,6 @@
 		CB45DF712F11D84700881A92 /* ProductScrapeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF702F11D84700881A92 /* ProductScrapeReviewView.swift */; };
 		CB45DF732F12094500881A92 /* PDFExportPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF722F12094500881A92 /* PDFExportPreview.swift */; };
 		CB45DF752F12095200881A92 /* PDFPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF742F12095200881A92 /* PDFPreviewView.swift */; };
-		CB45DF772F1549A300881A92 /* MailComposerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF762F1549A300881A92 /* MailComposerView.swift */; };
-		CB45DF792F1549C400881A92 /* ImageCropperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB45DF782F1549C400881A92 /* ImageCropperView.swift */; };
 		CB82FB0A2F0D587500D65A4A /* Secrets.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB092F0D587500D65A4A /* Secrets.swift */; };
 		CB82FB0C2F0D858A00D65A4A /* AdminDataExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */; };
 		CB82FB0E2F0DABEA00D65A4A /* AddTeamMemberView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */; };
@@ -124,8 +122,6 @@
 		CB45DF702F11D84700881A92 /* ProductScrapeReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductScrapeReviewView.swift; sourceTree = "<group>"; };
 		CB45DF722F12094500881A92 /* PDFExportPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExportPreview.swift; sourceTree = "<group>"; };
 		CB45DF742F12095200881A92 /* PDFPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPreviewView.swift; sourceTree = "<group>"; };
-		CB45DF762F1549A300881A92 /* MailComposerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MailComposerView.swift; sourceTree = "<group>"; };
-		CB45DF782F1549C400881A92 /* ImageCropperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCropperView.swift; sourceTree = "<group>"; };
 		CB82FB092F0D587500D65A4A /* Secrets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Secrets.swift; sourceTree = "<group>"; };
 		CB82FB0B2F0D858A00D65A4A /* AdminDataExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminDataExportView.swift; sourceTree = "<group>"; };
 		CB82FB0D2F0DABEA00D65A4A /* AddTeamMemberView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddTeamMemberView.swift; sourceTree = "<group>"; };
@@ -177,8 +173,6 @@
 		FADFBF0CD875779BF3632B53 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				CB45DF782F1549C400881A92 /* ImageCropperView.swift */,
-				CB45DF762F1549A300881A92 /* MailComposerView.swift */,
 				CB45DF742F12095200881A92 /* PDFPreviewView.swift */,
 				CB45DF722F12094500881A92 /* PDFExportPreview.swift */,
 				CB45DF702F11D84700881A92 /* ProductScrapeReviewView.swift */,
@@ -347,7 +341,6 @@
 				15597B726EF4238573C829D6 /* NetworkService.swift in Sources */,
 				CB00CD012F05C710009ED8F1 /* TeamMembersView.swift in Sources */,
 				CB45DF6F2F11D83600881A92 /* ProductScraper.swift in Sources */,
-				CB45DF792F1549C400881A92 /* ImageCropperView.swift in Sources */,
 				79196D972C246E2C88A1367E /* ProductCatalogView.swift in Sources */,
 				47D98A743BC65F40FEA03B78 /* ProductImportView.swift in Sources */,
 				CB00CD132F063847009ED8F1 /* ConsentHelpers.swift in Sources */,
@@ -355,7 +348,6 @@
 				CB45DF652F10719600881A92 /* AnalysisDetailView.swift in Sources */,
 				CB45DF732F12094500881A92 /* PDFExportPreview.swift in Sources */,
 				CB00CD152F063854009ED8F1 /* PhoneNumberFormatter.swift in Sources */,
-				CB45DF772F1549A300881A92 /* MailComposerView.swift in Sources */,
 				9C49980AEDB9815C90620A1F /* SignInWithAppleButton.swift in Sources */,
 				1F0E75885412ECB2EDCCD6A1 /* SkinAnalysisInputView.swift in Sources */,
 				C380F956DB4E56A5E0BE43C6 /* SkinAnalysisResultsView.swift in Sources */,
@@ -512,7 +504,7 @@
 				BUNDLE_DISPLAY_NAME = "Skin Insight Pro";
 				CODE_SIGN_ENTITLEMENTS = Sources/SkinInsightPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Skin Insight Pro";
@@ -539,7 +531,7 @@
 				BUNDLE_DISPLAY_NAME = "Skin Insight Pro";
 				CODE_SIGN_ENTITLEMENTS = Sources/SkinInsightPro.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
 				INFOPLIST_FILE = Sources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Skin Insight Pro";

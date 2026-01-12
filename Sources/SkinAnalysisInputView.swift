@@ -26,16 +26,19 @@ struct SkinAnalysisInputView: View {
     @State private var treatmentsPerformed = ""
     @State private var hasFillers = false
     @State private var hasBiostimulators = false
+    @State private var hasWrinkleRelaxers = false
     @State private var fillersTimeAmount = ""
     @State private var fillersTimeUnit = "months"
     @State private var biostimulatorsTimeAmount = ""
     @State private var biostimulatorsTimeUnit = "months"
+    @State private var wrinkleRelaxersTimeAmount = ""
+    @State private var wrinkleRelaxersTimeUnit = "months"
     @State private var showSubscriptionRequired = false
     @StateObject private var storeManager = StoreKitManager.shared
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case skinType, hydration, sensitivity, pore, concerns, products, treatments, fillersTime, biostimulatorsTime
+        case skinType, hydration, sensitivity, pore, concerns, products, treatments, fillersTime, biostimulatorsTime, wrinkleRelaxersTime
     }
     
     var body: some View {
@@ -507,6 +510,35 @@ struct SkinAnalysisInputView: View {
                 )
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
+
+            // Wrinkle Relaxers toggle button
+            Button(action: { hasWrinkleRelaxers.toggle() }) {
+                HStack {
+                    Image(systemName: hasWrinkleRelaxers ? "checkmark.circle.fill" : "circle")
+                    Text("Wrinkle Relaxers")
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(hasWrinkleRelaxers ? .white : theme.primaryText)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(hasWrinkleRelaxers ? theme.accent : theme.tertiaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.radiusMedium)
+                        .stroke(hasWrinkleRelaxers ? theme.accent : theme.border, lineWidth: hasWrinkleRelaxers ? 2 : 1)
+                )
+            }
+
+            // Wrinkle Relaxers time input
+            if hasWrinkleRelaxers {
+                timeInputField(
+                    title: "How long ago were wrinkle relaxers administered?",
+                    amount: $wrinkleRelaxersTimeAmount,
+                    unit: $wrinkleRelaxersTimeUnit,
+                    field: .wrinkleRelaxersTime
+                )
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
         .padding(20)
         .background(
@@ -516,6 +548,7 @@ struct SkinAnalysisInputView: View {
         )
         .animation(.spring(), value: hasFillers)
         .animation(.spring(), value: hasBiostimulators)
+        .animation(.spring(), value: hasWrinkleRelaxers)
     }
 
     private func timeInputField(
@@ -744,6 +777,10 @@ struct SkinAnalysisInputView: View {
 
         if hasBiostimulators && !biostimulatorsTimeAmount.isEmpty {
             historyParts.append("Biostimulators administered \(biostimulatorsTimeAmount) \(biostimulatorsTimeUnit) ago")
+        }
+
+        if hasWrinkleRelaxers && !wrinkleRelaxersTimeAmount.isEmpty {
+            historyParts.append("Wrinkle Relaxers (e.g., Botox, Dysport) administered \(wrinkleRelaxersTimeAmount) \(wrinkleRelaxersTimeUnit) ago")
         }
 
         if !historyParts.isEmpty {

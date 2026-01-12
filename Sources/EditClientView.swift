@@ -19,6 +19,7 @@ struct EditClientView: View {
     @State private var isBreastfeeding: Bool
     @State private var fillersDate: Date?
     @State private var biostimulatorsDate: Date?
+    @State private var wrinkleRelaxersDate: Date?
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
@@ -53,6 +54,10 @@ struct EditClientView: View {
         if let biostimulatorsDateString = client.biostimulatorsDate,
            let date = ISO8601DateFormatter().date(from: biostimulatorsDateString) {
             _biostimulatorsDate = State(initialValue: date)
+        }
+        if let wrinkleRelaxersDateString = client.wrinkleRelaxersDate,
+           let date = ISO8601DateFormatter().date(from: wrinkleRelaxersDateString) {
+            _wrinkleRelaxersDate = State(initialValue: date)
         }
     }
     
@@ -274,6 +279,11 @@ struct EditClientView: View {
                             date: $biostimulatorsDate
                         )
                     }
+
+                    compactDatePickerField(
+                        title: "Last Wrinkle Relaxers",
+                        date: $wrinkleRelaxersDate
+                    )
                 }
             }
         }
@@ -446,6 +456,7 @@ struct EditClientView: View {
         let isoFormatter = ISO8601DateFormatter()
         let fillersDateString = fillersDate.map { isoFormatter.string(from: $0) }
         let biostimulatorsDateString = biostimulatorsDate.map { isoFormatter.string(from: $0) }
+        let wrinkleRelaxersDateString = wrinkleRelaxersDate.map { isoFormatter.string(from: $0) }
 
         let updatedClient = AppClient(
             id: client.id,
@@ -463,6 +474,7 @@ struct EditClientView: View {
             profileImageUrl: client.profileImageUrl,
             fillersDate: fillersDateString,
             biostimulatorsDate: biostimulatorsDateString,
+            wrinkleRelaxersDate: wrinkleRelaxersDateString,
             consentSignature: client.consentSignature,
             consentDate: client.consentDate,
             isPregnant: isPregnant,

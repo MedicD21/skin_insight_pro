@@ -437,6 +437,17 @@ struct ClientDetailView: View {
                                         .foregroundColor(theme.primaryText)
                                 }
                             }
+
+                            if let wrinkleRelaxersDate = currentClient.wrinkleRelaxersDate {
+                                HStack {
+                                    Text("Wrinkle Relaxers:")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(theme.secondaryText)
+                                    Text(formatInjectablesDate(wrinkleRelaxersDate))
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(theme.primaryText)
+                                }
+                            }
                         }
                         .padding(.leading, 24)
                     }

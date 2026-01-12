@@ -445,6 +445,9 @@ class HIPAAComplianceManager: ObservableObject {
                     if let biostimulatorsDate = client.biostimulatorsDate {
                         exportData += "Last Biostimulators: \(biostimulatorsDate)\n"
                     }
+                    if let wrinkleRelaxersDate = client.wrinkleRelaxersDate {
+                        exportData += "Last Wrinkle Relaxers: \(wrinkleRelaxersDate)\n"
+                    }
 
                     // Consent Information
                     if let consentDate = client.consentDate {

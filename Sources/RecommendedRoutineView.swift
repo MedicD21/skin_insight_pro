@@ -1,4 +1,5 @@
 import SwiftUI
+import MessageUI
 
 struct RecommendedRoutineView: View {
     @ObservedObject var theme = ThemeManager.shared
@@ -17,6 +18,9 @@ struct RecommendedRoutineView: View {
     @State private var showShareSheet = false
     @State private var showAddStepSheet = false
     @State private var company: Company?
+    @State private var showMailComposer = false
+    @State private var showMailError = false
+    @State private var mailErrorMessage = ""
 
     enum RoutineTab {
         case morning, evening
@@ -61,7 +65,12 @@ struct RecommendedRoutineView: View {
                         }
 
                         exportButton
-                            .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 20, trailing: 20))
+                            .listRowInsets(EdgeInsets(top: 12, leading: 20, bottom: 6, trailing: 20))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+
+                        emailButton
+                            .listRowInsets(EdgeInsets(top: 6, leading: 20, bottom: 20, trailing: 20))
                             .listRowBackground(Color.clear)
                             .listRowSeparator(.hidden)
                     }
@@ -103,6 +112,27 @@ struct RecommendedRoutineView: View {
                 if let pdfData = exportedPDF {
                     ShareSheet(items: [pdfData as Any])
                 }
+            }
+            .sheet(isPresented: $showMailComposer) {
+                if let pdfData = exportedPDF,
+                   let email = client.email,
+                   !email.isEmpty {
+                    MailComposerView(
+                        recipient: email,
+                        subject: "Your Recommended Skincare Routine - \(client.name)",
+                        body: "Please find your personalized skincare routine attached.\n\nThank you for your visit!",
+                        pdfData: pdfData,
+                        pdfFileName: "Routine_\(sanitizeFileName(client.name))_\(Date().timeIntervalSince1970).pdf",
+                        onResult: { result in
+                            handleMailResult(result)
+                        }
+                    )
+                }
+            }
+            .alert("Email Unavailable", isPresented: $showMailError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(mailErrorMessage)
             }
             .sheet(isPresented: $showAddStepSheet) {
                 RoutineStepPickerView(
@@ -396,6 +426,23 @@ struct RecommendedRoutineView: View {
         .disabled(isExporting)
     }
 
+    private var emailButton: some View {
+        Button(action: emailRoutineToClient) {
+            HStack {
+                Image(systemName: "envelope.fill")
+                Text("Email Routine to Client")
+            }
+            .font(.system(size: 17, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(16)
+            .background(theme.accent.opacity(0.8))
+            .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+        }
+        .disabled(isExporting || client.email == nil || client.email?.isEmpty == true)
+        .opacity((client.email == nil || client.email?.isEmpty == true) ? 0.5 : 1.0)
+    }
+
     private func exportRoutinePDF() {
         isExporting = true
 
@@ -485,6 +532,87 @@ struct RecommendedRoutineView: View {
             #if DEBUG
             print("⚠️ Failed to load company for PDF: \(error)")
             #endif
+        }
+    }
+
+    private func emailRoutineToClient() {
+        // Check if mail is available
+        guard MFMailComposeViewController.canSendMail() else {
+            mailErrorMessage = "Email is not configured on this device. Please set up an email account in Settings."
+            showMailError = true
+            return
+        }
+
+        // Check if client has email
+        guard let clientEmail = client.email, !clientEmail.isEmpty else {
+            mailErrorMessage = "No email address found for this client."
+            showMailError = true
+            return
+        }
+
+        // Generate PDF if not already generated
+        if exportedPDF == nil {
+            isExporting = true
+
+            Task {
+                // Load company for branding
+                if company == nil {
+                    await loadCompany()
+                }
+
+                guard let pdfData = PDFExportManager.shared.generateRoutinePDF(
+                    client: client,
+                    routine: routine,
+                    company: company
+                ) else {
+                    await MainActor.run {
+                        isExporting = false
+                        mailErrorMessage = "Failed to generate PDF"
+                        showMailError = true
+                    }
+                    return
+                }
+
+                await MainActor.run {
+                    exportedPDF = pdfData
+                    isExporting = false
+                    showMailComposer = true
+                }
+            }
+        } else {
+            showMailComposer = true
+        }
+    }
+
+    private func sanitizeFileName(_ value: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_-"))
+        let sanitized = value.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
+        let result = String(sanitized).trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        return result.isEmpty ? "Client" : result
+    }
+
+    private func handleMailResult(_ result: Result<MFMailComposeResult, Error>) {
+        switch result {
+        case .success(let mailResult):
+            switch mailResult {
+            case .sent:
+                // Optionally show success message
+                break
+            case .saved:
+                // Draft saved
+                break
+            case .cancelled:
+                // User cancelled
+                break
+            case .failed:
+                mailErrorMessage = "Failed to send email. Please try again."
+                showMailError = true
+            @unknown default:
+                break
+            }
+        case .failure(let error):
+            mailErrorMessage = "Email error: \(error.localizedDescription)"
+            showMailError = true
         }
     }
 }

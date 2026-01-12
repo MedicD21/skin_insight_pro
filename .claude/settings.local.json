@@ -16,7 +16,10 @@
       "Bash(supabase db execute:*)",
       "Bash(supabase db push:*)",
       "Bash(cat:*)",
-      "Bash(ruby -e:*)"
+      "Bash(ruby -e:*)",
+      "Bash(uuidgen:*)",
+      "Bash(plutil -lint:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }
