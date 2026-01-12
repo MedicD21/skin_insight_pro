@@ -14,6 +14,8 @@ struct AddClientView: View {
     @State private var knownSensitivities = ""
     @State private var medications = ""
     @State private var productsToAvoid = ""
+    @State private var isPregnant = false
+    @State private var isBreastfeeding = false
     @State private var isLoading = false
     @State private var showError = false
     @State private var errorMessage = ""
@@ -92,7 +94,9 @@ struct AddClientView: View {
                     fillersDate: nil,
                     biostimulatorsDate: nil,
                     consentSignature: nil,
-                    consentDate: nil
+                    consentDate: nil,
+                    isPregnant: isPregnant,
+                    isBreastfeeding: isBreastfeeding
                 )
 
                 ClientHIPAAConsentView(client: tempClient, onConsent: { signature in
@@ -212,6 +216,40 @@ struct AddClientView: View {
                     text: $productsToAvoid,
                     field: .productsToAvoid
                 )
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Safety Considerations")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
+                        .padding(.top, 8)
+
+                    Toggle(isOn: $isPregnant) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "figure.and.child.holdinghands")
+                                .foregroundColor(theme.accent)
+                            Text("Currently Pregnant")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.primaryText)
+                        }
+                    }
+                    .tint(theme.accent)
+
+                    Toggle(isOn: $isBreastfeeding) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "figure.and.child.holdinghands")
+                                .foregroundColor(theme.accent)
+                            Text("Currently Breastfeeding")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.primaryText)
+                        }
+                    }
+                    .tint(theme.accent)
+
+                    Text("Products with salicylic acid or retinol will be flagged as contraindicated")
+                        .font(.system(size: 12))
+                        .foregroundColor(theme.secondaryText)
+                        .padding(.top, 4)
+                }
             }
         }
         .padding(20)
@@ -317,7 +355,9 @@ struct AddClientView: View {
             fillersDate: nil,
             biostimulatorsDate: nil,
             consentSignature: consentSignature,
-            consentDate: ISO8601DateFormatter().string(from: Date())
+            consentDate: ISO8601DateFormatter().string(from: Date()),
+            isPregnant: isPregnant,
+            isBreastfeeding: isBreastfeeding
         )
 
         Task {

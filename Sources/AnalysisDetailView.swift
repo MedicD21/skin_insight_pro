@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AnalysisDetailView: View {
     @ObservedObject var theme = ThemeManager.shared
+    @StateObject private var authManager = AuthenticationManager.shared
     let client: AppClient
     let analysis: SkinAnalysisResult
     let onDelete: ((SkinAnalysisResult) async throws -> Void)?
@@ -16,6 +17,7 @@ struct AnalysisDetailView: View {
     @State private var exportedPDF: Data?
     @State private var pdfURL: URL?
     @State private var showShareSheet = false
+    @State private var company: Company?
 
     private let medicalConditionKeywords = [
         "rosacea", "eczema", "psoriasis", "dermatitis", "acne", "melasma",
@@ -579,6 +581,11 @@ struct AnalysisDetailView: View {
             let analysisData = analysis.analysisResults ?? AnalysisData()
             let timestamp = parseDate(analysis.createdAt ?? "") ?? Date()
 
+            // Load company for branding
+            if company == nil {
+                await loadCompany()
+            }
+
             // Use the new detailed PDF export method
             guard let pdfData = PDFExportManager.shared.generateDetailedAnalysisPDF(
                 client: clientModel,
@@ -587,7 +594,8 @@ struct AnalysisDetailView: View {
                 notes: analysis.notes,
                 productsUsed: analysis.productsUsed,
                 treatmentsPerformed: analysis.treatmentsPerformed,
-                timestamp: timestamp
+                timestamp: timestamp,
+                company: company
             ) else {
                 await MainActor.run {
                     isExportingPDF = false
@@ -633,5 +641,23 @@ struct AnalysisDetailView: View {
 
         isoFormatter.formatOptions = [.withInternetDateTime]
         return isoFormatter.date(from: dateString)
+    }
+
+    private func loadCompany() async {
+        guard let companyId = authManager.currentUser?.companyId, !companyId.isEmpty else {
+            return
+        }
+
+        do {
+            let fetchedCompany = try await NetworkService.shared.fetchCompany(id: companyId)
+            await MainActor.run {
+                company = fetchedCompany
+            }
+        } catch {
+            // Silently fail - company logo is optional
+            #if DEBUG
+            print("⚠️ Failed to load company for PDF: \(error)")
+            #endif
+        }
     }
 }

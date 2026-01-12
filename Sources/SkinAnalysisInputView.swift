@@ -773,6 +773,8 @@ struct SkinAnalysisInputView: View {
                     knownSensitivities: client.knownSensitivities,
                     medications: client.medications,
                     productsToAvoid: client.productsToAvoid,
+                    isPregnant: client.isPregnant,
+                    isBreastfeeding: client.isBreastfeeding,
                     manualSkinType: manualSkinType.isEmpty ? nil : manualSkinType,
                     manualHydrationLevel: manualHydrationLevel.isEmpty ? nil : manualHydrationLevel,
                     manualSensitivity: manualSensitivity.isEmpty ? nil : manualSensitivity,

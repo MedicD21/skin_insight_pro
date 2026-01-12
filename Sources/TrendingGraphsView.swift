@@ -3,6 +3,7 @@ import Charts
 
 struct TrendingGraphsView: View {
     @ObservedObject var theme = ThemeManager.shared
+    @StateObject private var authManager = AuthenticationManager.shared
     @Environment(\.dismiss) var dismiss
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
@@ -13,6 +14,7 @@ struct TrendingGraphsView: View {
     @State private var isExporting = false
     @State private var exportedPDF: Data?
     @State private var showShareSheet = false
+    @State private var company: Company?
 
     enum MetricType: String, CaseIterable {
         case hydration = "Hydration"
@@ -413,13 +415,36 @@ struct TrendingGraphsView: View {
         isExporting = true
 
         Task {
-            let pdfData = PDFExportManager.shared.generateTrendingPDF(client: client, analyses: sortedAnalyses)
+            // Load company for branding
+            if company == nil {
+                await loadCompany()
+            }
+
+            let pdfData = PDFExportManager.shared.generateTrendingPDF(client: client, analyses: sortedAnalyses, company: company)
 
             await MainActor.run {
                 exportedPDF = pdfData
                 isExporting = false
                 showShareSheet = true
             }
+        }
+    }
+
+    private func loadCompany() async {
+        guard let companyId = authManager.currentUser?.companyId, !companyId.isEmpty else {
+            return
+        }
+
+        do {
+            let fetchedCompany = try await NetworkService.shared.fetchCompany(id: companyId)
+            await MainActor.run {
+                company = fetchedCompany
+            }
+        } catch {
+            // Silently fail - company logo is optional
+            #if DEBUG
+            print("⚠️ Failed to load company for PDF: \(error)")
+            #endif
         }
     }
 }

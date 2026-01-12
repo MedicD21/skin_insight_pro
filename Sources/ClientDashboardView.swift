@@ -4,9 +4,11 @@ import UIKit
 struct ClientDashboardView: View {
     @ObservedObject var theme = ThemeManager.shared
     @StateObject private var viewModel = ClientDashboardViewModel()
+    @StateObject private var authManager = AuthenticationManager.shared
     @State private var selectedClient: AppClient?
     @State private var showAddClient = false
     @State private var searchText = ""
+    @State private var company: Company?
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
@@ -53,6 +55,7 @@ struct ClientDashboardView: View {
         }
         .task {
             await viewModel.loadClients()
+            await loadCompany()
         }
     }
     
@@ -110,10 +113,7 @@ struct ClientDashboardView: View {
         .navigationTitle("Clients")
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                Image("logo")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 32)
+                companyLogoView
             }
 
             ToolbarItemGroup(placement: .topBarTrailing) {
@@ -125,6 +125,33 @@ struct ClientDashboardView: View {
                     }
                 }
                 .keyboardShortcut("n", modifiers: .command)
+            }
+        }
+    }
+
+    private var companyLogoView: some View {
+        Group {
+            if let logoUrl = company?.logoUrl, let url = URL(string: logoUrl) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 32)
+                    default:
+                        // Fallback to default app logo
+                        Image("logo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 32)
+                    }
+                }
+            } else {
+                Image("logo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(height: 32)
             }
         }
     }
@@ -207,6 +234,22 @@ struct ClientDashboardView: View {
 
     private func dismissKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+
+    private func loadCompany() async {
+        guard let companyId = authManager.currentUser?.companyId, !companyId.isEmpty else {
+            return
+        }
+
+        do {
+            let fetchedCompany = try await NetworkService.shared.fetchCompany(id: companyId)
+            company = fetchedCompany
+        } catch {
+            // Silently fail - company logo is optional
+            #if DEBUG
+            print("⚠️ Failed to load company: \(error)")
+            #endif
+        }
     }
 }
 

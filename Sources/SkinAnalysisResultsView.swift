@@ -6,6 +6,7 @@ extension Notification.Name {
 
 struct SkinAnalysisResultsView: View {
     @ObservedObject var theme = ThemeManager.shared
+    @StateObject private var authManager = AuthenticationManager.shared
     let client: AppClient
     let image: UIImage
     let analysisResult: AnalysisData
@@ -28,6 +29,7 @@ struct SkinAnalysisResultsView: View {
     @State private var recommendedRoutine: SkinCareRoutine
     @State private var editedRecommendations: [String]
     @State private var isEditingRecommendations = false
+    @State private var company: Company?
     @State private var newRecommendationDrafts: [String]
     @FocusState private var notesFieldFocused: Bool
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
@@ -169,6 +171,7 @@ struct SkinAnalysisResultsView: View {
         }
         .task {
             await viewModel.loadFlaggedProducts(for: client)
+            await loadCompany()
         }
     }
     
@@ -998,7 +1001,8 @@ struct SkinAnalysisResultsView: View {
                 notes: notes.isEmpty ? nil : notes,
                 productsUsed: productsUsed.isEmpty ? nil : productsUsed,
                 treatmentsPerformed: treatmentsPerformed.isEmpty ? nil : treatmentsPerformed,
-                timestamp: Date()
+                timestamp: Date(),
+                company: company
             ) else {
                 await MainActor.run {
                     isExportingPDF = false
@@ -1491,6 +1495,24 @@ struct SkinAnalysisResultsView: View {
         }
 
         isLoadingProducts = false
+    }
+
+    private func loadCompany() async {
+        guard let companyId = authManager.currentUser?.companyId, !companyId.isEmpty else {
+            return
+        }
+
+        do {
+            let fetchedCompany = try await NetworkService.shared.fetchCompany(id: companyId)
+            await MainActor.run {
+                company = fetchedCompany
+            }
+        } catch {
+            // Silently fail - company logo is optional
+            #if DEBUG
+            print("⚠️ Failed to load company for PDF: \(error)")
+            #endif
+        }
     }
 
 }

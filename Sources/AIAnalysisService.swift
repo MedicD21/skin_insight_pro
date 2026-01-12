@@ -15,6 +15,8 @@ class AIAnalysisService {
         knownSensitivities: String?,
         medications: String?,
         productsToAvoid: String?,
+        isPregnant: Bool?,
+        isBreastfeeding: Bool?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -36,6 +38,8 @@ class AIAnalysisService {
                 knownSensitivities: knownSensitivities,
                 medications: medications,
                 productsToAvoid: productsToAvoid,
+                isPregnant: isPregnant,
+                isBreastfeeding: isBreastfeeding,
                 manualSkinType: manualSkinType,
                 manualHydrationLevel: manualHydrationLevel,
                 manualSensitivity: manualSensitivity,
@@ -56,6 +60,8 @@ class AIAnalysisService {
                 knownSensitivities: knownSensitivities,
                 medications: medications,
                 productsToAvoid: productsToAvoid,
+                isPregnant: isPregnant,
+                isBreastfeeding: isBreastfeeding,
                 manualSkinType: manualSkinType,
                 manualHydrationLevel: manualHydrationLevel,
                 manualSensitivity: manualSensitivity,
@@ -79,6 +85,8 @@ class AIAnalysisService {
         knownSensitivities: String?,
         medications: String?,
         productsToAvoid: String?,
+        isPregnant: Bool?,
+        isBreastfeeding: Bool?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -194,7 +202,9 @@ class AIAnalysisService {
             products: products,
             allergies: allergies,
             sensitivities: knownSensitivities,
-            productsToAvoid: productsToAvoid
+            productsToAvoid: productsToAvoid,
+            isPregnant: isPregnant,
+            isBreastfeeding: isBreastfeeding
         )
         productRecommendations = matchedProducts
 
@@ -297,6 +307,8 @@ class AIAnalysisService {
         knownSensitivities: String?,
         medications: String?,
         productsToAvoid: String?,
+        isPregnant: Bool?,
+        isBreastfeeding: Bool?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -335,6 +347,8 @@ class AIAnalysisService {
             knownSensitivities: knownSensitivities,
             medications: medications,
             productsToAvoid: productsToAvoid,
+            isPregnant: isPregnant,
+            isBreastfeeding: isBreastfeeding,
             manualSkinType: manualSkinType,
             manualHydrationLevel: manualHydrationLevel,
             manualSensitivity: manualSensitivity,
@@ -388,6 +402,8 @@ class AIAnalysisService {
                 knownSensitivities: knownSensitivities,
                 medications: medications,
                 productsToAvoid: productsToAvoid,
+                isPregnant: isPregnant,
+                isBreastfeeding: isBreastfeeding,
                 manualSkinType: manualSkinType,
                 manualHydrationLevel: manualHydrationLevel,
                 manualSensitivity: manualSensitivity,
@@ -411,6 +427,8 @@ class AIAnalysisService {
             knownSensitivities: knownSensitivities,
             medications: medications,
             productsToAvoid: productsToAvoid,
+            isPregnant: isPregnant,
+            isBreastfeeding: isBreastfeeding,
             manualSkinType: manualSkinType,
             manualHydrationLevel: manualHydrationLevel,
             manualSensitivity: manualSensitivity,
@@ -434,6 +452,8 @@ class AIAnalysisService {
         knownSensitivities: String?,
         medications: String?,
         productsToAvoid: String?,
+        isPregnant: Bool?,
+        isBreastfeeding: Bool?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -471,6 +491,8 @@ class AIAnalysisService {
                         knownSensitivities: knownSensitivities,
                         medications: medications,
                         productsToAvoid: productsToAvoid,
+                        isPregnant: isPregnant,
+                        isBreastfeeding: isBreastfeeding,
                         manualSkinType: manualSkinType,
                         manualHydrationLevel: manualHydrationLevel,
                         manualSensitivity: manualSensitivity,
@@ -501,6 +523,8 @@ class AIAnalysisService {
                     knownSensitivities: knownSensitivities,
                     medications: medications,
                     productsToAvoid: productsToAvoid,
+                    isPregnant: isPregnant,
+                    isBreastfeeding: isBreastfeeding,
                     manualSkinType: manualSkinType,
                     manualHydrationLevel: manualHydrationLevel,
                     manualSensitivity: manualSensitivity,
@@ -725,7 +749,9 @@ class AIAnalysisService {
         products: [Product],
         allergies: String?,
         sensitivities: String?,
-        productsToAvoid: String?
+        productsToAvoid: String?,
+        isPregnant: Bool?,
+        isBreastfeeding: Bool?
     ) -> [String] {
         var matchedProducts: [String] = []
 
@@ -734,6 +760,13 @@ class AIAnalysisService {
         ingredientsToAvoid.append(contentsOf: parseAvoidList(allergies))
         ingredientsToAvoid.append(contentsOf: parseAvoidList(sensitivities))
         ingredientsToAvoid.append(contentsOf: parseAvoidList(productsToAvoid))
+
+        // Add pregnancy/breastfeeding contraindications
+        if isPregnant == true || isBreastfeeding == true {
+            ingredientsToAvoid.append("salicylic acid")
+            ingredientsToAvoid.append("retinol")
+        }
+
         if !ingredientsToAvoid.isEmpty {
             ingredientsToAvoid = Array(Set(ingredientsToAvoid))
         }
@@ -1080,6 +1113,8 @@ class AIAnalysisService {
         knownSensitivities: String?,
         medications: String?,
         productsToAvoid: String?,
+        isPregnant: Bool?,
+        isBreastfeeding: Bool?,
         manualSkinType: String?,
         manualHydrationLevel: String?,
         manualSensitivity: String?,
@@ -1170,6 +1205,12 @@ class AIAnalysisService {
         }
         if let productsToAvoid = productsToAvoid, !productsToAvoid.isEmpty {
             prompt += "⚠️ PRODUCTS TO AVOID: \(productsToAvoid) - DO NOT recommend any products containing these ingredients or products\n"
+        }
+        if isPregnant == true {
+            prompt += "⚠️ PREGNANCY STATUS: Client is currently pregnant. DO NOT recommend products containing salicylic acid or retinol. These ingredients are contraindicated during pregnancy.\n"
+        }
+        if isBreastfeeding == true {
+            prompt += "⚠️ BREASTFEEDING STATUS: Client is currently breastfeeding. DO NOT recommend products containing salicylic acid or retinol. These ingredients are contraindicated while breastfeeding.\n"
         }
         if let injectablesHistory = injectablesHistory, !injectablesHistory.isEmpty {
             prompt += "Injectables History: \(injectablesHistory)\n"

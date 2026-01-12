@@ -15,6 +15,8 @@ struct EditClientView: View {
     @State private var knownSensitivities: String
     @State private var medications: String
     @State private var productsToAvoid: String
+    @State private var isPregnant: Bool
+    @State private var isBreastfeeding: Bool
     @State private var fillersDate: Date?
     @State private var biostimulatorsDate: Date?
     @State private var isLoading = false
@@ -40,6 +42,8 @@ struct EditClientView: View {
         _knownSensitivities = State(initialValue: client.knownSensitivities ?? "")
         _medications = State(initialValue: client.medications ?? "")
         _productsToAvoid = State(initialValue: client.productsToAvoid ?? "")
+        _isPregnant = State(initialValue: client.isPregnant ?? false)
+        _isBreastfeeding = State(initialValue: client.isBreastfeeding ?? false)
 
         // Parse dates from ISO strings if they exist
         if let fillersDateString = client.fillersDate,
@@ -211,6 +215,40 @@ struct EditClientView: View {
                     text: $productsToAvoid,
                     field: .productsToAvoid
                 )
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Safety Considerations")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(theme.primaryText)
+                        .padding(.top, 8)
+
+                    Toggle(isOn: $isPregnant) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "figure.and.child.holdinghands")
+                                .foregroundColor(theme.accent)
+                            Text("Currently Pregnant")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.primaryText)
+                        }
+                    }
+                    .tint(theme.accent)
+
+                    Toggle(isOn: $isBreastfeeding) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "figure.and.child.holdinghands")
+                                .foregroundColor(theme.accent)
+                            Text("Currently Breastfeeding")
+                                .font(.system(size: 16))
+                                .foregroundColor(theme.primaryText)
+                        }
+                    }
+                    .tint(theme.accent)
+
+                    Text("Products with salicylic acid or retinol will be flagged as contraindicated")
+                        .font(.system(size: 12))
+                        .foregroundColor(theme.secondaryText)
+                        .padding(.top, 4)
+                }
 
                 Divider()
                     .padding(.vertical, 8)
@@ -426,7 +464,9 @@ struct EditClientView: View {
             fillersDate: fillersDateString,
             biostimulatorsDate: biostimulatorsDateString,
             consentSignature: client.consentSignature,
-            consentDate: client.consentDate
+            consentDate: client.consentDate,
+            isPregnant: isPregnant,
+            isBreastfeeding: isBreastfeeding
         )
         
         Task {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecommendedRoutineView: View {
     @ObservedObject var theme = ThemeManager.shared
+    @StateObject private var authManager = AuthenticationManager.shared
     @Environment(\.dismiss) var dismiss
 
     let client: Client
@@ -15,6 +16,7 @@ struct RecommendedRoutineView: View {
     @State private var exportedPDF: Data?
     @State private var showShareSheet = false
     @State private var showAddStepSheet = false
+    @State private var company: Company?
 
     enum RoutineTab {
         case morning, evening
@@ -398,9 +400,15 @@ struct RecommendedRoutineView: View {
         isExporting = true
 
         Task {
+            // Load company for branding
+            if company == nil {
+                await loadCompany()
+            }
+
             guard let pdfData = PDFExportManager.shared.generateRoutinePDF(
                 client: client,
-                routine: routine
+                routine: routine,
+                company: company
             ) else {
                 await MainActor.run {
                     isExporting = false
@@ -460,6 +468,24 @@ struct RecommendedRoutineView: View {
                 value.wrappedValue = trimmed.isEmpty ? nil : newValue
             }
         )
+    }
+
+    private func loadCompany() async {
+        guard let companyId = authManager.currentUser?.companyId, !companyId.isEmpty else {
+            return
+        }
+
+        do {
+            let fetchedCompany = try await NetworkService.shared.fetchCompany(id: companyId)
+            await MainActor.run {
+                company = fetchedCompany
+            }
+        } catch {
+            // Silently fail - company logo is optional
+            #if DEBUG
+            print("⚠️ Failed to load company for PDF: \(error)")
+            #endif
+        }
     }
 }
 

@@ -1086,6 +1086,12 @@ class ClientDetailViewModel: ObservableObject {
                     .forEach { terms.append($0) }
             }
 
+            // Add pregnancy/breastfeeding contraindications
+            if client.isPregnant == true || client.isBreastfeeding == true {
+                terms.append("salicylic acid")
+                terms.append("retinol")
+            }
+
             if terms.isEmpty {
                 flaggedProducts = []
                 return

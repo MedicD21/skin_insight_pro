@@ -1,5 +1,5 @@
-import SwiftUI
 import PDFKit
+import SwiftUI
 import UIKit
 
 struct PDFPreviewView: UIViewRepresentable {
@@ -17,7 +17,6 @@ struct PDFPreviewView: UIViewRepresentable {
         pdfView.document = PDFDocument(data: data)
     }
 }
-
 
 #Preview {
     let client = Client(

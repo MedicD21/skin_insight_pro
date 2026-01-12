@@ -56,6 +56,8 @@ struct AppClient: Identifiable, Hashable, Codable {
     var biostimulatorsDate: String?
     var consentSignature: String?
     var consentDate: String?
+    var isPregnant: Bool?
+    var isBreastfeeding: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -77,6 +79,8 @@ struct AppClient: Identifiable, Hashable, Codable {
         case biostimulatorsDate = "biostimulators_date"
         case consentSignature = "consent_signature"
         case consentDate = "consent_date"
+        case isPregnant = "is_pregnant"
+        case isBreastfeeding = "is_breastfeeding"
     }
 }
 
@@ -305,6 +309,8 @@ struct CreateClientRequest: Codable {
         let knownSensitivities: String
         let medications: String
         let profileImageUrl: String?
+        let isPregnant: Bool?
+        let isBreastfeeding: Bool?
 
         enum CodingKeys: String, CodingKey {
             case id
@@ -319,6 +325,8 @@ struct CreateClientRequest: Codable {
             case knownSensitivities = "known_sensitivities"
             case medications
             case profileImageUrl = "profile_image_url"
+            case isPregnant = "is_pregnant"
+            case isBreastfeeding = "is_breastfeeding"
         }
     }
 }
