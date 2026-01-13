@@ -9,12 +9,14 @@ struct ProductImportView: View {
     @State private var isImporting = false
     @State private var importedProducts: [Product] = []
     @State private var importErrors: [String] = []
+    @State private var importNotes: [String] = []
     @State private var showPreview = false
     @State private var csvText = ""
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var showShareSheet = false
     @State private var csvFileURL: URL?
+    @State private var selectedFileName = ""
 
     let validSkinTypes = ["Normal", "Dry", "Oily", "Combination", "Sensitive"]
     let validConcerns = AppConstants.concernOptions
@@ -52,6 +54,13 @@ struct ProductImportView: View {
                     ActivityViewController(activityItems: [url])
                 }
             }
+            .fileImporter(
+                isPresented: $showFilePicker,
+                allowedContentTypes: [.commaSeparatedText, .plainText],
+                allowsMultipleSelection: false
+            ) { result in
+                handleFileImport(result)
+            }
         }
     }
 
@@ -79,7 +88,7 @@ struct ProductImportView: View {
             VStack(alignment: .leading, spacing: 8) {
                 instructionRow(number: "1", text: "Download the CSV template below")
                 instructionRow(number: "2", text: "Fill in your product data")
-                instructionRow(number: "3", text: "Paste the CSV content below or upload a file")
+                instructionRow(number: "3", text: "Upload your CSV file")
                 instructionRow(number: "4", text: "Review and import")
             }
         }
@@ -105,18 +114,23 @@ struct ProductImportView: View {
 
     private var csvInputSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("CSV Content")
+            Text("CSV Upload")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundColor(theme.primaryText)
 
-            Text("Paste your CSV data below (including header row)")
+            Text("Upload a CSV file that includes the header row")
                 .font(.system(size: 14))
                 .foregroundColor(theme.secondaryText)
 
-            TextEditor(text: $csvText)
-                .font(.system(size: 13, design: .monospaced))
-                .foregroundColor(theme.primaryText)
-                .frame(minHeight: 200)
+            VStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text")
+                        .foregroundColor(theme.secondaryText)
+                    Text(selectedFileName.isEmpty ? "No file selected" : selectedFileName)
+                        .font(.system(size: 14))
+                        .foregroundColor(selectedFileName.isEmpty ? theme.secondaryText : theme.primaryText)
+                    Spacer()
+                }
                 .padding(12)
                 .background(theme.tertiaryBackground)
                 .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
@@ -124,6 +138,21 @@ struct ProductImportView: View {
                     RoundedRectangle(cornerRadius: theme.radiusMedium)
                         .stroke(theme.border, lineWidth: 1)
                 )
+
+                Button(action: { showFilePicker = true }) {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "tray.and.arrow.down.fill")
+                        Text("Upload CSV File")
+                        Spacer()
+                    }
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(height: 48)
+                    .background(theme.accent)
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                }
+            }
 
             Button(action: { parseCSV() }) {
                 HStack {
@@ -180,6 +209,37 @@ struct ProductImportView: View {
         }
     }
 
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let isAccessing = url.startAccessingSecurityScopedResource()
+            defer {
+                if isAccessing {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
+
+            do {
+                let data = try Data(contentsOf: url)
+                guard let content = String(data: data, encoding: .utf8) else {
+                    errorMessage = "Unable to read the CSV file. Please ensure it's saved as UTF-8."
+                    showError = true
+                    return
+                }
+                csvText = content
+                selectedFileName = url.lastPathComponent
+                parseCSV()
+            } catch {
+                errorMessage = "Failed to read CSV file: \(error.localizedDescription)"
+                showError = true
+            }
+        case .failure(let error):
+            errorMessage = "Failed to select file: \(error.localizedDescription)"
+            showError = true
+        }
+    }
+
     private var previewView: some View {
         ScrollView {
             VStack(spacing: 24) {
@@ -187,6 +247,10 @@ struct ProductImportView: View {
 
                 if !importErrors.isEmpty {
                     errorsCard
+                }
+
+                if !importNotes.isEmpty {
+                    notesCard
                 }
 
                 if !importedProducts.isEmpty {
@@ -224,6 +288,15 @@ struct ProductImportView: View {
                         .font(.system(size: 32, weight: .bold))
                         .foregroundColor(importErrors.isEmpty ? .green : .red)
                     Text("Errors")
+                        .font(.system(size: 14))
+                        .foregroundColor(theme.secondaryText)
+                }
+
+                VStack(spacing: 4) {
+                    Text("\(importNotes.count)")
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.orange)
+                    Text("Notes")
                         .font(.system(size: 14))
                         .foregroundColor(theme.secondaryText)
                 }
@@ -317,6 +390,36 @@ struct ProductImportView: View {
         .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
     }
 
+    private var notesCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "info.circle.fill")
+                    .foregroundColor(.orange)
+                Text("Import Notes")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(theme.primaryText)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(importNotes.prefix(10), id: \.self) { note in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 6))
+                            .foregroundColor(.orange)
+                            .padding(.top, 6)
+
+                        Text(note)
+                            .font(.system(size: 13))
+                            .foregroundColor(theme.primaryText)
+                    }
+                }
+            }
+        }
+        .padding(16)
+        .background(theme.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+    }
+
     private var actionButtons: some View {
         VStack(spacing: 12) {
             Button(action: { performImport() }) {
@@ -361,7 +464,7 @@ struct ProductImportView: View {
     // MARK: - Functions
 
     private func downloadCSVTemplate() {
-        let template = "name,brand,category,description,ingredients,skin_types,concerns,price,image_url,is_active\nHydrating Serum,CeraVe,Serum,Lightweight hydrating serum,Hyaluronic Acid,Normal,Dryness,24.99,,TRUE"
+        let template = "product_image,name,brand,category,price,description,key_ingredients,all_ingredients,usage_guidelines,skin_types,concerns\n,Hydrating Serum,CeraVe,Serum,24.99,Lightweight hydrating serum for all skin types,Hyaluronic Acid,,,Normal,Dryness"
 
         // Create temporary file
         let tempDir = FileManager.default.temporaryDirectory
@@ -380,18 +483,19 @@ struct ProductImportView: View {
 
     private func pasteExampleData() {
         csvText = """
-name,brand,category,description,ingredients,skin_types,concerns,price,image_url,is_active
-Hydrating Serum,CeraVe,Serum,Lightweight hydrating serum for all skin types,Hyaluronic Acid,Normal,Dryness,24.99,,TRUE
-Gentle Cleanser,La Roche-Posay,Cleanser,Mild foaming cleanser for sensitive skin,Glycerin,Sensitive,Redness,18.50,,TRUE
-Retinol Night Cream,The Ordinary,Moisturizer,Anti-aging night treatment with retinol,Retinol,Normal,Aging,12.99,,TRUE
-Vitamin C Serum,Skinceuticals,Serum,Brightening serum with pure vitamin C,L-Ascorbic Acid,Normal,Dark Spots,165.00,,TRUE
-Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,Oily,Pores,6.50,,TRUE
+product_image,name,brand,category,price,description,key_ingredients,all_ingredients,usage_guidelines,skin_types,concerns
+,Hydrating Serum,CeraVe,Serum,24.99,Lightweight hydrating serum for all skin types,Hyaluronic Acid,,,Normal,Dryness
+,Gentle Cleanser,La Roche-Posay,Cleanser,18.50,Mild foaming cleanser for sensitive skin,Glycerin,,,Sensitive,Redness
+,Retinol Night Cream,The Ordinary,Moisturizer,12.99,Anti-aging night treatment with retinol,Retinol,,,Normal,Aging
+,Vitamin C Serum,Skinceuticals,Serum,165.00,Brightening serum with pure vitamin C,L-Ascorbic Acid,,,Normal,Dark Spots
+,Niacinamide Solution,The Ordinary,Treatment,6.50,Pore-refining treatment,Niacinamide,,,Oily,Pores
 """
     }
 
     private func parseCSV() {
         importedProducts = []
         importErrors = []
+        importNotes = []
 
         let lines = csvText.components(separatedBy: .newlines)
         guard lines.count > 1 else {
@@ -411,14 +515,15 @@ Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,
             let columns = parseCSVLine(line)
 
             guard columns.count >= 3 else {
-                importErrors.append("Row \(rowNumber): Not enough columns (need at least name, brand, category)")
+                importErrors.append("Row \(rowNumber): Not enough columns (need at least product_image, name, brand)")
                 continue
             }
 
             // Required fields
-            let name = columns[0].trimmingCharacters(in: .whitespaces)
-            let brand = columns[1].trimmingCharacters(in: .whitespaces)
-            let category = columns[2].trimmingCharacters(in: .whitespaces)
+            let imageUrl = columns[0].trimmingCharacters(in: .whitespaces)
+            let name = columns[1].trimmingCharacters(in: .whitespaces)
+            let brand = columns[2].trimmingCharacters(in: .whitespaces)
+            let category = columns.count > 3 ? columns[3].trimmingCharacters(in: .whitespaces) : ""
 
             if name.isEmpty {
                 importErrors.append("Row \(rowNumber): Product name is required")
@@ -429,32 +534,38 @@ Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,
                 continue
             }
             if category.isEmpty {
-                importErrors.append("Row \(rowNumber): Category is required")
-                continue
+                importNotes.append("Row \(rowNumber): Category missing, please assign manually")
             }
 
             // Optional fields
-            let description = columns.count > 3 ? columns[3].trimmingCharacters(in: .whitespaces) : ""
-            let ingredients = columns.count > 4 ? columns[4].trimmingCharacters(in: .whitespaces) : ""
+            let priceStr = columns.count > 4 ? columns[4].trimmingCharacters(in: .whitespaces) : ""
+            let description = columns.count > 5 ? columns[5].trimmingCharacters(in: .whitespaces) : ""
+            let keyIngredients = columns.count > 6 ? columns[6].trimmingCharacters(in: .whitespaces) : ""
+            let allIngredients = columns.count > 7 ? columns[7].trimmingCharacters(in: .whitespaces) : ""
+            let usageGuidelines = columns.count > 8 ? columns[8].trimmingCharacters(in: .whitespaces) : ""
 
             // Parse skin types
             var skinTypes: [String] = []
-            if columns.count > 5 {
-                let skinTypesStr = columns[5].trimmingCharacters(in: .whitespaces)
+            if columns.count > 9 {
+                let skinTypesStr = columns[9].trimmingCharacters(in: .whitespaces)
                 if !skinTypesStr.isEmpty {
-                    skinTypes = skinTypesStr.components(separatedBy: ",")
+                    skinTypes = skinTypesStr
+                        .components(separatedBy: ",")
+                        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                        .filter { !$0.isEmpty }
                     for skinType in skinTypes {
                         if !validSkinTypes.contains(skinType) {
-                            importErrors.append("Row \(rowNumber): Invalid skin type '\(skinType)'")
+                            importNotes.append("Row \(rowNumber): Invalid skin type '\(skinType)' - please assign manually")
                         }
                     }
+                    skinTypes = skinTypes.filter { validSkinTypes.contains($0) }
                 }
             }
 
             // Parse concerns
             var concerns: [String] = []
-            if columns.count > 6 {
-                let concernsStr = columns[6].trimmingCharacters(in: .whitespaces)
+            if columns.count > 10 {
+                let concernsStr = columns[10].trimmingCharacters(in: .whitespaces)
                 if !concernsStr.isEmpty {
                     let rawConcerns = concernsStr.components(separatedBy: ",")
                         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -467,51 +578,44 @@ Niacinamide Solution,The Ordinary,Treatment,Pore-refining treatment,Niacinamide,
                                 normalizedConcerns.append(normalized)
                             }
                         } else {
-                            importErrors.append("Row \(rowNumber): Invalid concern '\(concern)'")
+                            importNotes.append("Row \(rowNumber): Invalid concern '\(concern)' - please assign manually")
                         }
                     }
 
                     for concern in normalizedConcerns {
                         if !validConcerns.contains(where: { $0.caseInsensitiveCompare(concern) == .orderedSame }) {
-                            importErrors.append("Row \(rowNumber): Invalid concern '\(concern)'")
+                            importNotes.append("Row \(rowNumber): Invalid concern '\(concern)' - please assign manually")
                         }
                     }
 
-                    concerns = normalizedConcerns
+                    concerns = normalizedConcerns.filter { normalized in
+                        validConcerns.contains(where: { $0.caseInsensitiveCompare(normalized) == .orderedSame })
+                    }
                 }
             }
 
             // Parse price
             var price: Double? = nil
-            if columns.count > 7 {
-                let priceStr = columns[7].trimmingCharacters(in: .whitespaces)
-                if !priceStr.isEmpty {
-                    if let parsedPrice = Double(priceStr) {
-                        price = parsedPrice
-                    } else {
-                        importErrors.append("Row \(rowNumber): Invalid price format '\(priceStr)'")
-                    }
+            if !priceStr.isEmpty {
+                if let parsedPrice = Double(priceStr) {
+                    price = parsedPrice
+                } else {
+                    importErrors.append("Row \(rowNumber): Invalid price format '\(priceStr)'")
                 }
             }
 
-            // Parse image URL
-            let imageUrl = columns.count > 8 ? columns[8].trimmingCharacters(in: .whitespaces) : ""
-
-            // Parse is_active
-            var isActive = true
-            if columns.count > 9 {
-                let isActiveStr = columns[9].trimmingCharacters(in: .whitespaces).uppercased()
-                isActive = isActiveStr == "TRUE" || isActiveStr == "1" || isActiveStr == "YES"
-            }
+            let isActive = true
 
             let product = Product(
                 id: nil,
                 userId: AuthenticationManager.shared.currentUser?.id,
                 name: name,
                 brand: brand,
-                category: category,
+                category: category.isEmpty ? nil : category,
                 description: description.isEmpty ? nil : description,
-                ingredients: ingredients.isEmpty ? nil : ingredients,
+                ingredients: keyIngredients.isEmpty ? nil : keyIngredients,
+                allIngredients: allIngredients.isEmpty ? nil : allIngredients,
+                usageGuidelines: usageGuidelines.isEmpty ? nil : usageGuidelines,
                 skinTypes: skinTypes.isEmpty ? nil : skinTypes,
                 concerns: concerns.isEmpty ? nil : concerns,
                 imageUrl: imageUrl.isEmpty ? nil : imageUrl,

@@ -11,7 +11,7 @@ struct TrendingGraphsView: View {
     let client: Client
     let analyses: [SkinAnalysis]
 
-    @State private var selectedMetric: MetricType = .hydration
+    @State private var selectedMetric: TrendingMetric = .hydration
     @State private var isExporting = false
     @State private var exportedPDF: Data?
     @State private var showShareSheet = false
@@ -19,46 +19,6 @@ struct TrendingGraphsView: View {
     @State private var showMailComposer = false
     @State private var showMailError = false
     @State private var mailErrorMessage = ""
-
-    enum MetricType: String, CaseIterable {
-        case hydration = "Hydration"
-        case oiliness = "Oiliness"
-        case texture = "Texture"
-        case pores = "Pores"
-        case wrinkles = "Wrinkles"
-        case redness = "Redness"
-        case darkSpots = "Dark Spots"
-        case acne = "Acne"
-        case all = "All Metrics"
-
-        var icon: String {
-            switch self {
-            case .hydration: return "drop.fill"
-            case .oiliness: return "sparkles"
-            case .texture: return "hand.raised.fill"
-            case .pores: return "circle.grid.cross.fill"
-            case .wrinkles: return "waveform.path"
-            case .redness: return "circle.fill"
-            case .darkSpots: return "sun.max.fill"
-            case .acne: return "exclamationmark.circle.fill"
-            case .all: return "chart.line.uptrend.xyaxis"
-            }
-        }
-
-        var color: Color {
-            switch self {
-            case .hydration: return .cyan
-            case .oiliness: return .yellow
-            case .texture: return .purple
-            case .pores: return .orange
-            case .wrinkles: return .brown
-            case .redness: return .red
-            case .darkSpots: return .indigo
-            case .acne: return .pink
-            case .all: return .white
-            }
-        }
-    }
 
     private var sortedAnalyses: [SkinAnalysis] {
         analyses.sorted { $0.timestamp < $1.timestamp }
@@ -161,7 +121,7 @@ struct TrendingGraphsView: View {
     private var metricFilterSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
-                ForEach(MetricType.allCases, id: \.self) { metric in
+                ForEach(TrendingMetric.allCases, id: \.self) { metric in
                     Button(action: { selectedMetric = metric }) {
                         HStack(spacing: 8) {
                             Image(systemName: metric.icon)
@@ -251,7 +211,7 @@ struct TrendingGraphsView: View {
                 .foregroundColor(theme.primaryText)
 
             Chart {
-                ForEach(MetricType.allCases.filter { $0 != .all }, id: \.self) { metric in
+                ForEach(TrendingMetric.allCases.filter { $0 != .all }, id: \.self) { metric in
                     ForEach(sortedAnalyses, id: \.id) { analysis in
                         LineMark(
                             x: .value("Date", analysis.timestamp),
@@ -265,14 +225,14 @@ struct TrendingGraphsView: View {
             }
             .chartYScale(domain: 0...10)
             .chartForegroundStyleScale([
-                MetricType.hydration.rawValue: MetricType.hydration.color,
-                MetricType.oiliness.rawValue: MetricType.oiliness.color,
-                MetricType.texture.rawValue: MetricType.texture.color,
-                MetricType.pores.rawValue: MetricType.pores.color,
-                MetricType.wrinkles.rawValue: MetricType.wrinkles.color,
-                MetricType.redness.rawValue: MetricType.redness.color,
-                MetricType.darkSpots.rawValue: MetricType.darkSpots.color,
-                MetricType.acne.rawValue: MetricType.acne.color
+                TrendingMetric.hydration.rawValue: TrendingMetric.hydration.color,
+                TrendingMetric.oiliness.rawValue: TrendingMetric.oiliness.color,
+                TrendingMetric.texture.rawValue: TrendingMetric.texture.color,
+                TrendingMetric.pores.rawValue: TrendingMetric.pores.color,
+                TrendingMetric.wrinkles.rawValue: TrendingMetric.wrinkles.color,
+                TrendingMetric.redness.rawValue: TrendingMetric.redness.color,
+                TrendingMetric.darkSpots.rawValue: TrendingMetric.darkSpots.color,
+                TrendingMetric.acne.rawValue: TrendingMetric.acne.color
             ])
             .chartXAxis {
                 AxisMarks(values: .automatic) { value in
@@ -312,7 +272,7 @@ struct TrendingGraphsView: View {
             if selectedMetric == .all {
                 // Show stats for all metrics
                 VStack(spacing: 12) {
-                    ForEach(MetricType.allCases.filter { $0 != .all }, id: \.self) { metric in
+                    ForEach(TrendingMetric.allCases.filter { $0 != .all }, id: \.self) { metric in
                         metricStatRow(metric: metric)
                     }
                 }
@@ -326,7 +286,7 @@ struct TrendingGraphsView: View {
         .clipShape(RoundedRectangle(cornerRadius: theme.radiusLarge))
     }
 
-    private func metricStatRow(metric: MetricType) -> some View {
+    private func metricStatRow(metric: TrendingMetric) -> some View {
         let values = sortedAnalyses.map { getMetricValue(for: $0, metric: metric) }
         let avg = values.reduce(0, +) / Double(values.count)
         let latest = values.last ?? 0
@@ -369,7 +329,7 @@ struct TrendingGraphsView: View {
         .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
     }
 
-    private func metricDetailedStats(metric: MetricType) -> some View {
+    private func metricDetailedStats(metric: TrendingMetric) -> some View {
         let values = sortedAnalyses.map { getMetricValue(for: $0, metric: metric) }
         let avg = values.reduce(0, +) / Double(values.count)
         let min = values.min() ?? 0
@@ -441,7 +401,7 @@ struct TrendingGraphsView: View {
         .opacity((client.email == nil || client.email?.isEmpty == true) ? 0.5 : 1.0)
     }
 
-    private func getMetricValue(for analysis: SkinAnalysis, metric: MetricType) -> Double {
+    private func getMetricValue(for analysis: SkinAnalysis, metric: TrendingMetric) -> Double {
         switch metric {
         case .hydration: return analysis.hydration
         case .oiliness: return analysis.oiliness
@@ -464,7 +424,12 @@ struct TrendingGraphsView: View {
                 await loadCompany()
             }
 
-            let pdfData = PDFExportManager.shared.generateTrendingPDF(client: client, analyses: sortedAnalyses, company: company)
+            let pdfData = PDFExportManager.shared.generateTrendingPDF(
+                client: client,
+                analyses: sortedAnalyses,
+                selectedMetric: selectedMetric,
+                company: company
+            )
 
             await MainActor.run {
                 exportedPDF = pdfData
@@ -517,7 +482,12 @@ struct TrendingGraphsView: View {
                     await loadCompany()
                 }
 
-                let pdfData = PDFExportManager.shared.generateTrendingPDF(client: client, analyses: sortedAnalyses, company: company)
+                let pdfData = PDFExportManager.shared.generateTrendingPDF(
+                    client: client,
+                    analyses: sortedAnalyses,
+                    selectedMetric: selectedMetric,
+                    company: company
+                )
 
                 await MainActor.run {
                     exportedPDF = pdfData
@@ -563,3 +533,32 @@ struct TrendingGraphsView: View {
     }
 }
 
+private extension TrendingMetric {
+    var icon: String {
+        switch self {
+        case .hydration: return "drop.fill"
+        case .oiliness: return "sparkles"
+        case .texture: return "hand.raised.fill"
+        case .pores: return "circle.grid.cross.fill"
+        case .wrinkles: return "waveform.path"
+        case .redness: return "circle.fill"
+        case .darkSpots: return "sun.max.fill"
+        case .acne: return "exclamationmark.circle.fill"
+        case .all: return "chart.line.uptrend.xyaxis"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .hydration: return .cyan
+        case .oiliness: return .yellow
+        case .texture: return .purple
+        case .pores: return .orange
+        case .wrinkles: return .brown
+        case .redness: return .red
+        case .darkSpots: return .indigo
+        case .acne: return .pink
+        case .all: return .white
+        }
+    }
+}

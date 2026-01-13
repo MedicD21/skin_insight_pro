@@ -13,6 +13,10 @@ struct ProductCatalogView: View {
     @State private var selectedSkinTypes: Set<String> = []
     @State private var selectedConcerns: Set<String> = []
     @Environment(\.dismiss) var dismiss
+    @State private var isSelecting = false
+    @State private var selectedProductIds: Set<String> = []
+    @State private var showBulkDeleteConfirm = false
+    @State private var showMissingOnly = false
 
     var body: some View {
         ZStack {
@@ -36,10 +40,23 @@ struct ProductCatalogView: View {
                         } else {
                             LazyVStack(spacing: 12) {
                                 ForEach(filteredProducts) { product in
-                                    ProductRowView(product: product)
-                                        .onTapGesture {
+                                    let missingCount = viewModel.missingFields(for: product).count
+                                    ProductRowView(
+                                        product: product,
+                                        missingCount: missingCount,
+                                        isSelecting: isSelecting,
+                                        isSelected: selectedProductIds.contains(product.id ?? ""),
+                                        onSelectToggle: {
+                                            toggleSelection(for: product)
+                                        }
+                                    )
+                                    .onTapGesture {
+                                        if isSelecting {
+                                            toggleSelection(for: product)
+                                        } else {
                                             productToEdit = product
                                         }
+                                    }
                                 }
                             }
                         }
@@ -66,16 +83,39 @@ struct ProductCatalogView: View {
                 }
             }
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Menu {
-                    Button(action: { showAddProduct = true }) {
-                        Label("Add Single Product", systemImage: "plus")
+                if isSelecting {
+                    Button("Delete") {
+                        showBulkDeleteConfirm = true
                     }
-                    Button(action: { showImportProducts = true }) {
-                        Label("Import Products (CSV)", systemImage: "square.and.arrow.down")
+                    .foregroundColor(.red)
+                    .disabled(selectedProductIds.isEmpty)
+
+                    Button("Select All") {
+                        selectAllFiltered()
                     }
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 20))
+                    .disabled(filteredProducts.isEmpty)
+
+                    Button("Done") {
+                        isSelecting = false
+                        selectedProductIds.removeAll()
+                    }
+                } else {
+                    Button("Select") {
+                        isSelecting = true
+                        selectedProductIds.removeAll()
+                    }
+
+                    Menu {
+                        Button(action: { showAddProduct = true }) {
+                            Label("Add Single Product", systemImage: "plus")
+                        }
+                        Button(action: { showImportProducts = true }) {
+                            Label("Import Products (CSV)", systemImage: "square.and.arrow.down")
+                        }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 20))
+                    }
                 }
             }
         }
@@ -101,6 +141,18 @@ struct ProductCatalogView: View {
                 onClear: clearFilters
             )
         }
+        .alert("Delete Products", isPresented: $showBulkDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                Task {
+                    await viewModel.deleteProducts(productIds: Array(selectedProductIds))
+                    selectedProductIds.removeAll()
+                    isSelecting = false
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Are you sure you want to delete \(selectedProductIds.count) products? This action cannot be undone.")
+        }
         .task {
             await viewModel.loadProducts()
         }
@@ -112,9 +164,15 @@ struct ProductCatalogView: View {
             return matchesSearch(product)
         }
 
-        return filteredBySearch.filter { product in
+        let filtered = filteredBySearch.filter { product in
             matchesFilters(product)
         }
+
+        if showMissingOnly {
+            return filtered.filter { viewModel.missingFields(for: $0).isEmpty == false }
+        }
+
+        return filtered
     }
 
     private func matchesFilters(_ product: Product) -> Bool {
@@ -219,6 +277,23 @@ struct ProductCatalogView: View {
                 )
             }
 
+            Button(action: { showMissingOnly.toggle() }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.circle")
+                    Text("Missing Data")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundColor(showMissingOnly ? .white : theme.primaryText)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(showMissingOnly ? Color.orange : theme.cardBackground)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(showMissingOnly ? Color.clear : theme.cardBorder, lineWidth: 1)
+                )
+            }
+
             if !searchText.isEmpty {
                 Button(action: { searchText = "" }) {
                     HStack(spacing: 4) {
@@ -244,6 +319,20 @@ struct ProductCatalogView: View {
 
             Spacer()
         }
+    }
+
+    private func toggleSelection(for product: Product) {
+        guard let productId = product.id else { return }
+        if selectedProductIds.contains(productId) {
+            selectedProductIds.remove(productId)
+        } else {
+            selectedProductIds.insert(productId)
+        }
+    }
+
+    private func selectAllFiltered() {
+        let ids = filteredProducts.compactMap { $0.id }
+        selectedProductIds = Set(ids)
     }
 
     private var filteredEmptyState: some View {
@@ -339,9 +428,22 @@ struct ProductCatalogView: View {
 struct ProductRowView: View {
     @ObservedObject var theme = ThemeManager.shared
     let product: Product
+    let missingCount: Int
+    let isSelecting: Bool
+    let isSelected: Bool
+    let onSelectToggle: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
+            if isSelecting {
+                Button(action: onSelectToggle) {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20))
+                        .foregroundColor(isSelected ? theme.accent : theme.tertiaryText)
+                }
+                .buttonStyle(.plain)
+            }
+
             // Product Image
             Group {
                 if let imageUrl = product.imageUrl, !imageUrl.isEmpty {
@@ -413,6 +515,16 @@ struct ProductRowView: View {
                         .clipShape(Capsule())
                     }
 
+                    if missingCount > 0 {
+                        Text("Missing \(missingCount)")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+
                     if let isActive = product.isActive {
                         Text(isActive ? "Active" : "Inactive")
                             .font(.system(size: 12, weight: .medium))
@@ -438,7 +550,7 @@ struct ProductRowView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: theme.radiusLarge)
-                .stroke(theme.cardBorder, lineWidth: 1)
+                .stroke(isSelected ? theme.accent : theme.cardBorder, lineWidth: isSelected ? 2 : 1)
         )
     }
 }
@@ -517,6 +629,59 @@ class ProductCatalogViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             showError = true
         }
+    }
+
+    func deleteProducts(productIds: [String]) async {
+        guard !productIds.isEmpty else { return }
+        for productId in productIds {
+            do {
+                try await NetworkService.shared.deleteProduct(productId: productId)
+                products.removeAll { $0.id == productId }
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+        }
+    }
+
+    func missingFields(for product: Product) -> [String] {
+        var missing: [String] = []
+
+        if (product.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("name")
+        }
+        if (product.brand ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("brand")
+        }
+        if (product.category ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("category")
+        }
+        if (product.description ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("description")
+        }
+        if (product.ingredients ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("key ingredients")
+        }
+        if (product.allIngredients ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("all ingredients")
+        }
+        if (product.usageGuidelines ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("usage guidelines")
+        }
+        if (product.imageUrl ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("image")
+        }
+        if product.price == nil {
+            missing.append("price")
+        }
+        if product.skinTypes?.isEmpty ?? true {
+            missing.append("skin types")
+        }
+        if product.concerns?.isEmpty ?? true {
+            missing.append("concerns")
+        }
+
+        return missing
     }
 }
 

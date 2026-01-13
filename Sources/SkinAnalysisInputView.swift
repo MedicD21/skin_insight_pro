@@ -24,6 +24,8 @@ struct SkinAnalysisInputView: View {
     @State private var manualConcerns = ""
     @State private var productsUsed = ""
     @State private var treatmentsPerformed = ""
+    @State private var previousAnalysisImage: UIImage?
+    @State private var isLoadingPreviousAnalysisImage = false
     @State private var hasFillers = false
     @State private var hasBiostimulators = false
     @State private var hasWrinkleRelaxers = false
@@ -118,7 +120,7 @@ struct SkinAnalysisInputView: View {
                 }
             }
             .fullScreenCover(isPresented: $showCameraWithOverlay) {
-                if let previousImage = getPreviousAnalysisImage() {
+                if let previousImage = previousAnalysisImage {
                     CameraWithOverlayView(capturedImage: $selectedImage, overlayImage: previousImage)
                 } else {
                     if ProcessInfo.processInfo.environment["SIMULATOR_DEVICE_NAME"] != nil {
@@ -138,6 +140,9 @@ struct SkinAnalysisInputView: View {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text("An active subscription is required to use Claude Vision AI. You can switch to Apple Vision (free) in Admin → AI Vision Provider, or contact your company admin to purchase a subscription.")
+            }
+            .task(id: viewModel.analyses.first?.id) {
+                await loadPreviousAnalysisImage()
             }
             .navigationDestination(isPresented: $showResults) {
                 if let result = analysisResult, let image = selectedImage {
@@ -164,24 +169,32 @@ struct SkinAnalysisInputView: View {
         (client.productsToAvoid != nil && !client.productsToAvoid!.isEmpty)
     }
     
-    private func getPreviousAnalysisImage() -> UIImage? {
-        guard let latestAnalysis = viewModel.analyses.first,
+    private func loadPreviousAnalysisImage() async {
+        guard previousAnalysisImage == nil,
+              !isLoadingPreviousAnalysisImage,
+              let latestAnalysis = viewModel.analyses.first,
               let imageUrlString = latestAnalysis.imageUrl,
               let imageUrl = URL(string: imageUrlString) else {
-            return nil
+            return
         }
-        
+
         if let cachedImage = ImageCache.shared.getImage(forKey: imageUrlString) {
-            return cachedImage
+            previousAnalysisImage = cachedImage
+            return
         }
-        
-        if let data = try? Data(contentsOf: imageUrl),
-           let image = UIImage(data: data) {
-            ImageCache.shared.setImage(image, forKey: imageUrlString)
-            return image
+
+        isLoadingPreviousAnalysisImage = true
+        defer { isLoadingPreviousAnalysisImage = false }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: imageUrl)
+            if let image = UIImage(data: data) {
+                ImageCache.shared.setImage(image, forKey: imageUrlString)
+                previousAnalysisImage = image
+            }
+        } catch {
+            // Ignore failures and fall back to non-overlay camera.
         }
-        
-        return nil
     }
     
     private var imageSection: some View {
@@ -223,7 +236,7 @@ struct SkinAnalysisInputView: View {
                                 .foregroundColor(theme.secondaryText)
                             
                             Button(action: { 
-                                if getPreviousAnalysisImage() != nil {
+                                if previousAnalysisImage != nil {
                                     showCameraWithOverlay = true
                                 } else {
                                     showCamera = true

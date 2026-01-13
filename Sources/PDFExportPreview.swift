@@ -9,7 +9,7 @@ import UIKit
         init() {
             let client = Client(
                 id: UUID().uuidString,
-                name: "Preview Client",
+                name: "Robert Downey Jr.",
                 companyId: "preview-company",
                 email: "preview@skininsightpro.com",
                 phone: "555-555-5555",
@@ -39,6 +39,18 @@ import UIKit
                 recommendedRoutine: nil
             )
 
+            let company = Company(
+//                id: "preview-company",
+                companyCode: nil,
+                name: "Preview Aesthetics",
+                address: nil,
+                phone: nil,
+                email: "preview@skininsightpro.com",
+                logoUrl: nil,
+                website: nil,
+                createdAt: nil
+            )
+
             pdfData = PDFExportManager.shared.generateDetailedAnalysisPDF(
                 client: client,
                 analysisData: analysisData,
@@ -46,7 +58,8 @@ import UIKit
                 notes: "Preview-only notes",
                 productsUsed: "Hydrating Cleanser",
                 treatmentsPerformed: "Hydrafacial",
-                timestamp: Date()
+                timestamp: Date(),
+                company: company
             )
         }
 

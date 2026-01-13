@@ -1,4 +1,5 @@
 import SwiftUI
+import MessageUI
 
 struct ClientDetailView: View {
     @ObservedObject var theme = ThemeManager.shared
@@ -18,6 +19,17 @@ struct ClientDetailView: View {
     @State private var showFreeTierLimitAlert = false
     @State private var isCheckingUsage = false
     @State private var showTrendingGraphs = false
+    @State private var showRoutineShareSheet = false
+    @State private var showRoutineMailComposer = false
+    @State private var showRoutineMailError = false
+    @State private var routineMailErrorMessage = ""
+    @State private var exportedRoutinePDF: Data?
+    @State private var isExportingRoutinePDF = false
+    @State private var routineCompany: Company?
+    @State private var showLatestRoutine = false
+    @State private var routineForSheet = SkinCareRoutine()
+    @State private var routineProducts: [Product] = []
+    @State private var isLoadingRoutineProducts = false
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
     @Environment(\.dismiss) var dismiss
 
@@ -59,6 +71,8 @@ struct ClientDetailView: View {
                         if !viewModel.analyses.isEmpty {
                             progressMetricsCard
                         }
+
+                        latestRoutineCard
 
                         if viewModel.analyses.isEmpty {
                             emptyAnalysisView
@@ -183,6 +197,35 @@ struct ClientDetailView: View {
 
             TrendingGraphsView(client: clientModel, analyses: skinAnalyses)
         }
+        .sheet(isPresented: $showRoutineShareSheet) {
+            if let pdfData = exportedRoutinePDF {
+                ShareSheet(items: [pdfData as Any])
+            }
+        }
+        .sheet(isPresented: $showRoutineMailComposer) {
+            if let pdfData = exportedRoutinePDF,
+               let email = currentClient.email,
+               !email.isEmpty {
+                MailComposerView(
+                    recipient: email,
+                    subject: "Your Recommended Skincare Routine - \(currentClient.name ?? "Client")",
+                    body: "Please find your personalized skincare routine attached.\n\nThank you for your visit!",
+                    pdfData: pdfData,
+                    pdfFileName: "Routine_\(sanitizeFileName(currentClient.name ?? "Client"))_\(Date().timeIntervalSince1970).pdf",
+                    onResult: { result in
+                        handleRoutineMailResult(result)
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showLatestRoutine) {
+            RecommendedRoutineView(
+                client: routineClient,
+                routine: $routineForSheet,
+                availableProducts: routineProducts,
+                flaggedProductIds: flaggedProductIds
+            )
+        }
         .alert("Consent Required", isPresented: $showConsentAlert) {
             Button("Sign Now") {
                 showConsentForm = true
@@ -209,6 +252,11 @@ struct ClientDetailView: View {
         } message: {
             Text("You've reached your free limit of 5 Apple Vision analyses this month. Upgrade to a subscription for unlimited analyses with Claude Vision AI.")
         }
+        .alert("Email Unavailable", isPresented: $showRoutineMailError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(routineMailErrorMessage)
+        }
         .task {
             await viewModel.loadAnalyses(clientId: currentClient.id ?? "")
             await viewModel.loadFlaggedProducts(for: currentClient)
@@ -224,6 +272,34 @@ struct ClientDetailView: View {
         !viewModel.flaggedProducts.isEmpty ||
         currentClient.fillersDate != nil ||
         currentClient.biostimulatorsDate != nil
+    }
+
+    private var latestRoutineAnalysis: SkinAnalysisResult? {
+        viewModel.analyses.first(where: { hasRoutineSteps($0.analysisResults?.recommendedRoutine) })
+    }
+
+    private var latestRoutine: SkinCareRoutine? {
+        latestRoutineAnalysis?.analysisResults?.recommendedRoutine
+    }
+
+    private var routineClient: Client {
+        let displayName = currentClient.name ?? [currentClient.firstName, currentClient.lastName]
+            .compactMap { $0 }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
+
+        return Client(
+            id: currentClient.id ?? "",
+            name: displayName.isEmpty ? "Client" : displayName,
+            companyId: currentClient.companyId ?? "",
+            email: currentClient.email,
+            phone: currentClient.phone,
+            createdAt: Date()
+        )
+    }
+
+    private var flaggedProductIds: Set<String> {
+        Set(viewModel.flaggedProducts.compactMap { $0.id })
     }
     
     private var clientInfoCard: some View {
@@ -633,6 +709,137 @@ struct ClientDetailView: View {
         )
     }
 
+    @ViewBuilder
+    private var latestRoutineCard: some View {
+        if let routine = latestRoutine {
+            let morningSteps = routineSummarySteps(from: routine.morningSteps)
+            let eveningSteps = routineSummarySteps(from: routine.eveningSteps)
+            let routineDate = latestRoutineAnalysis?.createdAt.map(formatProgressDate)
+
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .foregroundColor(theme.accent)
+                    Text("Latest Recommended Routine")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(theme.primaryText)
+                    Spacer()
+                }
+
+                if let routineDate {
+                    Text("From analysis on \(routineDate)")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                }
+
+                HStack(spacing: 16) {
+                    routineSummaryColumn(title: "Morning", steps: morningSteps, totalCount: routine.morningSteps.count)
+                    routineSummaryColumn(title: "Evening", steps: eveningSteps, totalCount: routine.eveningSteps.count)
+                }
+
+                if let notes = routine.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                }
+
+                HStack(spacing: 12) {
+                    Button(action: exportLatestRoutinePDF) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "square.and.arrow.down")
+                            Text(isExportingRoutinePDF ? "Exporting..." : "Export PDF")
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(theme.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    }
+                    .disabled(isExportingRoutinePDF)
+
+                    Button(action: emailLatestRoutineToClient) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "envelope.fill")
+                            Text("Email")
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(theme.accent.opacity(0.8))
+                        .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                    }
+                    .disabled(isExportingRoutinePDF || currentClient.email?.isEmpty != false)
+                    .opacity(currentClient.email?.isEmpty != false ? 0.6 : 1.0)
+                }
+
+                Button(action: openLatestRoutine) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "list.bullet.rectangle")
+                        Text("View Full Routine")
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(theme.accent)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(theme.accent.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: theme.radiusMedium))
+                }
+            }
+            .padding(20)
+            .background(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .fill(theme.cardBackground)
+                    .shadow(color: theme.shadowColor, radius: theme.shadowRadiusSmall, x: 0, y: 4)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.radiusXL)
+                    .stroke(theme.cardBorder, lineWidth: 1)
+            )
+        }
+    }
+
+    private func routineSummaryColumn(title: String, steps: [RoutineStep], totalCount: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(theme.primaryText)
+
+            if steps.isEmpty {
+                Text("No steps")
+                    .font(.system(size: 13))
+                    .foregroundColor(theme.secondaryText)
+            } else {
+                ForEach(steps) { step in
+                    Text("• \(step.productName)")
+                        .font(.system(size: 13))
+                        .foregroundColor(theme.secondaryText)
+                        .lineLimit(1)
+                }
+
+                if totalCount > steps.count {
+                    Text("+\(totalCount - steps.count) more")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(theme.accent)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func routineSummarySteps(from steps: [RoutineStep]) -> [RoutineStep] {
+        let sorted = steps.sorted { lhs, rhs in
+            if lhs.stepNumber == rhs.stepNumber {
+                return lhs.productName.localizedCaseInsensitiveCompare(rhs.productName) == .orderedAscending
+            }
+            if lhs.stepNumber == 0 { return false }
+            if rhs.stepNumber == 0 { return true }
+            return lhs.stepNumber < rhs.stepNumber
+        }
+        return Array(sorted.prefix(3))
+    }
+
     private func progressMetricRow(label: String, icon: String, firstValue: Int, lastValue: Int, unit: String) -> some View {
         HStack {
             Image(systemName: icon)
@@ -697,6 +904,204 @@ struct ClientDetailView: View {
         }
 
         return dateString
+    }
+
+    private func hasRoutineSteps(_ routine: SkinCareRoutine?) -> Bool {
+        guard let routine else { return false }
+        return !(routine.morningSteps.isEmpty && routine.eveningSteps.isEmpty)
+    }
+
+    private func routineWithResolvedImages(_ routine: SkinCareRoutine) -> SkinCareRoutine {
+        var updatedRoutine = routine
+        updatedRoutine.morningSteps = resolvedSteps(updatedRoutine.morningSteps)
+        updatedRoutine.eveningSteps = resolvedSteps(updatedRoutine.eveningSteps)
+        return updatedRoutine
+    }
+
+    private func resolvedSteps(_ steps: [RoutineStep]) -> [RoutineStep] {
+        steps.map { step in
+            var updatedStep = step
+            if (updatedStep.imageUrl?.isEmpty ?? true),
+               let productId = updatedStep.productId,
+               let product = routineProducts.first(where: { $0.id == productId }),
+               let imageUrl = product.imageUrl,
+               !imageUrl.isEmpty {
+                updatedStep.imageUrl = imageUrl
+            }
+            return updatedStep
+        }
+    }
+
+    private func exportLatestRoutinePDF() {
+        guard let routine = latestRoutine else { return }
+        isExportingRoutinePDF = true
+
+        Task {
+            if routineCompany == nil {
+                await loadRoutineCompany()
+            }
+
+            let clientModel = Client(
+                id: currentClient.id ?? "",
+                name: currentClient.name ?? "Client",
+                companyId: currentClient.companyId ?? "",
+                email: currentClient.email,
+                phone: currentClient.phone,
+                createdAt: Date()
+            )
+
+            let routineForExport = routineWithResolvedImages(routine)
+            await PDFExportManager.shared.prefetchRoutineImages(routineForExport)
+            guard let pdfData = PDFExportManager.shared.generateRoutinePDF(
+                client: clientModel,
+                routine: routineForExport,
+                company: routineCompany
+            ) else {
+                await MainActor.run {
+                    isExportingRoutinePDF = false
+                }
+                return
+            }
+
+            await MainActor.run {
+                exportedRoutinePDF = pdfData
+                isExportingRoutinePDF = false
+                showRoutineShareSheet = true
+            }
+        }
+    }
+
+    private func openLatestRoutine() {
+        guard let routine = latestRoutine else { return }
+        routineForSheet = routine
+
+        if routineProducts.isEmpty {
+            Task {
+                await loadRoutineProducts()
+                await MainActor.run {
+                    showLatestRoutine = true
+                }
+            }
+        } else {
+            showLatestRoutine = true
+        }
+    }
+
+    private func emailLatestRoutineToClient() {
+        guard MFMailComposeViewController.canSendMail() else {
+            routineMailErrorMessage = "Email is not configured on this device. Please set up an email account in Settings."
+            showRoutineMailError = true
+            return
+        }
+
+        guard let clientEmail = currentClient.email, !clientEmail.isEmpty else {
+            routineMailErrorMessage = "No email address found for this client. Please add an email address to the client's profile."
+            showRoutineMailError = true
+            return
+        }
+
+        if exportedRoutinePDF == nil {
+            isExportingRoutinePDF = true
+
+            Task {
+                if routineCompany == nil {
+                    await loadRoutineCompany()
+                }
+
+                guard let routine = latestRoutine else {
+                    await MainActor.run {
+                        isExportingRoutinePDF = false
+                    }
+                return
+            }
+
+            let clientModel = Client(
+                id: currentClient.id ?? "",
+                name: currentClient.name ?? "Client",
+                companyId: currentClient.companyId ?? "",
+                email: currentClient.email,
+                phone: currentClient.phone,
+                createdAt: Date()
+            )
+
+            let routineForExport = routineWithResolvedImages(routine)
+            await PDFExportManager.shared.prefetchRoutineImages(routineForExport)
+            guard let pdfData = PDFExportManager.shared.generateRoutinePDF(
+                client: clientModel,
+                routine: routineForExport,
+                company: routineCompany
+            ) else {
+                await MainActor.run {
+                    isExportingRoutinePDF = false
+                        routineMailErrorMessage = "Failed to generate PDF."
+                        showRoutineMailError = true
+                    }
+                    return
+                }
+
+                await MainActor.run {
+                    exportedRoutinePDF = pdfData
+                    isExportingRoutinePDF = false
+                    showRoutineMailComposer = true
+                }
+            }
+        } else {
+            showRoutineMailComposer = true
+        }
+    }
+
+    private func loadRoutineProducts() async {
+        guard !isLoadingRoutineProducts,
+              let user = AuthenticationManager.shared.currentUser,
+              let userId = user.id else { return }
+
+        isLoadingRoutineProducts = true
+        defer { isLoadingRoutineProducts = false }
+
+        do {
+            let products = try await NetworkService.shared.fetchProductsForUser(
+                userId: userId,
+                companyId: user.companyId
+            )
+            await MainActor.run {
+                routineProducts = products.filter { $0.isActive == true }
+            }
+        } catch {
+            #if DEBUG
+            print("⚠️ Failed to load products for routine: \(error)")
+            #endif
+        }
+    }
+
+    private func loadRoutineCompany() async {
+        guard let companyId = AuthenticationManager.shared.currentUser?.companyId, !companyId.isEmpty else {
+            return
+        }
+
+        do {
+            let fetchedCompany = try await NetworkService.shared.fetchCompany(id: companyId)
+            await MainActor.run {
+                routineCompany = fetchedCompany
+            }
+        } catch {
+            #if DEBUG
+            print("⚠️ Failed to load company for routine PDF: \(error)")
+            #endif
+        }
+    }
+
+    private func handleRoutineMailResult(_ result: Result<MFMailComposeResult, Error>) {
+        if case .failure(let error) = result {
+            routineMailErrorMessage = error.localizedDescription
+            showRoutineMailError = true
+        }
+    }
+
+    private func sanitizeFileName(_ value: String) -> String {
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_-"))
+        let sanitized = value.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
+        let result = String(sanitized).trimmingCharacters(in: CharacterSet(charactersIn: "_"))
+        return result.isEmpty ? "Client" : result
     }
 
     private func formatInjectablesDate(_ dateString: String) -> String {

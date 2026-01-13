@@ -631,6 +631,18 @@ struct CreateAIRuleRequest: Codable {
 
 // MARK: - PDF Export Models
 
+enum TrendingMetric: String, CaseIterable, Codable {
+    case hydration = "Hydration"
+    case oiliness = "Oiliness"
+    case texture = "Texture"
+    case pores = "Pores"
+    case wrinkles = "Wrinkles"
+    case redness = "Redness"
+    case darkSpots = "Dark Spots"
+    case acne = "Acne"
+    case all = "All Metrics"
+}
+
 /// Simplified client model for PDF export
 struct Client {
     let id: String

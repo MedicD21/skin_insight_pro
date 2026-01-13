@@ -206,7 +206,7 @@ class AIAnalysisService {
             isPregnant: isPregnant,
             isBreastfeeding: isBreastfeeding
         )
-        productRecommendations = matchedProducts
+        productRecommendations = filterProductRecommendations(matchedProducts, products: products)
 
         let hasOilinessConcern = concerns.contains { concern in
             let normalized = concern.lowercased()
@@ -1416,7 +1416,22 @@ class AIAnalysisService {
         let expandedConcerns = expandConcerns(baseConcerns)
         let healthScore = normalizeHealthScore(analysisResponse.skinHealthScore, concerns: baseConcerns)
 
-        let normalizedRoutine = normalizeRecommendedRoutine(analysisResponse.recommendedRoutine, products: products)
+        let filteredProductRecommendations = filterProductRecommendations(
+            analysisResponse.productRecommendations,
+            products: products
+        )
+        let normalizedRoutine = normalizeRecommendedRoutine(
+            analysisResponse.recommendedRoutine,
+            products: products
+        )
+        let fallbackRoutine =
+            filteredProductRecommendations.isEmpty
+            ? nil
+            : buildRecommendedRoutine(
+                productRecommendations: filteredProductRecommendations,
+                products: products
+            )
+        let finalRoutine = hasRoutineSteps(normalizedRoutine) ? normalizedRoutine : fallbackRoutine
 
         return AnalysisData(
             skinType: skinType,
@@ -1426,10 +1441,10 @@ class AIAnalysisService {
             poreCondition: poreCondition,
             skinHealthScore: healthScore,
             recommendations: analysisResponse.recommendations,
-            productRecommendations: analysisResponse.productRecommendations,
+            productRecommendations: filteredProductRecommendations.isEmpty ? nil : filteredProductRecommendations,
             medicalConsiderations: analysisResponse.medicalConsiderations,
             progressNotes: analysisResponse.progressNotes,
-            recommendedRoutine: normalizedRoutine
+            recommendedRoutine: finalRoutine
         )
     }
 
@@ -1457,24 +1472,34 @@ class AIAnalysisService {
             return lhs.stepNumber < rhs.stepNumber
         }
 
-        return sortedSteps.enumerated().map { index, step in
+        let matchedSteps = sortedSteps.compactMap { step -> RoutineStep? in
+            let matchedProduct = findProduct(for: step, products: products)
+            guard let matchedProduct else { return nil }
             var updatedStep = step
-            updatedStep.stepNumber = index + 1
 
-            if let matchedProduct = matchProduct(for: step.productName, products: products) {
-                let canonicalName = formattedProductName(for: matchedProduct)
-                if !canonicalName.isEmpty {
-                    updatedStep.productName = canonicalName
-                }
-                updatedStep.productId = matchedProduct.id
-                updatedStep.imageUrl = matchedProduct.imageUrl
-                if (updatedStep.instructions ?? "").isEmpty,
-                   let guidelines = matchedProduct.usageGuidelines,
-                   !guidelines.isEmpty {
-                    updatedStep.instructions = guidelines
-                }
+            let canonicalName = formattedProductName(for: matchedProduct)
+            if !canonicalName.isEmpty {
+                updatedStep.productName = canonicalName
+            }
+            updatedStep.productId = matchedProduct.id
+            updatedStep.imageUrl = matchedProduct.imageUrl
+            if (updatedStep.instructions ?? "").isEmpty,
+               let guidelines = matchedProduct.usageGuidelines,
+               !guidelines.isEmpty {
+                updatedStep.instructions = guidelines
+            }
+            if (updatedStep.amount ?? "").isEmpty,
+               let instructions = updatedStep.instructions,
+               !instructions.isEmpty {
+                updatedStep.amount = extractAmount(from: instructions)
             }
 
+            return updatedStep
+        }
+        
+        return matchedSteps.enumerated().map { index, step in
+            var updatedStep = step
+            updatedStep.stepNumber = index + 1
             return updatedStep
         }
     }
@@ -1505,6 +1530,43 @@ class AIAnalysisService {
             .lowercased()
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .joined()
+    }
+
+    private func filterProductRecommendations(
+        _ recommendations: [String]?,
+        products: [Product]
+    ) -> [String] {
+        guard let recommendations, !recommendations.isEmpty else { return [] }
+
+        var seen = Set<String>()
+        var filtered: [String] = []
+
+        for recommendation in recommendations {
+            guard let product = matchProduct(for: recommendation, products: products) else {
+                continue
+            }
+            let canonicalName = formattedProductName(for: product)
+            let normalized = normalizeProductName(canonicalName)
+            guard !normalized.isEmpty else { continue }
+            if seen.insert(normalized).inserted {
+                filtered.append(canonicalName)
+            }
+        }
+
+        return filtered
+    }
+
+    private func hasRoutineSteps(_ routine: SkinCareRoutine?) -> Bool {
+        guard let routine else { return false }
+        return !(routine.morningSteps.isEmpty && routine.eveningSteps.isEmpty)
+    }
+
+    private func findProduct(for step: RoutineStep, products: [Product]) -> Product? {
+        if let productId = step.productId,
+           let matched = products.first(where: { $0.id == productId }) {
+            return matched
+        }
+        return matchProduct(for: step.productName, products: products)
     }
 
     private func generateImageVariants(from image: UIImage) -> [UIImage] {
@@ -1583,25 +1645,20 @@ class AIAnalysisService {
         var eveningSteps: [RoutineStep] = []
 
         for recommendation in uniqueRecommendations {
-            if let product = matchProduct(for: recommendation, products: products) {
-                let targets = routineTargets(for: product)
-                if targets.includeMorning {
-                    morningSteps.append(makeRoutineStep(for: product))
-                }
-                if targets.includeEvening {
-                    eveningSteps.append(makeRoutineStep(for: product))
-                }
-            } else {
-                morningSteps.append(RoutineStep(productName: recommendation, stepNumber: 0))
-                if !isMorningOnlyProduct(recommendation) {
-                    eveningSteps.append(RoutineStep(productName: recommendation, stepNumber: 0))
-                }
+            guard let product = matchProduct(for: recommendation, products: products) else { continue }
+            let targets = routineTargets(for: product)
+            if targets.includeMorning {
+                morningSteps.append(makeRoutineStep(for: product))
+            }
+            if targets.includeEvening {
+                eveningSteps.append(makeRoutineStep(for: product))
             }
         }
 
         morningSteps = normalizeAndSortRoutineSteps(morningSteps, products: products)
         eveningSteps = normalizeAndSortRoutineSteps(eveningSteps, products: products)
 
+        guard !morningSteps.isEmpty || !eveningSteps.isEmpty else { return nil }
         return SkinCareRoutine(morningSteps: morningSteps, eveningSteps: eveningSteps, notes: nil)
     }
 

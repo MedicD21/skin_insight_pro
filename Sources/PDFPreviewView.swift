@@ -51,6 +51,18 @@ struct PDFPreviewView: UIViewRepresentable {
         recommendedRoutine: nil
     )
 
+    let company = Company(
+        id: "preview-company",
+        companyCode: nil,
+        name: "Preview Aesthetics",
+        address: nil,
+        phone: nil,
+        email: "preview@skininsightpro.com",
+        logoUrl: nil,
+        website: nil,
+        createdAt: nil
+    )
+
     let data = PDFExportManager.shared.generateDetailedAnalysisPDF(
         client: client,
         analysisData: analysisData,
@@ -58,7 +70,8 @@ struct PDFPreviewView: UIViewRepresentable {
         notes: "Preview-only notes",
         productsUsed: "Hydrating Cleanser",
         treatmentsPerformed: "Hydrafacial",
-        timestamp: Date()
+        timestamp: Date(),
+        company: company
     )
 
     return Group {

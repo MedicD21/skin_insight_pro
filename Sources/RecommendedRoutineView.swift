@@ -241,7 +241,8 @@ struct RecommendedRoutineView: View {
             }
 
             // Product image (if available)
-            if let imageUrl = step.wrappedValue.imageUrl, let url = URL(string: imageUrl) {
+            if let imageUrl = resolvedImageUrl(for: step.wrappedValue),
+               let url = URL(string: imageUrl) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
@@ -452,9 +453,11 @@ struct RecommendedRoutineView: View {
                 await loadCompany()
             }
 
+            let routineForExport = routineWithResolvedImages()
+            await PDFExportManager.shared.prefetchRoutineImages(routineForExport)
             guard let pdfData = PDFExportManager.shared.generateRoutinePDF(
                 client: client,
-                routine: routine,
+                routine: routineForExport,
                 company: company
             ) else {
                 await MainActor.run {
@@ -505,6 +508,40 @@ struct RecommendedRoutineView: View {
         if brand.isEmpty { return name }
         if name.isEmpty { return brand }
         return "\(brand) - \(name)"
+    }
+
+    private func resolvedImageUrl(for step: RoutineStep) -> String? {
+        if let imageUrl = step.imageUrl, !imageUrl.isEmpty {
+            return imageUrl
+        }
+        if let productId = step.productId,
+           let product = availableProducts.first(where: { $0.id == productId }),
+           let imageUrl = product.imageUrl,
+           !imageUrl.isEmpty {
+            return imageUrl
+        }
+        return nil
+    }
+
+    private func routineWithResolvedImages() -> SkinCareRoutine {
+        var updatedRoutine = routine
+        updatedRoutine.morningSteps = resolvedSteps(updatedRoutine.morningSteps)
+        updatedRoutine.eveningSteps = resolvedSteps(updatedRoutine.eveningSteps)
+        return updatedRoutine
+    }
+
+    private func resolvedSteps(_ steps: [RoutineStep]) -> [RoutineStep] {
+        steps.map { step in
+            var updatedStep = step
+            if (updatedStep.imageUrl?.isEmpty ?? true),
+               let productId = updatedStep.productId,
+               let product = availableProducts.first(where: { $0.id == productId }),
+               let imageUrl = product.imageUrl,
+               !imageUrl.isEmpty {
+                updatedStep.imageUrl = imageUrl
+            }
+            return updatedStep
+        }
     }
 
     private func optionalTextBinding(_ value: Binding<String?>) -> Binding<String> {
@@ -560,9 +597,11 @@ struct RecommendedRoutineView: View {
                     await loadCompany()
                 }
 
+                let routineForExport = routineWithResolvedImages()
+                await PDFExportManager.shared.prefetchRoutineImages(routineForExport)
                 guard let pdfData = PDFExportManager.shared.generateRoutinePDF(
                     client: client,
-                    routine: routine,
+                    routine: routineForExport,
                     company: company
                 ) else {
                     await MainActor.run {
