@@ -1,0 +1,24 @@
+{
+  "split": {
+    "train": 0.7,
+    "val": 0.2,
+    "test": 0.1
+  },
+  "acne04": {
+    "train": 966,
+    "val": 288,
+    "test": 152,
+    "total": 1406
+  },
+  "isic_2018_task1_2": {
+    "train": 1765,
+    "val": 551,
+    "test": 278,
+    "total": 2594,
+    "missing_mask": 0
+  },
+  "notes": [
+    "ACNE04 in this project is severity-labeled image data (classification), not lesion bounding boxes.",
+    "ISIC segmentation rows require both image and matching mask files."
+  ]
+}
