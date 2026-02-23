@@ -25,3 +25,26 @@ Pods/
 
 # Carthage
 Carthage/Build/
+
+# Local env
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Supabase local state
+supabase/.branches/
+supabase/.temp/
+
+# Local tooling/editor state
+.claude/settings.local.json
