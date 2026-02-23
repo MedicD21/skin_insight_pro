@@ -34,6 +34,17 @@ struct AppUser: Identifiable, Hashable, Codable {
         case companyName = "company_name"
         case companyEmail = "company_email"
     }
+
+    var fullName: String? {
+        let first = firstName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let last = lastName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parts = [first, last].compactMap { value -> String? in
+            guard let value, !value.isEmpty else { return nil }
+            return value
+        }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " ")
+    }
 }
 
 struct AppClient: Identifiable, Hashable, Codable {

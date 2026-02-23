@@ -11,47 +11,67 @@ const PRODUCT_TIERS: Record<string, { tier: string; monthly_cap: number }> = {
   'com.skininsightpro.enterprise.monthly': { tier: 'enterprise', monthly_cap: 15000 },
 }
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
-    const { receipt, company_id, product_id, transaction_id } = await req.json()
+    const payload = await req.json()
+    const receipt = typeof payload?.receipt === 'string' ? payload.receipt : ''
+    const companyId = typeof payload?.company_id === 'string' ? payload.company_id : ''
+    const productId = typeof payload?.product_id === 'string' ? payload.product_id : ''
+    const transactionId = typeof payload?.transaction_id === 'string' ? payload.transaction_id : ''
 
-    if (!receipt || !company_id || !product_id || !transaction_id) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
+    if (!receipt || !companyId || !productId || !transactionId) {
+      return jsonResponse({ error: 'Missing required fields' }, 400)
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in function environment.')
+      return jsonResponse({ error: 'Server configuration error' }, 500)
     }
 
     // Initialize Supabase client
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    )
+    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     // Validate receipt with Apple (in production, use Apple's server-to-server API)
     // For now, we'll trust the client and verify the transaction exists
-    const tierInfo = PRODUCT_TIERS[product_id]
+    const tierInfo = PRODUCT_TIERS[productId]
     if (!tierInfo) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid product ID' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      )
+      return jsonResponse({ error: 'Invalid product ID' }, 400)
     }
 
     // Check if company_plans record exists for this company
     const { data: existingPlan } = await supabase
       .from('company_plans')
       .select('*')
-      .eq('company_id', company_id)
+      .eq('company_id', companyId)
       .eq('status', 'active')
       .single()
 
     const now = new Date()
-    const isAnnual = product_id.includes('annual')
+    const isAnnual = productId.includes('annual')
     const endsAt = new Date(now)
 
     if (isAnnual) {
@@ -67,8 +87,8 @@ Deno.serve(async (req) => {
         .update({
           tier: tierInfo.tier,
           monthly_company_cap: tierInfo.monthly_cap,
-          apple_transaction_id: transaction_id,
-          product_id: product_id,
+          apple_transaction_id: transactionId,
+          product_id: productId,
           started_at: now.toISOString(),
           ends_at: endsAt.toISOString(),
           updated_at: now.toISOString(),
@@ -77,21 +97,18 @@ Deno.serve(async (req) => {
 
       if (updateError) {
         console.error('Failed to update plan:', updateError)
-        return new Response(
-          JSON.stringify({ error: 'Failed to update subscription' }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        )
+        return jsonResponse({ error: 'Failed to update subscription' }, 500)
       }
     } else {
       // Create new plan
       const { error: insertError } = await supabase
         .from('company_plans')
         .insert({
-          company_id: company_id,
+          company_id: companyId,
           tier: tierInfo.tier,
           monthly_company_cap: tierInfo.monthly_cap,
-          apple_transaction_id: transaction_id,
-          product_id: product_id,
+          apple_transaction_id: transactionId,
+          product_id: productId,
           status: 'active',
           started_at: now.toISOString(),
           ends_at: endsAt.toISOString(),
@@ -99,28 +116,19 @@ Deno.serve(async (req) => {
 
       if (insertError) {
         console.error('Failed to create plan:', insertError)
-        return new Response(
-          JSON.stringify({ error: 'Failed to create subscription' }),
-          { status: 500, headers: { 'Content-Type': 'application/json' } }
-        )
+        return jsonResponse({ error: 'Failed to create subscription' }, 500)
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        tier: tierInfo.tier,
-        monthly_cap: tierInfo.monthly_cap,
-        ends_at: endsAt.toISOString(),
-      }),
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+    return jsonResponse({
+      success: true,
+      tier: tierInfo.tier,
+      monthly_cap: tierInfo.monthly_cap,
+      ends_at: endsAt.toISOString(),
+    })
 
   } catch (error) {
     console.error('Error validating receipt:', error)
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return jsonResponse({ success: false, error: getErrorMessage(error) }, 500)
   }
 })

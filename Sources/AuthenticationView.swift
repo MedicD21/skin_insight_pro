@@ -32,7 +32,7 @@ struct AuthenticationView: View {
                         DeviceLoginManager.shared.saveUserProfile(
                             userId: user.id ?? "",
                             email: user.email ?? "",
-                            name: user.firstName != nil && user.lastName != nil ? "\(user.firstName!) \(user.lastName!)" : nil,
+                            name: user.fullName,
                             profileImageUrl: user.profileImageUrl
                         )
                     }

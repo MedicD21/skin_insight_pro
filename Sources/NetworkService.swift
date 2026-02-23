@@ -51,10 +51,24 @@ class NetworkService {
         UserDefaults.standard.removeObject(forKey: AppConstants.userIdKey)
     }
 
+    private func validatedURL(_ urlString: String) throws -> URL {
+        guard let url = URL(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        return url
+    }
+
+    private func validatedURLComponents(_ urlString: String) throws -> URLComponents {
+        guard let components = URLComponents(string: urlString) else {
+            throw NetworkError.invalidURL
+        }
+        return components
+    }
+
     // MARK: - Authentication with Supabase Auth
 
     func login(email: String, password: String) async throws -> AppUser {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/token?grant_type=password")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/auth/v1/token?grant_type=password")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         for (key, value) in supabaseHeaders() {
@@ -114,7 +128,7 @@ class NetworkService {
     }
 
     func createUser(email: String, password: String) async throws -> AppUser {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/signup")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/auth/v1/signup")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         for (key, value) in supabaseHeaders() {
@@ -204,7 +218,7 @@ class NetworkService {
 
     private func fetchOrCreateUserProfile(userId: String, email: String, provider: String) async throws -> AppUser {
         // Check if profile exists
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/users")
         components.queryItems = [
             URLQueryItem(name: "id", value: "eq.\(userId)")
         ]
@@ -251,7 +265,7 @@ class NetworkService {
         }
 
         // Create profile
-        let createUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        let createUrl = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users")
         var createRequest = URLRequest(url: createUrl)
         createRequest.httpMethod = "POST"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -301,7 +315,7 @@ class NetworkService {
     }
 
     private func updateUserProfile(userId: String, appleUserId: String, firstName: String?, lastName: String?) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -334,7 +348,7 @@ class NetworkService {
     }
 
     private func fetchUserByAppleId(appleUserId: String) async throws -> AppUser {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/users")
         components.queryItems = [
             URLQueryItem(name: "apple_user_id", value: "eq.\(appleUserId)")
         ]
@@ -369,7 +383,7 @@ class NetworkService {
     }
 
     func fetchUser(userId: String) async throws -> AppUser {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/users")
         components.queryItems = [
             URLQueryItem(name: "id", value: "eq.\(userId)"),
             URLQueryItem(name: "select", value: "*")
@@ -465,7 +479,7 @@ class NetworkService {
 
         let companyData = try JSONSerialization.data(withJSONObject: companyPayload)
 
-        var companyRequest = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!)
+        var companyRequest = URLRequest(url: try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/companies"))
         companyRequest.httpMethod = "POST"
         companyRequest.httpBody = companyData
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -494,7 +508,7 @@ class NetworkService {
 
         let userData = try JSONSerialization.data(withJSONObject: userPayload)
 
-        var userRequest = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!)
+        var userRequest = URLRequest(url: try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)"))
         userRequest.httpMethod = "PATCH"
         userRequest.httpBody = userData
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -524,7 +538,7 @@ class NetworkService {
         }
 
         // Find company by code
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/companies")
         components.queryItems = [
             URLQueryItem(name: "company_code", value: "eq.\(code)")
         ]
@@ -558,7 +572,7 @@ class NetworkService {
 
         let jsonData = try JSONSerialization.data(withJSONObject: payload)
 
-        var updateRequest = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!)
+        var updateRequest = URLRequest(url: try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)"))
         updateRequest.httpMethod = "PATCH"
         updateRequest.httpBody = jsonData
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -574,8 +588,8 @@ class NetworkService {
     }
 
     private func generateCompanyCode() -> String {
-        let letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-        return String((0..<8).map { _ in letters.randomElement()! })
+        let letters = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+        return String((0..<8).map { _ in letters.randomElement() ?? "A" })
     }
 
     // MARK: - Receipt Validation
@@ -591,7 +605,7 @@ class NetworkService {
 
         let jsonData = try JSONSerialization.data(withJSONObject: payload)
 
-        var request = URLRequest(url: URL(string: "\(AppConstants.supabaseUrl)/functions/v1/validate-receipt")!)
+        var request = URLRequest(url: try validatedURL("\(AppConstants.supabaseUrl)/functions/v1/validate-receipt"))
         request.httpMethod = "POST"
         request.httpBody = jsonData
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -618,7 +632,7 @@ class NetworkService {
     // MARK: - Clients
 
     func fetchClients(userId: String) async throws -> [AppClient] {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/clients")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/clients")
         components.queryItems = [
             URLQueryItem(name: "user_id", value: "eq.\(userId)"),
             URLQueryItem(name: "order", value: "created_at.desc")
@@ -667,7 +681,7 @@ class NetworkService {
     }
 
     func fetchClientsByCompany(companyId: String) async throws -> [AppClient] {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/clients")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/clients")
         components.queryItems = [
             URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
             URLQueryItem(name: "order", value: "created_at.desc")
@@ -718,7 +732,7 @@ class NetworkService {
     func createOrUpdateClient(client: AppClient, userId: String) async throws -> AppClient {
         if let clientId = client.id {
             // Update existing client
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/clients?id=eq.\(clientId)")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/clients?id=eq.\(clientId)")
             var request = URLRequest(url: url)
             request.httpMethod = "PATCH"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -732,16 +746,16 @@ class NetworkService {
                 "last_name": client.lastName,
                 "phone": client.phone,
                 "email": client.email,
-                "notes": client.notes,
-                "medical_history": client.medicalHistory,
-                "allergies": client.allergies,
-                "known_sensitivities": client.knownSensitivities,
-                "medications": client.medications,
+                "notes": (client.notes?.isEmpty == false ? client.notes : NSNull()),
+                "medical_history": (client.medicalHistory?.isEmpty == false ? client.medicalHistory : NSNull()),
+                "allergies": (client.allergies?.isEmpty == false ? client.allergies : NSNull()),
+                "known_sensitivities": (client.knownSensitivities?.isEmpty == false ? client.knownSensitivities : NSNull()),
+                "medications": (client.medications?.isEmpty == false ? client.medications : NSNull()),
                 "products_to_avoid": (client.productsToAvoid?.isEmpty == false ? client.productsToAvoid : NSNull()),
                 "profile_image_url": client.profileImageUrl,
                 "company_id": client.companyId,
-                "fillers_date": client.fillersDate,
-                "biostimulators_date": client.biostimulatorsDate,
+                "fillers_date": (client.fillersDate?.isEmpty == false ? client.fillersDate : NSNull()),
+                "biostimulators_date": (client.biostimulatorsDate?.isEmpty == false ? client.biostimulatorsDate : NSNull()),
                 "consent_signature": (client.consentSignature?.isEmpty == false ? client.consentSignature : nil),
                 "consent_date": (client.consentDate?.isEmpty == false ? client.consentDate : nil)
             ]
@@ -787,7 +801,7 @@ class NetworkService {
             }
         } else {
             // Create new client
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/clients")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/clients")
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -859,7 +873,7 @@ class NetworkService {
     }
 
     func deleteClient(clientId: String) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/clients?id=eq.\(clientId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/clients?id=eq.\(clientId)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -887,7 +901,7 @@ class NetworkService {
             throw NetworkError.invalidResponse
         }
 
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -956,7 +970,7 @@ class NetworkService {
     }
 
     func updatePassword(newPassword: String) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/user")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/auth/v1/user")
         var request = URLRequest(url: url)
         request.httpMethod = "PUT"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -985,7 +999,7 @@ class NetworkService {
     // MARK: - Companies
 
     func fetchCompany(id: String) async throws -> Company {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(id)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(id)")
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1013,7 +1027,7 @@ class NetworkService {
     func createOrUpdateCompany(_ company: Company) async throws -> Company {
         if let companyId = company.id {
             // Update existing company
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(companyId)")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(companyId)")
             var request = URLRequest(url: url)
             request.httpMethod = "PATCH"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1050,7 +1064,7 @@ class NetworkService {
             return updatedCompany
         } else {
             // Create new company
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/companies")
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1115,7 +1129,7 @@ class NetworkService {
 
         // IMPORTANT: Update foreign keys FIRST before changing the primary key
         // Step 1: Update all users with the old company_id to the new company_id
-        let updateUsersUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?company_id=eq.\(oldId)")!
+        let updateUsersUrl = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users?company_id=eq.\(oldId)")
         var updateUsersRequest = URLRequest(url: updateUsersUrl)
         updateUsersRequest.httpMethod = "PATCH"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1140,7 +1154,7 @@ class NetworkService {
         #endif
 
         // Step 2: Update all clients with the old company_id to the new company_id
-        let updateClientsUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/clients?company_id=eq.\(oldId)")!
+        let updateClientsUrl = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/clients?company_id=eq.\(oldId)")
         var updateClientsRequest = URLRequest(url: updateClientsUrl)
         updateClientsRequest.httpMethod = "PATCH"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1166,7 +1180,7 @@ class NetworkService {
         #endif
 
         // Step 3: Now update the company's ID (primary key) - this must be done LAST
-        let updateCompanyUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(oldId)")!
+        let updateCompanyUrl = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(oldId)")
         var updateCompanyRequest = URLRequest(url: updateCompanyUrl)
         updateCompanyRequest.httpMethod = "PATCH"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1197,7 +1211,7 @@ class NetworkService {
         print("🏢 Updating company_code for company '\(companyId)' to '\(newCode)'")
         #endif
 
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(companyId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/companies?id=eq.\(companyId)")
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1225,7 +1239,7 @@ class NetworkService {
     // MARK: - Team Members
 
     func fetchTeamMembers(companyId: String) async throws -> [AppUser] {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/users")
         components.queryItems = [
             URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
             URLQueryItem(name: "select", value: "*"),
@@ -1263,7 +1277,7 @@ class NetworkService {
     }
 
     func verifyCompanyExists(id: String) async throws -> Bool {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/companies")
         components.queryItems = [
             URLQueryItem(name: "id", value: "eq.\(id)"),
             URLQueryItem(name: "select", value: "id")
@@ -1308,7 +1322,7 @@ class NetworkService {
     }
 
     private func fetchCompanyByCode(_ code: String, matchType: String) async throws -> Company? {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/companies")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/companies")
         components.queryItems = [
             URLQueryItem(name: "company_code", value: "\(matchType).\(code)"),
             URLQueryItem(name: "select", value: "id,company_code,name"),
@@ -1353,7 +1367,7 @@ class NetworkService {
         formatter.formatOptions = [.withInternetDateTime]
         let startDateString = formatter.string(from: startOfMonth)
 
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")
         components.queryItems = [
             URLQueryItem(name: "user_id", value: "eq.\(userId)"),
             URLQueryItem(name: "ai_provider", value: "eq.appleVision"),
@@ -1416,7 +1430,7 @@ class NetworkService {
     func syncAuditLogs(_ logs: [HIPAAAuditLog]) async throws {
         guard !logs.isEmpty else { return }
 
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/hipaa_audit_logs")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/hipaa_audit_logs")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
 
@@ -1486,7 +1500,7 @@ class NetworkService {
     }
 
     func fetchAnalyses(clientId: String) async throws -> [SkinAnalysisResult] {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")
         components.queryItems = [
             URLQueryItem(name: "client_id", value: "eq.\(clientId)"),
             URLQueryItem(name: "order", value: "created_at.desc")
@@ -1544,7 +1558,7 @@ class NetworkService {
     }
 
     func fetchLatestAnalysisImageUrl(clientId: String) async throws -> String? {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")
         components.queryItems = [
             URLQueryItem(name: "client_id", value: "eq.\(clientId)"),
             URLQueryItem(name: "select", value: "image_url,created_at"),
@@ -1589,7 +1603,7 @@ class NetworkService {
         productsUsed: String?,
         treatmentsPerformed: String?
     ) async throws -> SkinAnalysisResult {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/skin_analyses")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1685,7 +1699,7 @@ class NetworkService {
     }
 
     func deleteAnalysis(analysisId: String) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/skin_analyses?id=eq.\(analysisId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/skin_analyses?id=eq.\(analysisId)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -1737,7 +1751,7 @@ class NetworkService {
 
         // Use Supabase Storage API
         let fileName = "\(userId)/\(UUID().uuidString).jpg"
-        let url = URL(string: "\(AppConstants.supabaseUrl)/storage/v1/object/skin-images/\(fileName)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/storage/v1/object/skin-images/\(fileName)")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
@@ -1797,7 +1811,7 @@ class NetworkService {
     func uploadProductImage(image: UIImage, userId: String) async throws -> String {
         // Upload to Supabase Storage in product-images bucket
         let fileName = "\(userId)/\(UUID().uuidString).jpg"
-        let url = URL(string: "\(AppConstants.supabaseUrl)/storage/v1/object/product-images/\(fileName)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/storage/v1/object/product-images/\(fileName)")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
@@ -1903,7 +1917,10 @@ class NetworkService {
     }
 
     func refreshAccessToken(using refreshToken: String) async throws -> String {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/token?grant_type=refresh_token")!
+        guard !refreshToken.isEmpty else {
+            throw NetworkError.invalidCredentials
+        }
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/auth/v1/token?grant_type=refresh_token")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         for (key, value) in supabaseHeaders() {
@@ -1941,7 +1958,7 @@ class NetworkService {
         companyName: String? = nil
     ) async throws -> AppUser {
         // Create account via Supabase Auth
-        let url = URL(string: "\(AppConstants.supabaseUrl)/auth/v1/signup")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/auth/v1/signup")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -1982,7 +1999,7 @@ class NetworkService {
         let userAccessToken = authResponse.accessToken
 
         // Create user profile in users table
-        let profileUrl = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        let profileUrl = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users")
         var profileRequest = URLRequest(url: profileUrl)
         profileRequest.httpMethod = "POST"
         profileRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -2055,7 +2072,7 @@ class NetworkService {
     }
 
     func fetchCompanyUsers(companyId: String) async throws -> [AppUser] {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/users")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/users")
         components.queryItems = [
             URLQueryItem(name: "company_id", value: "eq.\(companyId)"),
             URLQueryItem(name: "select", value: "*"),
@@ -2087,7 +2104,7 @@ class NetworkService {
     }
 
     func updateUserAdminStatus(userId: String, isAdmin: Bool) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")
 
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
@@ -2135,7 +2152,7 @@ class NetworkService {
     // MARK: - Products
 
     func fetchProducts(userId: String) async throws -> [Product] {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/products")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/products")
         components.queryItems = [
             URLQueryItem(name: "user_id", value: "eq.\(userId)"),
             URLQueryItem(name: "order", value: "created_at.desc")
@@ -2207,7 +2224,7 @@ class NetworkService {
         }
 
         let inList = userIds.joined(separator: ",")
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/products")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/products")
         components.queryItems = [
             URLQueryItem(name: "user_id", value: "in.(\(inList))"),
             URLQueryItem(name: "order", value: "created_at.desc")
@@ -2257,7 +2274,7 @@ class NetworkService {
     }
 
     private func fetchUsageCount(queryItems: [URLQueryItem]) async throws -> Int {
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_usage_events")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/ai_usage_events")
         components.queryItems = queryItems + [URLQueryItem(name: "select", value: "id")]
 
         guard let url = components.url else {
@@ -2311,7 +2328,7 @@ class NetworkService {
     func createOrUpdateProduct(product: Product, userId: String) async throws -> Product {
         if let productId = product.id {
             // Update existing product
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/products?id=eq.\(productId)")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/products?id=eq.\(productId)")
             var request = URLRequest(url: url)
             request.httpMethod = "PATCH"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2353,7 +2370,7 @@ class NetworkService {
             return updatedProduct
         } else {
             // Create new product
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/products")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/products")
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2403,7 +2420,7 @@ class NetworkService {
     }
 
     func deleteProduct(productId: String) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/products?id=eq.\(productId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/products?id=eq.\(productId)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2432,7 +2449,7 @@ class NetworkService {
             throw NetworkError.invalidResponse
         }
 
-        var components = URLComponents(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules")!
+        var components = try validatedURLComponents("\(AppConstants.supabaseUrl)/rest/v1/ai_rules")
 
         if let companyId = user.companyId {
             // Fetch all rules for the company
@@ -2475,7 +2492,7 @@ class NetworkService {
     func createOrUpdateAIRule(rule: AIRule, userId: String) async throws -> AIRule {
         if let ruleId = rule.id {
             // Update existing rule
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")
             var request = URLRequest(url: url)
             request.httpMethod = "PATCH"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2511,7 +2528,7 @@ class NetworkService {
             return updatedRule
         } else {
             // Create new rule
-            let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules")!
+            let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/ai_rules")
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2560,7 +2577,7 @@ class NetworkService {
         priority: Int,
         isActive: Bool
     ) async throws -> AIRule {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/ai_rules")
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2630,7 +2647,7 @@ class NetworkService {
         priority: Int,
         isActive: Bool
     ) async throws -> AIRule {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2682,7 +2699,7 @@ class NetworkService {
     }
 
     func deleteAIRule(ruleId: String) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/ai_rules?id=eq.\(ruleId)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         for (key, value) in supabaseHeaders(authenticated: true) {
@@ -2703,7 +2720,7 @@ class NetworkService {
     // MARK: - User Management
 
     func deleteUser(userId: String) async throws {
-        let url = URL(string: "\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")!
+        let url = try validatedURL("\(AppConstants.supabaseUrl)/rest/v1/users?id=eq.\(userId)")
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         for (key, value) in supabaseHeaders(authenticated: true) {

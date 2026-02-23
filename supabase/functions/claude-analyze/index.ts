@@ -26,6 +26,13 @@ serve(async (req) => {
     });
   }
 
+  if (!supabaseUrl || !supabaseAnonKey || !claudeApiKey) {
+    return new Response(JSON.stringify({ error: "Server configuration error" }), {
+      status: 500,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+  }
+
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
     const token = authHeader.replace("Bearer ", "");

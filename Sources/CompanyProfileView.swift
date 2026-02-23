@@ -121,10 +121,17 @@ struct CompanyProfileView: View {
                     .font(.system(size: 24, weight: .bold))
                     .foregroundColor(theme.primaryText)
 
-                if let website = company.website, !website.isEmpty {
-                    Link(website, destination: URL(string: website) ?? URL(string: "https://example.com")!)
-                        .font(.system(size: 15))
-                        .foregroundColor(theme.accent)
+                if let website = company.website?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !website.isEmpty {
+                    if let websiteURL = normalizedWebsiteURL(website) {
+                        Link(website, destination: websiteURL)
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.accent)
+                    } else {
+                        Text(website)
+                            .font(.system(size: 15))
+                            .foregroundColor(theme.secondaryText)
+                    }
                 }
             }
         }
@@ -405,6 +412,23 @@ struct CompanyProfileView: View {
                 isLoadingUsage = false
             }
         }
+    }
+
+    private func normalizedWebsiteURL(_ rawValue: String) -> URL? {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        if let directURL = URL(string: trimmed),
+           let scheme = directURL.scheme?.lowercased(),
+           scheme == "http" || scheme == "https" {
+            return directURL
+        }
+
+        if URL(string: trimmed)?.scheme != nil {
+            return nil
+        }
+
+        return URL(string: "https://\(trimmed)")
     }
 }
 

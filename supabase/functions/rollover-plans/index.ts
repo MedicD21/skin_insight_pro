@@ -1,8 +1,25 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: { 'Access-Control-Allow-Origin': '*' } })
+    return new Response('ok', { headers: corsHeaders })
   }
 
   try {
@@ -10,12 +27,18 @@ Deno.serve(async (req) => {
     const cronSecret = Deno.env.get('CRON_SECRET')
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+      return jsonResponse({ error: 'Unauthorized' }, 401)
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      return jsonResponse({ error: 'Server configuration error' }, 500)
     }
 
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      supabaseUrl,
+      supabaseServiceRoleKey
     )
 
     let rolledOver = 0
@@ -58,20 +81,14 @@ Deno.serve(async (req) => {
       expired = inactivePlans.length
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        rolledOverCount: rolledOver,
-        expiredCount: expired,
-        timestamp: new Date().toISOString()
-      }),
-      { headers: { 'Content-Type': 'application/json' } }
-    )
+    return jsonResponse({
+      success: true,
+      rolledOverCount: rolledOver,
+      expiredCount: expired,
+      timestamp: new Date().toISOString()
+    })
 
   } catch (error) {
-    return new Response(
-      JSON.stringify({ success: false, error: error.message }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
-    )
+    return jsonResponse({ success: false, error: getErrorMessage(error) }, 500)
   }
 })

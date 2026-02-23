@@ -364,10 +364,16 @@ class AIAnalysisService {
         )
 
         // Call Supabase Edge Function (enforces usage caps)
-        let url = URL(string: "\(AppConstants.supabaseUrl)/functions/v1/claude-analyze")!
+        guard let url = URL(string: "\(AppConstants.supabaseUrl)/functions/v1/claude-analyze") else {
+            throw NSError(domain: "AIAnalysisService", code: 3, userInfo: [
+                NSLocalizedDescriptionKey: "Invalid Claude endpoint URL"
+            ])
+        }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
+        request.timeoutInterval = 120
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("identity", forHTTPHeaderField: "Accept-Encoding")
         request.setValue(AppConstants.supabaseAnonKey, forHTTPHeaderField: "apikey")
 
         guard let accessToken = UserDefaults.standard.string(forKey: AppConstants.accessTokenKey),

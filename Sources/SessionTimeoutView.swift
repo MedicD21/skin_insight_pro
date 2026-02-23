@@ -252,11 +252,10 @@ struct SessionTimeoutView: View {
 
             // If not found in stored profiles, create one
             if userProfile == nil {
-                let fullName = currentUser.firstName != nil && currentUser.lastName != nil ? "\(currentUser.firstName!) \(currentUser.lastName!)" : nil
                 DeviceLoginManager.shared.saveUserProfile(
                     userId: userId,
                     email: currentUser.email ?? "",
-                    name: fullName,
+                    name: currentUser.fullName,
                     profileImageUrl: currentUser.profileImageUrl
                 )
                 userProfile = DeviceLoginManager.shared.getStoredProfiles().first(where: { $0.id == userId })

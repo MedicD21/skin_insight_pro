@@ -94,7 +94,9 @@ class DeviceLoginManager {
 
     /// Save PIN to Keychain
     func savePIN(_ pin: String, for userId: String) -> Bool {
-        let pinData = pin.data(using: .utf8)!
+        guard let pinData = pin.data(using: .utf8) else {
+            return false
+        }
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -165,7 +167,9 @@ class DeviceLoginManager {
     // MARK: - Refresh Token Management (Keychain)
 
     func saveRefreshToken(_ token: String, for userId: String) -> Bool {
-        let tokenData = token.data(using: .utf8)!
+        guard let tokenData = token.data(using: .utf8) else {
+            return false
+        }
 
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

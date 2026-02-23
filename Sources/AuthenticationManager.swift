@@ -111,11 +111,10 @@ class AuthenticationManager: NSObject, ObservableObject {
                 isAuthenticated = true
 
                 // Save user profile to device login manager
-                let fullName = user.firstName != nil && user.lastName != nil ? "\(user.firstName!) \(user.lastName!)" : nil
                 DeviceLoginManager.shared.saveUserProfile(
                     userId: userId,
                     email: email,
-                    name: fullName,
+                    name: user.fullName,
                     profileImageUrl: user.profileImageUrl
                 )
 
@@ -275,11 +274,10 @@ class AuthenticationManager: NSObject, ObservableObject {
             }
 
             // Save user profile to device login manager
-            let fullName = user.firstName != nil && user.lastName != nil ? "\(user.firstName!) \(user.lastName!)" : nil
             DeviceLoginManager.shared.saveUserProfile(
                 userId: serverUserId,
                 email: displayEmail,
-                name: fullName,
+                name: user.fullName,
                 profileImageUrl: user.profileImageUrl
             )
 
@@ -320,11 +318,21 @@ extension AuthenticationManager: ASAuthorizationControllerDelegate {
 
 extension AuthenticationManager: ASAuthorizationControllerPresentationContextProviding {
     @MainActor func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-        // Get the key window from the connected scenes
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
-            fatalError("No window available for Sign in with Apple")
+        let windowScenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+
+        if let keyWindow = windowScenes
+            .flatMap(\.windows)
+            .first(where: { $0.isKeyWindow }) {
+            return keyWindow
         }
-        return window
+
+        if let firstWindow = windowScenes.flatMap(\.windows).first {
+            return firstWindow
+        }
+
+        #if DEBUG
+        print("⚠️ No active window available for Sign in with Apple; returning empty presentation anchor.")
+        #endif
+        return ASPresentationAnchor()
     }
 }
