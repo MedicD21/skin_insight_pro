@@ -7,6 +7,11 @@ class AIAnalysisService {
     static let shared = AIAnalysisService()
     private init() {}
     private let ciContext = CIContext()
+    private let claudeModelName = "claude-sonnet-4-5-20250929"
+    private let claudeTemperature = 0.2
+    private let claudeMaxTokens = 3072
+    private let maxCatalogProductsInPrompt = 120
+    private let maxPromptFieldLength = 700
 
     func analyzeImage(
         image: UIImage,
@@ -385,9 +390,11 @@ class AIAnalysisService {
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
         let requestBody: [String: Any] = [
-            "model": "claude-sonnet-4-5-20250929",
+            "model": claudeModelName,
             "prompt": prompt,
-            "image_base64": base64Image
+            "image_base64": base64Image,
+            "max_tokens": claudeMaxTokens,
+            "temperature": claudeTemperature
         ]
 
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
@@ -1134,12 +1141,10 @@ class AIAnalysisService {
         products: [Product],
         clinicalSummary: String?
     ) -> String {
-        // Separate rules into settings and conditions
         let activeRules = aiRules.filter { $0.isActive == true }
         let settingsRules = activeRules.filter { $0.ruleType == "setting" }
         let conditionRules = activeRules.filter { $0.ruleType == "condition" || $0.ruleType == nil }
 
-        // Extract general AI settings
         var tone = "professional and empathetic"
         var depth = "detailed"
         var format = "clear and structured"
@@ -1148,7 +1153,8 @@ class AIAnalysisService {
         var avoidMentioning: [String] = []
 
         for setting in settingsRules {
-            guard let key = setting.settingKey?.lowercased(), let value = setting.settingValue else { continue }
+            guard let key = setting.settingKey?.lowercased(),
+                  let value = trimmedPromptValue(setting.settingValue, maxLength: 180) else { continue }
 
             switch key {
             case "tone":
@@ -1168,131 +1174,145 @@ class AIAnalysisService {
             }
         }
 
-        // Build base prompt with AI personality
         var prompt = """
-        You are an expert skin analysis AI for estheticians and medspa professionals. Analyze this skin image and provide a detailed assessment.
-
+        You are an expert skin analysis AI for estheticians and medspa professionals.
+        Analyze the provided skin image, prioritize objective findings, and return a clinically useful response.
         """
 
-        // Add AI behavior instructions based on settings
         if !settingsRules.isEmpty {
-            prompt += "\nAI BEHAVIOR SETTINGS:\n"
-            prompt += "- Tone: Use a \(tone) tone throughout your analysis\n"
-            prompt += "- Detail Level: Provide \(depth) analysis and explanations\n"
-            prompt += "- Format: Present information in a \(format) manner\n"
+            prompt += "\n\nAI BEHAVIOR SETTINGS:\n"
+            prompt += "- Tone: Use a \(tone) tone throughout the analysis.\n"
+            prompt += "- Detail Level: Provide \(depth) explanations.\n"
+            prompt += "- Format: Present output in a \(format) manner.\n"
 
             if !focusAreas.isEmpty {
-                prompt += "- Focus Areas: Pay special attention to: \(focusAreas.joined(separator: ", "))\n"
+                prompt += "- Focus Areas: \(focusAreas.joined(separator: ", ")).\n"
             }
-
             if !alwaysInclude.isEmpty {
-                prompt += "- Always Include: Make sure to mention: \(alwaysInclude.joined(separator: ", "))\n"
+                prompt += "- Always Include: \(alwaysInclude.joined(separator: ", ")).\n"
             }
-
             if !avoidMentioning.isEmpty {
-                prompt += "- Avoid: Do not mention or focus on: \(avoidMentioning.joined(separator: ", "))\n"
+                prompt += "- Avoid Mentioning: \(avoidMentioning.joined(separator: ", ")).\n"
             }
         }
 
-        prompt += "\nConsider the following context carefully while performing your analysis:\n\n"
+        prompt += "\n\nCLIENT CONTEXT:\n"
 
-        // Add client context
-        if let medicalHistory = medicalHistory, !medicalHistory.isEmpty {
+        if let medicalHistory = trimmedPromptValue(medicalHistory) {
             prompt += "Medical History: \(medicalHistory)\n"
         }
-        if let allergies = allergies, !allergies.isEmpty {
+        if let allergies = trimmedPromptValue(allergies) {
             prompt += "Allergies: \(allergies)\n"
         }
-        if let knownSensitivities = knownSensitivities, !knownSensitivities.isEmpty {
+        if let knownSensitivities = trimmedPromptValue(knownSensitivities) {
             prompt += "Known Sensitivities: \(knownSensitivities)\n"
         }
-        if let medications = medications, !medications.isEmpty {
+        if let medications = trimmedPromptValue(medications) {
             prompt += "Medications: \(medications)\n"
         }
-        if let productsToAvoid = productsToAvoid, !productsToAvoid.isEmpty {
-            prompt += "⚠️ PRODUCTS TO AVOID: \(productsToAvoid) - DO NOT recommend any products containing these ingredients or products\n"
+        if let productsToAvoid = trimmedPromptValue(productsToAvoid) {
+            prompt += "Products To Avoid: \(productsToAvoid). Do not recommend products containing any of these.\n"
         }
         if isPregnant == true {
-            prompt += "⚠️ PREGNANCY STATUS: Client is currently pregnant. DO NOT recommend products containing salicylic acid or retinol. These ingredients are contraindicated during pregnancy.\n"
+            prompt += "Pregnancy Status: Client is pregnant. Do not recommend salicylic acid or retinol.\n"
         }
         if isBreastfeeding == true {
-            prompt += "⚠️ BREASTFEEDING STATUS: Client is currently breastfeeding. DO NOT recommend products containing salicylic acid or retinol. These ingredients are contraindicated while breastfeeding.\n"
+            prompt += "Breastfeeding Status: Client is breastfeeding. Do not recommend salicylic acid or retinol.\n"
         }
-        if let injectablesHistory = injectablesHistory, !injectablesHistory.isEmpty {
+        if let injectablesHistory = trimmedPromptValue(injectablesHistory) {
             prompt += "Injectables History: \(injectablesHistory)\n"
         }
-
-        // Add comprehensive clinical image analysis
-        if let clinicalSummary = clinicalSummary, !clinicalSummary.isEmpty {
-            prompt += "\n\n📊 DETAILED CLINICAL IMAGE ANALYSIS:\n"
-            prompt += "The following metrics were extracted from the image using advanced perceptual color analysis (LAB color space),\n"
-            prompt += "spatial region mapping, multi-scale texture analysis, structural feature detection, vascular assessment,\n"
-            prompt += "and pigmentation analysis. Use these objective measurements to inform your professional assessment:\n\n"
-            prompt += clinicalSummary
-            prompt += "\n\nInterpret these metrics in combination with your visual analysis of the image to provide the most accurate assessment.\n"
+        if let productsUsed = trimmedPromptValue(productsUsed) {
+            prompt += "Products Used Recently: \(productsUsed)\n"
+        }
+        if let treatmentsPerformed = trimmedPromptValue(treatmentsPerformed) {
+            prompt += "Treatments Performed Recently: \(treatmentsPerformed)\n"
         }
 
-        // Add manual assessments if provided
-        if let manualSkinType = manualSkinType {
-            prompt += "Esthetician's skin type assessment: \(manualSkinType)\n"
+        if let manualSkinType = trimmedPromptValue(manualSkinType, maxLength: 80) {
+            prompt += "Esthetician Assessment - Skin Type: \(manualSkinType)\n"
         }
-        if let manualHydrationLevel = manualHydrationLevel, !manualHydrationLevel.isEmpty {
-            prompt += "Esthetician's hydration assessment (percent): \(manualHydrationLevel)\n"
+        if let manualHydrationLevel = trimmedPromptValue(manualHydrationLevel, maxLength: 40) {
+            prompt += "Esthetician Assessment - Hydration Percent: \(manualHydrationLevel)\n"
+        }
+        if let manualSensitivity = trimmedPromptValue(manualSensitivity, maxLength: 80) {
+            prompt += "Esthetician Assessment - Sensitivity: \(manualSensitivity)\n"
+        }
+        if let manualPoreCondition = trimmedPromptValue(manualPoreCondition, maxLength: 80) {
+            prompt += "Esthetician Assessment - Pore Condition: \(manualPoreCondition)\n"
+        }
+        if let manualConcerns = trimmedPromptValue(manualConcerns, maxLength: 300) {
+            prompt += "Esthetician Assessment - Primary Concerns: \(manualConcerns)\n"
         }
 
-        // Add Condition-Based AI Rules
+        if let previousSummary = buildPreviousAnalysesContext(previousAnalyses) {
+            prompt += "\nPREVIOUS ANALYSIS TREND CONTEXT:\n\(previousSummary)\n"
+        }
+
+        if let clinicalSummary = trimmedPromptValue(clinicalSummary, maxLength: 2200) {
+            prompt += """
+
+            DETAILED CLINICAL IMAGE ANALYSIS:
+            The following objective metrics were extracted with color, texture, structural, vascular, and pigmentation analysis.
+            Use these measurements together with your own visual interpretation of the image.
+            \(clinicalSummary)
+            """
+            prompt += "\n"
+        }
+
         if !conditionRules.isEmpty {
-            prompt += "\n\nCUSTOM CONDITIONAL RULES - These are professional rules you MUST follow:\n"
+            prompt += "\nCUSTOM CONDITIONAL RULES - You must apply all matching rules:\n"
             let sortedRules = conditionRules.sorted { ($0.priority ?? 0) > ($1.priority ?? 0) }
             for (index, rule) in sortedRules.enumerated() {
-                if let condition = rule.condition, let action = rule.action {
-                    prompt += "Rule \(index + 1): IF skin shows \"\(condition)\" THEN add to recommendations: \"\(action)\" (Priority: \(rule.priority ?? 0))\n"
-                }
+                guard let condition = trimmedPromptValue(rule.condition, maxLength: 180),
+                      let action = trimmedPromptValue(rule.action, maxLength: 220) else { continue }
+                prompt += "Rule \(index + 1): IF skin shows \"\(condition)\" THEN include \"\(action)\" in recommendations (priority \(rule.priority ?? 0)).\n"
             }
         }
 
-        // Add Available Products
-        if !products.isEmpty {
-            let activeProducts = products.filter { $0.isActive == true }
-            if !activeProducts.isEmpty {
-                prompt += "\n\nAVAILABLE PRODUCTS CATALOG - Use your professional judgment to select the BEST products:\n"
-                for (index, product) in activeProducts.enumerated() {
-                    if let name = product.name {
-                        let brand = product.brand ?? ""
-                        let productName = brand.isEmpty ? name : "\(brand) - \(name)"
+        let activeProducts = products
+            .filter { $0.isActive == true }
+            .sorted { lhs, rhs in
+                formattedProductName(for: lhs).localizedCaseInsensitiveCompare(formattedProductName(for: rhs)) == .orderedAscending
+            }
+        if !activeProducts.isEmpty {
+            let productsForPrompt = Array(activeProducts.prefix(maxCatalogProductsInPrompt))
+            prompt += "\nAVAILABLE PRODUCTS CATALOG (\(productsForPrompt.count) listed of \(activeProducts.count) active products):\n"
+            for (index, product) in productsForPrompt.enumerated() {
+                guard let rawName = trimmedPromptValue(product.name, maxLength: 120) else { continue }
+                let brand = trimmedPromptValue(product.brand, maxLength: 80) ?? ""
+                let productName = brand.isEmpty ? rawName : "\(brand) - \(rawName)"
 
-                        var productDetails = "Product \(index + 1): \"\(productName)\""
-
-                        if let skinTypes = product.skinTypes, !skinTypes.isEmpty {
-                            productDetails += " | Skin Types: \(skinTypes.joined(separator: ", "))"
-                        }
-                        if let concerns = product.concerns, !concerns.isEmpty {
-                            productDetails += " | Addresses: \(concerns.joined(separator: ", "))"
-                        }
-                        if let ingredients = product.ingredients, !ingredients.isEmpty {
-                            productDetails += " | Key Ingredients: \(ingredients)"
-                        }
-                        if let allIngredients = product.allIngredients, !allIngredients.isEmpty {
-                            productDetails += " | ALL Ingredients: \(allIngredients)"
-                        }
-                        if let description = product.description, !description.isEmpty {
-                            productDetails += " | Details: \(description)"
-                        }
-                        if let usageGuidelines = product.usageGuidelines, !usageGuidelines.isEmpty {
-                            productDetails += " | Usage: \(usageGuidelines)"
-                        }
-
-                        prompt += productDetails + "\n"
-                    }
+                var productDetails = "Product \(index + 1): \"\(productName)\""
+                if let skinTypes = product.skinTypes, !skinTypes.isEmpty {
+                    productDetails += " | Skin Types: \(skinTypes.joined(separator: ", "))"
                 }
+                if let concerns = product.concerns, !concerns.isEmpty {
+                    productDetails += " | Addresses: \(concerns.joined(separator: ", "))"
+                }
+                if let ingredients = trimmedPromptValue(product.ingredients, maxLength: 280) {
+                    productDetails += " | Key Ingredients: \(ingredients)"
+                }
+                if let allIngredients = trimmedPromptValue(product.allIngredients, maxLength: 500) {
+                    productDetails += " | All Ingredients: \(allIngredients)"
+                }
+                if let description = trimmedPromptValue(product.description, maxLength: 220) {
+                    productDetails += " | Details: \(description)"
+                }
+                if let usageGuidelines = trimmedPromptValue(product.usageGuidelines, maxLength: 220) {
+                    productDetails += " | Usage: \(usageGuidelines)"
+                }
+                prompt += productDetails + "\n"
+            }
+            if activeProducts.count > productsForPrompt.count {
+                prompt += "Catalog note: the full catalog is larger. Never invent products that are not explicitly listed above.\n"
             }
         }
 
         let concernLabels = AppConstants.concernOptions.joined(separator: ", ")
-
         prompt += """
 
-        Provide your analysis in this EXACT JSON format:
+        Return your analysis as JSON using this shape:
         {
           "skin_type": "Normal/Dry/Oily/Combination/Sensitive",
           "hydration_level": 0-100,
@@ -1316,70 +1336,96 @@ class AIAnalysisService {
                 "frequency": "Daily"
               }
             ],
-            "evening_steps": [...],
+            "evening_steps": [],
             "notes": "General routine tips"
           }
         }
 
-        CONCERN LABELS:
+        OUTPUT REQUIREMENTS:
+        - Return only one valid JSON object.
+        - Do not wrap output in markdown or add explanatory text outside JSON.
         - Use standardized concern labels only: \(concernLabels).
+        - If data is uncertain, keep recommendations conservative and state uncertainty inside recommendation text.
+        - If a field is unknown, use null or an empty array.
 
         HYDRATION GUIDANCE:
-        - "hydration_level" is an estimated percent (0-100) of moisture appearance.
-        - Avoid single-digit values unless the skin is extremely dehydrated.
+        - hydration_level is a 0-100 estimate of moisture appearance.
+        - Avoid single-digit hydration values unless skin is severely dehydrated.
         - Typical ranges: 20-35 severely dehydrated, 36-50 low, 51-65 moderate, 66-80 good, 81-95 excellent.
-        - Use the esthetician’s hydration assessment if provided, adjusted only if the photo strongly contradicts it.
+        - Use esthetician hydration assessment when provided unless the image strongly contradicts it.
 
         METRIC GUIDANCE:
-        - "skin_type" should reflect oil vs dryness cues in the photo (shine, texture, flaking) and avoid defaulting to Normal.
-        - "sensitivity" should be Low/Normal/High and based on visible redness/irritation or reactive indicators.
-        - "pore_condition" should be Fine/Normal/Enlarged based on visible pore size/texture.
-        - "skin_health_score" should be 0-100 and reflect the overall condition given concerns, hydration, and sensitivity.
+        - skin_type should reflect visible oil vs dryness cues and should not default to Normal.
+        - sensitivity should be Low/Normal/High and based on visible irritation/reactivity.
+        - pore_condition should be Fine/Normal/Enlarged based on visible pore size and texture.
+        - skin_health_score should be 0-100 and coherent with concerns, hydration, and sensitivity.
 
-        CRITICAL INSTRUCTIONS FOR TWO SEPARATE FIELDS:
+        FIELD RULES:
+        1) recommendations:
+        - Include professional skincare guidance.
+        - Include every matching custom AI rule.
 
-        1. "recommendations" - Include BOTH:
-           a) Your own professional skincare recommendations based on the analysis
-           b) ALL matching custom AI rules (check detected concerns against rule conditions and include every match)
+        2) product_recommendations:
+        - Use only products from the provided catalog.
+        - Check Key Ingredients and All Ingredients against allergies, known sensitivities, and products_to_avoid.
+        - Skip any product with matching restricted ingredients.
+        - Prefer 2-3 best matching products when available.
+        - Format names as "Brand - Product Name".
+        - Do not place AI rules in this field.
+        - If no safe match exists, return an empty array.
 
-        2. "product_recommendations" - ONLY matching products from the catalog:
-           - Consider detected skin type and concerns
-           - Select products that address the specific concerns
-           - From multiple products addressing the same concern, choose the BEST 2-3 based on ingredients and efficacy
-           - ⚠️ CRITICAL SAFETY CHECK: For EACH product, check BOTH "Key Ingredients" AND "ALL Ingredients" lists against:
-             * Client's Allergies
-             * Client's Known Sensitivities
-             * Products to Avoid list
-           - SKIP ANY PRODUCT that contains ANY ingredient matching the above lists (check both partial and full matches)
-           - Format products as: "Brand - Product Name"
-           - DO NOT include AI rules here, they belong in "recommendations"
-
-        Example: If you detect "Redness" and "Dry" skin type:
-        - recommendations: Your professional advice + ALL matching AI rules
-        - product_recommendations: The 2-3 BEST products for redness on dry skin (excluding allergens)
-
-        3. "recommended_routine" - Create a structured morning and evening skincare routine:
-           - Order products by category: Cleanser → Toner → Treatment/Serum → Eye Cream → Moisturizer → Sunscreen (AM only)
-           - ONLY include products from the catalog that match the client's skin concerns
-           - For each step provide:
-             * product_name: "Brand - Product Name" (must match catalog exactly)
-             * step_number: Sequential order (1, 2, 3...)
-             * instructions: Brief how-to (e.g., "Gently massage into damp skin in circular motions")
-             * amount: How much to use (e.g., "Pea-sized", "2-3 drops", "Dime-sized", "Generous layer")
-             * wait_time: Seconds to wait before next step (optional, e.g., 60 for actives, 30 for serums)
-             * frequency: "Daily", "2-3 times per week", "Every other day", etc.
-           - Morning routine: Focus on protection (antioxidants, sunscreen)
-           - Evening routine: Focus on treatment and repair (actives, retinol, heavier moisturizers)
-           - Add routine notes with general tips (e.g., "Always apply products to damp skin for better absorption")
-           - Keep routines simple (3-5 steps each) - don't overwhelm the client
-           - Use the product's "Usage Guidelines" field when available to inform instructions
-
-        Example routine for dry, aging skin:
-        Morning: Gentle Cleanser → Vitamin C Serum → Eye Cream → Moisturizer → SPF 50
-        Evening: Oil Cleanser → Gentle Cleanser → Hyaluronic Acid Serum → Retinol → Night Cream
+        3) recommended_routine:
+        - Keep each routine simple (3-5 steps) and ordered by category:
+          Cleanser -> Toner -> Treatment/Serum -> Eye Cream -> Moisturizer -> Sunscreen (AM only).
+        - Use only catalog products.
+        - Include instructions, amount, wait_time, and frequency when possible.
+        - Use product Usage fields when available.
         """
 
         return prompt
+    }
+
+    private func buildPreviousAnalysesContext(_ previousAnalyses: [SkinAnalysisResult]) -> String? {
+        guard !previousAnalyses.isEmpty else { return nil }
+
+        let recent = previousAnalyses
+            .sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+            .prefix(3)
+
+        var lines: [String] = []
+        lines.reserveCapacity(recent.count + 1)
+
+        for (index, analysis) in recent.enumerated() {
+            let dateText = analysis.createdAt ?? "unknown"
+            let skinType = analysis.analysisResults?.skinType ?? "unknown"
+            let scoreText = analysis.analysisResults?.skinHealthScore.map(String.init) ?? "unknown"
+            let concerns = analysis.analysisResults?.concerns ?? []
+            let concernsText = concerns.isEmpty ? "none listed" : truncateForPrompt(concerns.joined(separator: ", "), maxLength: 180)
+            lines.append("Analysis \(index + 1): date=\(dateText), skin_type=\(skinType), skin_health_score=\(scoreText), concerns=\(concernsText)")
+        }
+
+        if let newestScore = recent.first?.analysisResults?.skinHealthScore,
+           let oldestScore = recent.last?.analysisResults?.skinHealthScore,
+           recent.count > 1 {
+            let delta = newestScore - oldestScore
+            let trend = delta > 0 ? "improved" : (delta < 0 ? "declined" : "stable")
+            lines.append("Trend: skin health score \(trend) by \(abs(delta)) points from oldest to newest prior analysis.")
+        }
+
+        return lines.isEmpty ? nil : lines.joined(separator: "\n")
+    }
+
+    private func trimmedPromptValue(_ value: String?, maxLength: Int? = nil) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return truncateForPrompt(trimmed, maxLength: maxLength ?? maxPromptFieldLength)
+    }
+
+    private func truncateForPrompt(_ value: String, maxLength: Int) -> String {
+        guard value.count > maxLength else { return value }
+        let endIndex = value.index(value.startIndex, offsetBy: maxLength)
+        return String(value[..<endIndex]) + "... [truncated]"
     }
 
     private func parseClaudeResponse(data: Data, products: [Product]) throws -> AnalysisData {
@@ -1388,31 +1434,44 @@ class AIAnalysisService {
         }
 
         struct ClaudeContent: Codable {
-            let type: String
-            let text: String
+            let type: String?
+            let text: String?
         }
 
         let response = try JSONDecoder().decode(ClaudeResponse.self, from: data)
-        guard let text = response.content.first?.text else {
+        let textBlocks = response.content.compactMap { block -> String? in
+            guard let text = block.text?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+                return nil
+            }
+            return text
+        }
+
+        guard !textBlocks.isEmpty else {
             throw NSError(domain: "AIAnalysisService", code: 4, userInfo: [
                 NSLocalizedDescriptionKey: "No text content in Claude response"
             ])
         }
 
-        // Extract JSON from response (Claude may wrap it in markdown)
-        var jsonText = text
-        if let jsonStart = text.range(of: "{"),
-           let jsonEnd = text.range(of: "}", options: .backwards) {
-            jsonText = String(text[jsonStart.lowerBound...jsonEnd.upperBound])
+        let jsonCandidates = buildClaudeJSONCandidates(from: textBlocks)
+        var analysisResponse: AIAnalysisResponse?
+        var lastDecodeError: Error?
+
+        for candidate in jsonCandidates {
+            guard let candidateData = candidate.data(using: .utf8) else { continue }
+            do {
+                analysisResponse = try JSONDecoder().decode(AIAnalysisResponse.self, from: candidateData)
+                break
+            } catch {
+                lastDecodeError = error
+            }
         }
 
-        guard let jsonData = jsonText.data(using: .utf8) else {
+        guard let analysisResponse else {
+            let message = lastDecodeError?.localizedDescription ?? "No valid JSON object found in Claude response."
             throw NSError(domain: "AIAnalysisService", code: 5, userInfo: [
-                NSLocalizedDescriptionKey: "Failed to convert response to data"
+                NSLocalizedDescriptionKey: "Failed to parse Claude JSON response: \(message)"
             ])
         }
-
-        let analysisResponse = try JSONDecoder().decode(AIAnalysisResponse.self, from: jsonData)
 
         let hydratedLevel = normalizeHydrationLevel(analysisResponse.hydrationLevel)
         let skinType = normalizeSkinType(analysisResponse.skinType)
@@ -1452,6 +1511,98 @@ class AIAnalysisService {
             progressNotes: analysisResponse.progressNotes,
             recommendedRoutine: finalRoutine
         )
+    }
+
+    private func buildClaudeJSONCandidates(from textBlocks: [String]) -> [String] {
+        var seen = Set<String>()
+        var candidates: [String] = []
+
+        func appendCandidate(_ value: String) {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return }
+            if seen.insert(trimmed).inserted {
+                candidates.append(trimmed)
+            }
+        }
+
+        for block in textBlocks {
+            appendCandidate(block)
+
+            let stripped = stripMarkdownCodeFence(from: block)
+            appendCandidate(stripped)
+
+            for object in extractJSONObjectCandidates(from: stripped) {
+                appendCandidate(object)
+            }
+        }
+
+        return candidates
+    }
+
+    private func stripMarkdownCodeFence(from text: String) -> String {
+        var cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if cleaned.hasPrefix("```") {
+            cleaned = cleaned.replacingOccurrences(
+                of: "^```(?:json)?\\s*",
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
+            cleaned = cleaned.replacingOccurrences(
+                of: "\\s*```$",
+                with: "",
+                options: [.regularExpression, .caseInsensitive]
+            )
+        }
+        return cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func extractJSONObjectCandidates(from text: String) -> [String] {
+        let characters = Array(text)
+        var objects: [String] = []
+        var depth = 0
+        var startIndex: Int?
+        var inString = false
+        var isEscaped = false
+
+        for (index, character) in characters.enumerated() {
+            if inString {
+                if isEscaped {
+                    isEscaped = false
+                    continue
+                }
+                if character == "\\" {
+                    isEscaped = true
+                    continue
+                }
+                if character == "\"" {
+                    inString = false
+                }
+                continue
+            }
+
+            if character == "\"" {
+                inString = true
+                continue
+            }
+
+            if character == "{" {
+                if depth == 0 {
+                    startIndex = index
+                }
+                depth += 1
+                continue
+            }
+
+            if character == "}", depth > 0 {
+                depth -= 1
+                if depth == 0, let startIndex {
+                    let object = String(characters[startIndex...index])
+                    objects.append(object)
+                }
+            }
+        }
+
+        return objects.sorted { $0.count > $1.count }
     }
 
     private func normalizeRecommendedRoutine(_ routine: SkinCareRoutine?, products: [Product]) -> SkinCareRoutine? {
