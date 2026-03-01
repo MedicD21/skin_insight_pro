@@ -48,3 +48,6 @@ supabase/.temp/
 
 # Local tooling/editor state
 .claude/settings.local.json
+.claude
+CLAUDE.md
+AGENTS.md
