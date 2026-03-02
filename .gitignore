@@ -1,6 +1,3 @@
-# API Keys and Secrets
-Sources/Secrets.swift
-
 # Xcode
 build/
 *.pbxuser

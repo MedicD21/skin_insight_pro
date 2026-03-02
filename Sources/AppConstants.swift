@@ -39,11 +39,6 @@ struct AppConstants {
         return savedProvider == "claude" ? .claude : .appleVision
     }
 
-    // Claude API key (loaded from Secrets.swift - not committed to git)
-    static var claudeApiKey: String {
-        return Secrets.claudeApiKey
-    }
-
     // UserDefaults keys
     static let accessTokenKey = "supabase_access_token"
     static let refreshTokenKey = "supabase_refresh_token"
